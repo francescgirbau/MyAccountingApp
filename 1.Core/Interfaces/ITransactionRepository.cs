@@ -6,9 +6,7 @@ namespace _1.Core.Interfaces
     {
         void Add(Transaction transaction);
         IEnumerable<Transaction> GetAll();
-        Transaction? GetTransaction(Guid id);
-        void Delete(Guid id);
-        double GetBalance();
+        decimal GetBalance();
         
 
 
