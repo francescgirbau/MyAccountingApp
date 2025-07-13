@@ -8,24 +8,45 @@ namespace MyAccountingApp.Tests;
 public class CurrencyConversionServiceTests
 {
     private const double PRECISION = 0.001;
+    [Fact]
+    public void TransactionWithZeroAmountIsNotValid()
+    {
+        //Arrange
+        Currencies invalidSource = Currencies.USD;
 
+        DateTime date = new DateTime(2023, 12, 1); // This date does not exist
+
+        FakeConversionRepository fakeRepo = new FakeConversionRepository(); // repositori in-memory per testing
+        FakeCurrencyConverter fakeApi = new FakeCurrencyConverter();     // fake API que retorna quotes
+
+        // Act
+        Action action = () => { new CurrencyRateService(fakeRepo, fakeApi, invalidSource); };
+
+        //Assert
+        Assert.Throws<ArgumentException>(() => action());
+
+
+    }
     [Fact]
     public async Task GetExchangeRateAsync_AddsConversion_WhenMissing()
     {
         // Arrange
-        var fakeRepo = new FakeConversionRepository(); // repositori in-memory per testing
-        var fakeApi = new FakeCurrencyConverter();     // fake API que retorna quotes
+        FakeConversionRepository fakeRepo = new FakeConversionRepository(); // repositori in-memory per testing
+        FakeCurrencyConverter fakeApi = new FakeCurrencyConverter();     // fake API que retorna quotes
+        Currencies source = Currencies.EUR;
 
-        var service = new CurrencyConversionService(fakeRepo, fakeApi);
+        CurrencyRateService service = new CurrencyRateService(fakeRepo, fakeApi, source);
 
-        var date = new DateTime(2023, 12, 1); // This date does not exist
-        var targetCurrency = Currencies.USD;
+        DateTime date = new DateTime(2023, 12, 1); // This date does not exist
+        Currencies targetCurrency = Currencies.USD;
+        double expectedTargetRate = 1.1;
+
 
         // Act
-        var rate = await service.GetExchangeRateAsync(targetCurrency, date);
+        Dictionary<Currencies, double> rate = await service.GetQuotes(date);
 
         // Assert
-        Assert.True(1.1 - rate < PRECISION);
+        Assert.Equal(rate[targetCurrency], expectedTargetRate);
         Assert.True(fakeRepo.CalledAdd);
         Assert.True(fakeRepo.ExistsForDate(date));
     }
@@ -34,19 +55,21 @@ public class CurrencyConversionServiceTests
     public async Task GetExchangeRateAsync_WhenIsNotMissing()
     {
         // Arrange
-        var fakeRepo = new FakeConversionRepository(); // repositori in-memory per testing
-        var fakeApi = new FakeCurrencyConverter();     // fake API que retorna quotes
+        FakeConversionRepository fakeRepo = new FakeConversionRepository(); // repositori in-memory per testing
+        FakeCurrencyConverter fakeApi = new FakeCurrencyConverter();     // fake API que retorna quotes
+        Currencies source = Currencies.EUR;
 
-        var service = new CurrencyConversionService(fakeRepo, fakeApi);
+        CurrencyRateService service = new CurrencyRateService(fakeRepo, fakeApi, source);
 
-        var date = new DateTime(2005, 12, 1); // This date does  exist
-        var targetCurrency = Currencies.USD;
+        DateTime date = new DateTime(2005, 12, 1); // This date does  exist
+        Currencies targetCurrency = Currencies.USD;
+        double expectedTargetRate = 1.1;
 
         // Act
-        var rate = await service.GetExchangeRateAsync(targetCurrency, date);
+        Dictionary<Currencies, double> rate = await service.GetQuotes(date);
 
         // Assert
-        Assert.True(1.1 - rate < PRECISION);
+        Assert.Equal(rate[targetCurrency], expectedTargetRate);
         Assert.False(fakeRepo.CalledAdd);
         Assert.True(fakeRepo.ExistsForDate(date));
     }

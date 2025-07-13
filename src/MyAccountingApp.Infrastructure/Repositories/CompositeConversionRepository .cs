@@ -15,7 +15,7 @@ public class CompositeConversionRepository : IConversionRepository
         _memoryRepo = new InMemoryConversionRepository();
 
         // Pre-carrega les conversions existents del JSON a la memòria
-        foreach (var conversion in _jsonRepo.GetAll())
+        foreach (Conversion conversion in _jsonRepo.GetAll())
         {
             _memoryRepo.Add(conversion);
         }

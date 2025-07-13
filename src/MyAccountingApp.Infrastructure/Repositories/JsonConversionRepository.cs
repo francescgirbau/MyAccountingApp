@@ -16,8 +16,8 @@ public class JsonConversionRepository : IConversionRepository
 
         if (File.Exists(_filePath))
         {
-            var json = File.ReadAllText(_filePath);
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, Converters = { new JsonStringEnumConverter() } };
+            string json = File.ReadAllText(_filePath);
+            JsonSerializerOptions options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, Converters = { new JsonStringEnumConverter() } };
             _conversions = JsonSerializer.Deserialize<List<Conversion>>(json, options) ?? new List<Conversion>();
         }
         else
@@ -51,13 +51,13 @@ public class JsonConversionRepository : IConversionRepository
     }
     private void Save()
     {
-        var options = new JsonSerializerOptions
+        JsonSerializerOptions options = new JsonSerializerOptions
         {
             WriteIndented = true,
-            Converters = { new JsonStringEnumConverter() } 
+            Converters = { new JsonStringEnumConverter() }
         };
 
-        var json = JsonSerializer.Serialize(_conversions, options);
+        string json = JsonSerializer.Serialize(_conversions, options);
         File.WriteAllText(_filePath, json);
     }
 

@@ -21,6 +21,4 @@ public class InMemoryTransactionRepository : ITransactionRepository
             _transactions.Remove(transaction);
     }
 
-    public double GetBalance() => _transactions.Sum(t => t.Money.Amount);
-
 }
