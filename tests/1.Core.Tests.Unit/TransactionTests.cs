@@ -8,7 +8,7 @@ namespace _1.Core.Tests.Unit
     public class TransactionTests
     {
         [Fact]
-        public void Transaction_with_zero_amount_is_not_valid()
+        public void TransactionWithZeroAmountIsNotValid()
         { 
             //Arrange
             double invalid_amount = 0;
@@ -19,6 +19,51 @@ namespace _1.Core.Tests.Unit
             string description = string.Empty;
 
             TransactionCategory category = TransactionCategory.EXPENSE;
+
+            // Act
+            Action action = () => { new Transaction(dateTime, description, invalidMoney, category); };
+
+
+            //Assert
+            Assert.Throws<ArgumentException>(() => action());
+
+
+        }
+
+        [Fact]
+        public void ExpenseTransactionWithNegativeAmountIsNotValid()
+        {
+            //Arrange
+            double invalid_amount = -10;
+
+            Money invalidMoney = GetMoneyInEuros(invalid_amount);
+
+            DateTime dateTime = DateTime.Now;
+            string description = string.Empty;
+
+            TransactionCategory category = TransactionCategory.EXPENSE;
+
+            // Act
+            Action action = () => { new Transaction(dateTime, description, invalidMoney, category); };
+
+
+            //Assert
+            Assert.Throws<ArgumentException>(() => action());
+
+
+        }
+        [Fact]
+        public void IncomeTransactionWithPositiveAmountIsNotValid()
+        {
+            //Arrange
+            double invalid_amount = 10;
+
+            Money invalidMoney = GetMoneyInEuros(invalid_amount);
+
+            DateTime dateTime = DateTime.Now;
+            string description = string.Empty;
+
+            TransactionCategory category = TransactionCategory.INCOME;
 
             // Act
             Action action = () => { new Transaction(dateTime, description, invalidMoney, category); };
