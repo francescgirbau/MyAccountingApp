@@ -7,16 +7,16 @@ namespace _1.Core.Entities
         public Guid Id { get; }
         public DateTime Date { get; }
         public string Description { get; }
-        public Money Amount { get; } 
+        public Money Money { get; } 
         public TransactionCategory Category { get; }
 
 
-        public Transaction(DateTime date, string description, Money amount, TransactionCategory category)
+        public Transaction(DateTime date, string description, Money money, TransactionCategory category)
         {
             Id = new Guid();
             Date = date;
             Description = description;
-            Amount = amount;
+            Money = money;
             Category = category;
 
             Validate();
@@ -27,24 +27,24 @@ namespace _1.Core.Entities
         {
             string parentType = nameof(Transaction);
 
-            if (this.Amount.Value == 0)
+            if (this.Money.Amount == 0)
             {
-                string message = $"The {nameof(Money.Value)} cannot be zero, you provided {this.Amount.Value} {this.Amount.Currency}";
+                string message = $"The {nameof(_2.Shared.Models.Money.Amount)} cannot be zero, you provided {this.Money.Amount} {this.Money.Currency}";
 
                 throw new ArgumentException(message, parentType);
 
             }
             
-            if (this.Amount.Value < 0 && this.Category == TransactionCategory.EXPENSE)
+            if (this.Money.Amount < 0 && this.Category == TransactionCategory.EXPENSE)
             {
-                string message = $"The {nameof(Money.Value)} cannot be negative, when the transaction is an Expense, you provided {this.Amount.Value} {this.Amount.Currency}";
+                string message = $"The {nameof(_2.Shared.Models.Money.Amount)} cannot be negative, when the transaction is an Expense, you provided {this.Money.Amount} {this.Money.Currency}";
 
                 throw new ArgumentException(message, parentType);
             }
 
-            if (this.Amount.Value > 0 && this.Category == TransactionCategory.INCOME)
+            if (this.Money.Amount > 0 && this.Category == TransactionCategory.INCOME)
             {
-                string message = $"The {nameof(Money.Value)} cannot be negative, when the transaction is an Expense, you provided {this.Amount.Value} {this.Amount.Currency}";
+                string message = $"The {nameof(_2.Shared.Models.Money.Amount)} cannot be negative, when the transaction is an Expense, you provided {this.Money.Amount} {this.Money.Currency}";
 
                 throw new ArgumentException(message, parentType);
             }
