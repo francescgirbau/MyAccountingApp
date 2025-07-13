@@ -1,5 +1,6 @@
-﻿using _1.Core.Entities;
-using _1.Core.Interfaces;
+﻿using MyAccountingApp.Core;
+
+namespace MyAccountingApp.Infrastructure;
 
 public class InMemoryTransactionRepository : ITransactionRepository
 {

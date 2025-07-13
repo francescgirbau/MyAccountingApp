@@ -1,14 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <RootNamespace>_1.Core</RootNamespace>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\2.Shared\2.Shared.csproj" />
+    <ProjectReference Include="..\MyAccountingApp.Shared\MyAccountingApp.Shared.csproj" />
   </ItemGroup>
 
 </Project>
