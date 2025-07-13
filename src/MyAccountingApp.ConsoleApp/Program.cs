@@ -3,7 +3,7 @@ using MyAccountingApp.Core.Enums;
 using MyAccountingApp.Infrastructure.Repositories;
 using MyAccountingApp.Infrastructure.Services;
 
-var repo = new JsonConversionRepository("conversions.json");
+CompositeConversionRepository repo = new CompositeConversionRepository("conversions.json");
 var api = new CurrencyConverter();
 var service = new CurrencyConversionService(repo, api);
 

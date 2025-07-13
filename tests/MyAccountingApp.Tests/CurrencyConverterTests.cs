@@ -1,7 +1,9 @@
 ﻿using MyAccountingApp.Core.Enums;
+using MyAccountingApp.Core.Interfaces;
 using MyAccountingApp.Core.ValueObjects;
 using MyAccountingApp.Infrastructure;
 using MyAccountingApp.Infrastructure.Services;
+using MyAccountingApp.Tests.Fakes;
 using Xunit;
 
 namespace MyAccountingApp.Tests
@@ -12,16 +14,22 @@ namespace MyAccountingApp.Tests
         public async Task ConvertToAsync_ShouldConvert_USD_To_EUR_OnGivenDate()
         {
             // Arrange
-            CurrencyConverter converter = new CurrencyConverter();
-            Money money = new Money { Amount = 100, Currency = Currencies.USD };
+            ICurrencyConverter converter = new FakeCurrencyConverter();
+            Currencies source = Currencies.EUR;
+            (string, double) expectedRateUsd = ("EURUSD", 1.1 );
+            (string, double) expectedRateCad = ("EURCAD", 1.5);
+
+
             DateTime date = new DateTime(2023, 12, 1);
 
             // Act
-            var result = await converter.ConvertToAsync(money, Currencies.EUR, date);
+            Dictionary<string, double> result = await converter.FetchAllRatesAsync(source, date);
 
             // Assert
-            Assert.Equal(Currencies.EUR, result.Currency);
-            Assert.True(result.Amount > 0 && result.Amount < 200); // marge ample per evitar fallades per canvi de quotes
+            Assert.True(result.ContainsKey(expectedRateUsd.Item1));
+            Assert.Equal(result[expectedRateUsd.Item1], expectedRateUsd.Item2);
+            Assert.True(result.ContainsKey(expectedRateCad.Item1));
+            Assert.Equal(result[expectedRateCad.Item1], expectedRateCad.Item2);
         }
     }
 }

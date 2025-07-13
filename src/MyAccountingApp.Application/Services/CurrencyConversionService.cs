@@ -1,18 +1,17 @@
 ﻿using MyAccountingApp.Core.Entities;
 using MyAccountingApp.Core.Enums;
 using MyAccountingApp.Core.Interfaces;
-using MyAccountingApp.Infrastructure.Services;
 
 namespace MyAccountingApp.Application.Services;
 
 public class CurrencyConversionService
 {
     private readonly IConversionRepository _repository;
-    private readonly CurrencyConverter _api;
+    private readonly ICurrencyConverter _api;
 
     private static readonly Currencies[] SupportedCurrencies = Enum.GetValues<Currencies>();
 
-    public CurrencyConversionService(IConversionRepository repository, CurrencyConverter api)
+    public CurrencyConversionService(IConversionRepository repository, ICurrencyConverter api)
     {
         _repository = repository;
         _api = api;

@@ -1,4 +1,5 @@
 ﻿using MyAccountingApp.Core.Enums;
+using MyAccountingApp.Core.Interfaces;
 using MyAccountingApp.Core.ValueObjects;
 using MyAccountingApp.Infrastructure.DTOs;
 using System;
@@ -6,7 +7,7 @@ using System.Text.Json;
 
 namespace MyAccountingApp.Infrastructure.Services;
 
-public class CurrencyConverter
+public class CurrencyConverter : ICurrencyConverter
 {
     private readonly HttpClient _httpClient;
     private const string API_KEY = "3038e2941e7364716db9169d95d531";
