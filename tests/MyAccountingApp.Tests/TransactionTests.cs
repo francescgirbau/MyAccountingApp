@@ -1,6 +1,7 @@
 ﻿
-using MyAccountingApp.Core;
-using MyAccountingApp.Shared;
+using MyAccountingApp.Core.Enums;
+using MyAccountingApp.Core.ValueObjects;
+using MyAccountingApp.Core.Entities;
 
 namespace MyAccountingApp.Tests;
 

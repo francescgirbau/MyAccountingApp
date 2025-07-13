@@ -1,8 +1,7 @@
-﻿using MyAccountingApp.Shared;
+﻿using MyAccountingApp.Core.Enums;
+using MyAccountingApp.Core.ValueObjects;
 
-namespace MyAccountingApp.Core;
-
-
+namespace MyAccountingApp.Core.Entities;
 public class Transaction
 {
     public Guid Id { get; }
@@ -28,24 +27,24 @@ public class Transaction
     {
         string parentType = nameof(Transaction);
 
-        if (this.Money.Amount == 0)
+        if (Money.Amount == 0)
         {
-            string message = $"The {nameof(Money.Amount)} cannot be zero, you provided {this.Money.Amount} {this.Money.Currency}";
+            string message = $"The {nameof(Money.Amount)} cannot be zero, you provided {Money.Amount} {Money.Currency}";
 
             throw new ArgumentException(message, parentType);
 
         }
             
-        if (this.Money.Amount < 0 && this.Category == TransactionCategory.EXPENSE)
+        if (Money.Amount < 0 && Category == TransactionCategory.EXPENSE)
         {
-            string message = $"The {nameof(Money.Amount)} cannot be negative, when the transaction is an Expense, you provided {this.Money.Amount} {this.Money.Currency}";
+            string message = $"The {nameof(Money.Amount)} cannot be negative, when the transaction is an Expense, you provided {Money.Amount} {Money.Currency}";
 
             throw new ArgumentException(message, parentType);
         }
 
-        if (this.Money.Amount > 0 && this.Category == TransactionCategory.INCOME)
+        if (Money.Amount > 0 && Category == TransactionCategory.INCOME)
         {
-            string message = $"The {nameof(Money.Amount)} cannot be negative, when the transaction is an Expense, you provided {this.Money.Amount} {this.Money.Currency}";
+            string message = $"The {nameof(Money.Amount)} cannot be negative, when the transaction is an Expense, you provided {Money.Amount} {Money.Currency}";
 
             throw new ArgumentException(message, parentType);
         }

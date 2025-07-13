@@ -1,4 +1,6 @@
-﻿namespace MyAccountingApp.Core;
+﻿using MyAccountingApp.Core.Entities;
+
+namespace MyAccountingApp.Core.Interfaces;
 
 public interface ITransactionRepository
 {
