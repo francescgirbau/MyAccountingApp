@@ -1,15 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36301.6
+VisualStudioVersion = 17.14.36301.6 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyAccountingApp", "MyAccountingApp\MyAccountingApp.csproj", "{E1CE68F2-59B6-40A4-A9A8-047D3AD0AE93}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "1.Core", "1.Core\1.Core.csproj", "{96365778-7ED1-499E-95CA-6E7936591A92}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "2.Shared", "2.Shared\2.Shared.csproj", "{93AB862F-E027-44E4-86D7-667F587DC4E5}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "1.Core.Tests.Unit", "tests\1.Core.Tests.Unit\1.Core.Tests.Unit.csproj", "{C09B345E-B8A5-34CE-0E0D-4D3412075FBE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,10 +27,6 @@ Global
 		{93AB862F-E027-44E4-86D7-667F587DC4E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{93AB862F-E027-44E4-86D7-667F587DC4E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{93AB862F-E027-44E4-86D7-667F587DC4E5}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C09B345E-B8A5-34CE-0E0D-4D3412075FBE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C09B345E-B8A5-34CE-0E0D-4D3412075FBE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C09B345E-B8A5-34CE-0E0D-4D3412075FBE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C09B345E-B8A5-34CE-0E0D-4D3412075FBE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
