@@ -1,4 +1,4 @@
-﻿namespace MyAccountingApp.Shared;
+﻿namespace MyAccountingApp.Core.Enums;
 
 public enum TransactionCategory
 {

@@ -1,6 +1,7 @@
 ﻿
-using MyAccountingApp.Core;
-using MyAccountingApp.Shared;
+using MyAccountingApp.Core.Entities;
+using MyAccountingApp.Core.Enums;
+using MyAccountingApp.Core.ValueObjects;
 
 namespace MyAccountingApp.Tests;
 
@@ -8,7 +9,7 @@ public class TransactionTests
 {
     [Fact]
     public void TransactionWithZeroAmountIsNotValid()
-    { 
+    {
         //Arrange
         double invalid_amount = 0;
 

@@ -19,9 +19,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\MyAccountingApp.Application\MyAccountingApp.Application.csproj" />
     <ProjectReference Include="..\..\src\MyAccountingApp.Core\MyAccountingApp.Core.csproj" />
     <ProjectReference Include="..\..\src\MyAccountingApp.Infrastructure\MyAccountingApp.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\src\MyAccountingApp.Shared\MyAccountingApp.Shared.csproj" />
   </ItemGroup>
 
 </Project>

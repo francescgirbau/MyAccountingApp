@@ -1,6 +1,7 @@
-﻿using MyAccountingApp.Core;
+﻿using MyAccountingApp.Core.Entities;
+using MyAccountingApp.Core.Interfaces;
 
-namespace MyAccountingApp.Infrastructure;
+namespace MyAccountingApp.Infrastructure.Repositories;
 
 public class InMemoryTransactionRepository : ITransactionRepository
 {
@@ -19,7 +20,5 @@ public class InMemoryTransactionRepository : ITransactionRepository
         if (transaction != null)
             _transactions.Remove(transaction);
     }
-
-    public double GetBalance() => _transactions.Sum(t => t.Money.Amount);
 
 }
