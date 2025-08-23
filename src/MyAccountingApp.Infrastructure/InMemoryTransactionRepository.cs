@@ -1,25 +1,27 @@
-﻿using MyAccountingApp.Core;
-
-namespace MyAccountingApp.Infrastructure;
+﻿namespace MyAccountingApp.Infrastructure;
 
 public class InMemoryTransactionRepository : ITransactionRepository
 {
     private readonly List<Transaction> _transactions = new();
 
-    public void Add(Transaction transaction) => _transactions.Add(transaction);
+    public void Add(Transaction transaction) => this._transactions.Add(transaction);
 
-    public IEnumerable<Transaction> GetAll() => _transactions;
+    public IEnumerable<Transaction> GetAll() => this._transactions;
 
-    public Transaction? GetTransaction(Guid id) =>
-        _transactions.FirstOrDefault(t => t.Id == id);
+    public Transaction? GetTransaction(Guid id)
+    {
+        return this._transactions.FirstOrDefault(t => t.Id == id);
+    }
 
     public void Delete(Guid id)
     {
-        var transaction = GetTransaction(id);
+        Transaction transaction = GetTransaction(id);
         if (transaction != null)
-            _transactions.Remove(transaction);
+        {
+            this._transactions.Remove(transaction);
+        }
     }
 
-    public double GetBalance() => _transactions.Sum(t => t.Money.Amount);
+    public double GetBalance() => this._transactions.Sum(t => t.Money.Amount);
 
 }

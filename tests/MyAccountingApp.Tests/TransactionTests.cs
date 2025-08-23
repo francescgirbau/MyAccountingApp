@@ -1,5 +1,4 @@
-﻿
-using MyAccountingApp.Core;
+﻿using MyAccountingApp.Core;
 using MyAccountingApp.Shared;
 
 namespace MyAccountingApp.Tests;
@@ -8,8 +7,8 @@ public class TransactionTests
 {
     [Fact]
     public void TransactionWithZeroAmountIsNotValid()
-    { 
-        //Arrange
+    {
+        // Arrange
         double invalid_amount = 0;
 
         Money invalidMoney = GetMoneyInEuros(invalid_amount);
@@ -22,17 +21,14 @@ public class TransactionTests
         // Act
         Action action = () => { new Transaction(dateTime, description, invalidMoney, category); };
 
-
-        //Assert
+        // Assert
         Assert.Throws<ArgumentException>(() => action());
-
-
     }
 
     [Fact]
     public void ExpenseTransactionWithNegativeAmountIsNotValid()
     {
-        //Arrange
+        // Arrange
         double invalid_amount = -10;
 
         Money invalidMoney = GetMoneyInEuros(invalid_amount);
@@ -45,16 +41,14 @@ public class TransactionTests
         // Act
         Action action = () => { new Transaction(dateTime, description, invalidMoney, category); };
 
-
-        //Assert
+        // Assert
         Assert.Throws<ArgumentException>(() => action());
-
-
     }
+
     [Fact]
     public void IncomeTransactionWithPositiveAmountIsNotValid()
     {
-        //Arrange
+        // Arrange
         double invalid_amount = 10;
 
         Money invalidMoney = GetMoneyInEuros(invalid_amount);
@@ -67,25 +61,13 @@ public class TransactionTests
         // Act
         Action action = () => { new Transaction(dateTime, description, invalidMoney, category); };
 
-
-        //Assert
+        // Assert
         Assert.Throws<ArgumentException>(() => action());
-
-
     }
 
-
-    private Money GetMoneyInEuros(double amount)
+    private Money GetMoneyInEuros(double amount) => new()
     {
-
-        return new Money()
-        {
-            Amount = amount,
-            Currency = Currencies.EUR
-        };
-
-    }
-
-
+        Amount = amount,
+        Currency = Currencies.EUR
+    };
 }
-

@@ -2,8 +2,7 @@
 
 public record Money
 {
-    public double Amount { get; init; } 
-        
+    public double Amount { get; init; }
     public Currencies Currency { get; init; }
 
 }
