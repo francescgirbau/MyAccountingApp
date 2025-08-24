@@ -1,10 +1,10 @@
 name: .NET CI
 
 on:
-  push:           
-    branches: [ "*" ] 
+  push:
+    branches: [ "*" ]        # Cada commit a qualsevol branca
   pull_request:
-    branches: [ main ]
+    branches: [ main ]       # PR cap a main
 
 jobs:
   build-and-test:
@@ -28,9 +28,14 @@ jobs:
     - name: Run StyleCop (linter)
       run: dotnet build --no-restore --configuration Release -warnaserror
 
-    - name: Run tests with coverage
-      run: dotnet test --configuration Debug --verbosity normal /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:Threshold=80 /p:ThresholdType=line
-    
+    - name: Run tests with coverage (threshold 80%)
+      run: dotnet test --no-build --configuration Debug --verbosity normal \
+        /p:CollectCoverage=true \
+        /p:CoverletOutput=./TestResults/coverage.cobertura.xml \
+        /p:CoverletOutputFormat=cobertura \
+        /p:Threshold=80 \
+        /p:ThresholdType=line
+
     - name: Generate coverage report
       uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
       with:
