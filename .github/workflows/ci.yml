@@ -2,9 +2,9 @@ name: .NET CI
 
 on:
   push:           
-    branches: [ "**" ] 
+    branches: [ main ] 
   pull_request:
-    branches: [ "**" ]
+    branches: [ main ]
 
 jobs:
   build-and-test:
@@ -28,5 +28,22 @@ jobs:
     - name: Run StyleCop (linter)
       run: dotnet build --no-restore --configuration Release -warnaserror
 
-    - name: Run tests
-      run: dotnet test --configuration Debug --verbosity normal
+    - name: Run tests with coverage threshold
+      run: dotnet test --configuration Debug --verbosity normal \
+            /p:CollectCoverage=true \
+            /p:CoverletOutputFormat=lcov \
+            /p:Threshold=80 \
+            /p:ThresholdType=line
+
+    - name: Generate coverage report
+      uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
+      with:
+        reports: ./TestResults/**/coverage.cobertura.xml
+        targetdir: ./coveragereport
+        reporttypes: Html
+
+    - name: Upload coverage report as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: ./coveragereport
