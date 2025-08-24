@@ -1,10 +1,6 @@
 ﻿using MyAccountingApp.Core.Enums;
 using MyAccountingApp.Core.Interfaces;
-using MyAccountingApp.Core.ValueObjects;
-using MyAccountingApp.Infrastructure;
-using MyAccountingApp.Infrastructure.Services;
 using MyAccountingApp.Tests.Fakes;
-using Xunit;
 
 namespace MyAccountingApp.Tests
 {
@@ -16,9 +12,8 @@ namespace MyAccountingApp.Tests
             // Arrange
             ICurrencyConverter converter = new FakeCurrencyConverter();
             Currencies source = Currencies.EUR;
-            (string, double) expectedRateUsd = ("EURUSD", 1.1 );
+            (string, double) expectedRateUsd = ("EURUSD", 1.1);
             (string, double) expectedRateCad = ("EURCAD", 1.5);
-
 
             DateTime date = new DateTime(2023, 12, 1);
 

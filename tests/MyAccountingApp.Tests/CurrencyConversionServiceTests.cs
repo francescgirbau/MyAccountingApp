@@ -2,31 +2,28 @@
 using MyAccountingApp.Core.Enums;
 using MyAccountingApp.Tests.Fakes;
 
-
 namespace MyAccountingApp.Tests;
 
 public class CurrencyConversionServiceTests
 {
-    private const double PRECISION = 0.001;
     [Fact]
     public void TransactionWithZeroAmountIsNotValid()
     {
-        //Arrange
+        // Arrange
         Currencies invalidSource = Currencies.USD;
 
         DateTime date = new DateTime(2023, 12, 1); // This date does not exist
 
-        FakeConversionRepository fakeRepo = new FakeConversionRepository(); // repositori in-memory per testing
-        FakeCurrencyConverter fakeApi = new FakeCurrencyConverter();     // fake API que retorna quotes
+        FakeConversionRepository fakeRepo = new(); // repositori in-memory per testing
+        FakeCurrencyConverter fakeApi = new();     // fake API que retorna quotes
 
         // Act
         Action action = () => { new CurrencyRateService(fakeRepo, fakeApi, invalidSource); };
 
-        //Assert
+        // Assert
         Assert.Throws<ArgumentException>(() => action());
-
-
     }
+
     [Fact]
     public async Task GetExchangeRateAsync_AddsConversion_WhenMissing()
     {
@@ -35,12 +32,11 @@ public class CurrencyConversionServiceTests
         FakeCurrencyConverter fakeApi = new FakeCurrencyConverter();     // fake API que retorna quotes
         Currencies source = Currencies.EUR;
 
-        CurrencyRateService service = new CurrencyRateService(fakeRepo, fakeApi, source);
+        CurrencyRateService service = new(fakeRepo, fakeApi, source);
 
         DateTime date = new DateTime(2023, 12, 1); // This date does not exist
         Currencies targetCurrency = Currencies.USD;
         double expectedTargetRate = 1.1;
-
 
         // Act
         Dictionary<Currencies, double> rate = await service.GetQuotes(date);
@@ -55,8 +51,8 @@ public class CurrencyConversionServiceTests
     public async Task GetExchangeRateAsync_WhenIsNotMissing()
     {
         // Arrange
-        FakeConversionRepository fakeRepo = new FakeConversionRepository(); // repositori in-memory per testing
-        FakeCurrencyConverter fakeApi = new FakeCurrencyConverter();     // fake API que retorna quotes
+        FakeConversionRepository fakeRepo = new(); // repositori in-memory per testing
+        FakeCurrencyConverter fakeApi = new();     // fake API que retorna quotes
         Currencies source = Currencies.EUR;
 
         CurrencyRateService service = new CurrencyRateService(fakeRepo, fakeApi, source);
