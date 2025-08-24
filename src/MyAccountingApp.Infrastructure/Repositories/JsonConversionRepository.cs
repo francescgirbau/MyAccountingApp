@@ -20,16 +20,18 @@ public class JsonConversionRepository : IConversionRepository
     public JsonConversionRepository(string filePath)
     {
         this._filePath = filePath;
+        this._conversions = new List<Conversion>();
 
         if (File.Exists(this._filePath))
         {
             string json = File.ReadAllText(this._filePath);
             JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true, Converters = { new JsonStringEnumConverter() } };
-            this._conversions = JsonSerializer.Deserialize<List<Conversion>>(json, options) ?? new List<Conversion>();
-        }
-        else
-        {
-            this._conversions = [];
+            List<Conversion>? conversions = JsonSerializer.Deserialize<List<Conversion>>(json, options);
+
+            if (conversions != null)
+            {
+                this._conversions = conversions;
+            }
         }
     }
 
@@ -90,6 +92,7 @@ public class JsonConversionRepository : IConversionRepository
         };
 
         string json = JsonSerializer.Serialize(this._conversions, options);
+
         File.WriteAllText(this._filePath, json);
     }
 }

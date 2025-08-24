@@ -32,13 +32,14 @@ public class CurrencyRateService : ICurrencyRateService
 
     /// <summary>
     /// Validates the base currency. Currently only EUR is supported.
+    /// ToDo, remove limitation to support non EUR as base currency.
     /// </summary>
     /// <exception cref="ArgumentException">Thrown if the base currency is not EUR.</exception>
     private void Validate()
     {
         string parentType = nameof(CurrencyRateService);
 
-        if (this._source != Currencies.EUR) // ToDo, remove limitation to support non EUR as base currency
+        if (this._source != Currencies.EUR)
         {
             string message = $"The {nameof(this._source)} must be {Currencies.EUR}, you provided {this._source}";
             throw new ArgumentException(message, parentType);
