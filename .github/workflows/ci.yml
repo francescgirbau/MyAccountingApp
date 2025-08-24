@@ -28,13 +28,13 @@ jobs:
     - name: Run StyleCop (linter)
       run: dotnet build --no-restore --configuration Release -warnaserror
 
-    - name: Run tests with coverage threshold
+    - name: Run tests with coverage
       run: dotnet test --configuration Debug --verbosity normal \
-            /p:CollectCoverage=true \
-            /p:CoverletOutputFormat=lcov \
-            /p:Threshold=80 \
-            /p:ThresholdType=line
-
+        /p:CollectCoverage=true \
+        /p:CoverletOutputFormat=lcov \
+        /p:Threshold=80 \
+        /p:ThresholdType=line
+    
     - name: Generate coverage report
       uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
       with:
