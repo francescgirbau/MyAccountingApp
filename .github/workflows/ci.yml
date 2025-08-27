@@ -2,7 +2,7 @@ name: .NET CI
 
 on:
   push:
-    branches: ["*"] # Cada commit a qualsevol branca
+    branches: ["*"] # Qualsevol branca
   pull_request:
     branches: [main] # PR cap a main
 
@@ -19,52 +19,37 @@ jobs:
       with:
         dotnet-version: 9.0.304
 
-    - name: Restore dependencies
-      run: dotnet restore
-
-    - name: Build
-      run: dotnet build --no-restore --configuration Release
+    - name: Restore & Build
+      run: dotnet build --configuration Release
 
     - name: Run StyleCop (linter)
-      run: dotnet build --no-restore --configuration Release -warnaserror
+      run: dotnet build --configuration Release -warnaserror
 
-    - name: Run tests with coverage (Release, 80% min)
+    - name: Run tests with coverage (min 80%)
       run: |
-        dotnet test --no-restore --configuration Release --collect:"XPlat Code Coverage"
-        # Find the coverage file and print its path
+        dotnet test --configuration Release --collect:"XPlat Code Coverage"
         COVERAGE=$(find . -type f -name 'coverage.cobertura.xml' | head -n 1)
         echo "Coverage file found at: $COVERAGE"
-        # Optionally, fail if not found
-        if [ ! -f "$COVERAGE" ]; then
-          echo "Coverage file not found!"
-          exit 1
-        fi
 
-    - name: Find coverage file
-      run: |
-        COVERAGE=$(find . -type f -name 'coverage.cobertura.xml' | head -n 1)
-        echo "Coverage file found at: $COVERAGE"
-        echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
-      
-    - name: Generate coverage report
-      run: |
-        # Trobar fitxer de cobertura
-        COVERAGE=$(find . -type f -name 'coverage.cobertura.xml' | head -n 1)
-        echo "Coverage file found at: $COVERAGE"
-    
-        # Instal·lar reportgenerator
         dotnet tool install dotnet-reportgenerator-globaltool \
           --tool-path reportgeneratortool \
           --version 5.2.4 \
           --ignore-failed-sources
-    
-        # Generar informe
+
         ./reportgeneratortool/reportgenerator \
           -reports:"$COVERAGE" \
           -targetdir:coveragereport \
           -reporttypes:Html
 
-    - name: Upload coverage report as artifact
+        # Comprovar threshold 80%
+        PERCENT=$(grep -oP 'line-rate="\K[0-9.]+' "$COVERAGE" | awk '{print $1*100}')
+        echo "Coverage: $PERCENT%"
+        if (( $(echo "$PERCENT < 80" | bc -l) )); then
+          echo "❌ Coverage below 80%"
+          exit 1
+        fi
+
+    - name: Upload coverage report
       uses: actions/upload-artifact@v4
       with:
         name: coverage-report
