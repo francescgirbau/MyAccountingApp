@@ -41,11 +41,11 @@ jobs:
           -targetdir:coveragereport \
           -reporttypes:Html
 
-        # Comprovar threshold 80%
-        PERCENT=$(grep -oP 'line-rate="\K[0-9.]+' "$COVERAGE" | awk '{print $1*100}')
-        echo "Coverage: $PERCENT%"
+        PERCENT=$(grep -oP '<coverage .*line-rate="\K[0-9.]+' "$COVERAGE" | head -n 1 | awk '{print $1*100}')
+        echo "Line coverage: $PERCENT%"
+
         if (( $(echo "$PERCENT < 80" | bc -l) )); then
-          echo "❌ Coverage below 80%"
+          echo "Coverage below 80%"
           exit 1
         fi
 
