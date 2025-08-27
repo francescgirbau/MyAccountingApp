@@ -11,6 +11,7 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 
 #### StyleCop — Disabled rules ####
+dotnet_diagnostic.SA0001.severity = none  # Braces must not be on the same line as code
 dotnet_diagnostic.IDE0007.severity = none
 dotnet_diagnostic.SA1000.severity = none   # Keywords must be spaced correctly
 dotnet_diagnostic.SA1600.severity = none   # Require XML documentation for public members
@@ -25,7 +26,6 @@ dotnet_diagnostic.SA1310.severity = none   # Field names must not contain Hungar
 dotnet_diagnostic.SA1602.severity = none   # Enumeration items must be documented
 
 #### Example of keeping some useful rules active ####
-dotnet_diagnostic.SA0001.severity = error  # Braces must not be on the same line as code
 dotnet_diagnostic.SA1500.severity = error  # Braces must not be on the same line as code
 dotnet_diagnostic.SA1101.severity = error  # Prefix instance members with 'this.'
 dotnet_diagnostic.IDE0008.severity = error # Force explicit types instead of 'var'
