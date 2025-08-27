@@ -30,21 +30,25 @@ jobs:
 
     - name: Run tests with coverage (80% min)
       run: |
+        mkdir -p TestResults
         dotnet test --configuration Debug --verbosity normal \
           /p:CollectCoverage=true \
-          /p:CoverletOutput=./TestResults/coverage.cobertura.xml \
+          /p:CoverletOutput="${{ github.workspace }}/TestResults/coverage.cobertura.xml" \
           /p:CoverletOutputFormat=cobertura \
           /p:Threshold=80 \
           /p:ThresholdType=line
-    
 
     - name: Generate coverage report
-      uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
-      with:
-        reports: ./TestResults/**/coverage.cobertura.xml
-        targetdir: ./coveragereport
-        reporttypes: Html
-
+      run: |
+        dotnet tool install dotnet-reportgenerator-globaltool \
+          --tool-path reportgeneratortool \
+          --version 5.2.4 \
+          --ignore-failed-sources
+        ./reportgeneratortool/reportgenerator \
+          -reports:"${{ github.workspace }}/TestResults/coverage.cobertura.xml" \
+          -targetdir:"${{ github.workspace }}/coveragereport" \
+          -reporttypes:Html
+          
     - name: Upload coverage report as artifact
       uses: actions/upload-artifact@v4
       with:
