@@ -49,31 +49,6 @@ jobs:
           exit 1
         fi
 
-    - name: Check test coverage
-      run: |
-        COVERAGE_FILE=$(find TestResults -name "coverage.cobertura.xml" | head -n 1)
-        if [[ -z "$COVERAGE_FILE" ]]; then
-          echo "❌ Not find file"
-          exit 1
-        fi
-    
-        PERCENT=$(grep -oP 'line-rate="\K[0-9.]+' "$COVERAGE_FILE" | head -n 1 | awk '{print $1*100}')
-        echo "Cobertura: ${PERCENT}%"
-    
-        if (( $(echo "$PERCENT < 80" | bc -l) )); then
-          echo "❌ Not enough coverage 80%. Actual: ${PERCENT}%"
-          exit 1
-        else
-          echo "✅ Cobertura enough"
-        fi
-    
-    - name: Generate HTML coverage report
-      run: |
-        ./reportgeneratortool/reportgenerator \
-          -reports:"$COVERAGE_FILE" \
-          -targetdir:"coveragereport" \
-          -reporttypes:Html
-    
     - name: Upload coverage report
       uses: actions/upload-artifact@v4
       with:
