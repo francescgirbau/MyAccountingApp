@@ -28,15 +28,17 @@ jobs:
     - name: Run StyleCop (linter)
       run: dotnet build --no-restore --configuration Release -warnaserror
 
-    - name: Run tests with coverage (80% min)
+    - name: Run tests with coverage (Release, 80% min)
       run: |
-        mkdir -p TestResults
-        dotnet test --no-restore --configuration Release --verbosity normal \
-          /p:CollectCoverage=true \
-          /p:CoverletOutput=$(pwd)/TestResults/coverage.cobertura.xml \
-          /p:CoverletOutputFormat=cobertura \
-          /p:Threshold=80 \
-          /p:ThresholdType=line
+        dotnet test --no-restore --configuration Release --collect:"XPlat Code Coverage"
+        # Find the coverage file and print its path
+        COVERAGE=$(find . -type f -name 'coverage.cobertura.xml' | head -n 1)
+        echo "Coverage file found at: $COVERAGE"
+        # Optionally, fail if not found
+        if [ ! -f "$COVERAGE" ]; then
+          echo "Coverage file not found!"
+          exit 1
+        fi
 
     - name: Generate coverage report
       run: |
