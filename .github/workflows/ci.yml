@@ -31,7 +31,7 @@ jobs:
     - name: Run tests with coverage (80% min)
       run: |
         mkdir -p TestResults
-        dotnet test --no-restore --configuration Debug --verbosity normal \
+        dotnet test --no-restore --configuration Release --verbosity normal \
           /p:CollectCoverage=true \
           /p:CoverletOutput=TestResults/coverage.cobertura.xml \
           /p:CoverletOutputFormat=cobertura \
