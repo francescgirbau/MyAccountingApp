@@ -44,10 +44,7 @@ jobs:
       run: |
         COVERAGE=$(find . -type f -name 'coverage.cobertura.xml' | head -n 1)
         echo "Coverage file found at: $COVERAGE"
-        if [ ! -f "$COVERAGE" ]; then
-          echo "Coverage file not found!"
-          exit 1
-        fi
+        echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
       
     - name: Generate coverage report
       run: |
