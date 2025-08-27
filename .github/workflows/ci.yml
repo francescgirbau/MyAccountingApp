@@ -25,6 +25,30 @@ jobs:
     - name: Run StyleCop (linter)
       run: dotnet build --configuration Release -warnaserror
 
+    - name: Run tests with coverage (min 80%)
+      run: |
+        dotnet test --configuration Release --collect:"XPlat Code Coverage"
+        COVERAGE=$(find . -type f -name 'coverage.cobertura.xml' | head -n 1)
+        echo "Coverage file found at: $COVERAGE"
+
+        dotnet tool install dotnet-reportgenerator-globaltool \
+          --tool-path reportgeneratortool \
+          --version 5.2.4 \
+          --ignore-failed-sources
+
+        ./reportgeneratortool/reportgenerator \
+          -reports:"$COVERAGE" \
+          -targetdir:coveragereport \
+          -reporttypes:Html
+
+        # Comprovar threshold 80%
+        PERCENT=$(grep -oP 'line-rate="\K[0-9.]+' "$COVERAGE" | awk '{print $1*100}')
+        echo "Coverage: $PERCENT%"
+        if (( $(echo "$PERCENT < 80" | bc -l) )); then
+          echo "❌ Coverage below 80%"
+          exit 1
+        fi
+
     - name: Check test coverage
       run: |
         COVERAGE_FILE=$(find TestResults -name "coverage.cobertura.xml" | head -n 1)
@@ -55,4 +79,3 @@ jobs:
       with:
         name: coverage-report
         path: coveragereport
-    
