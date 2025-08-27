@@ -33,7 +33,7 @@ jobs:
         mkdir -p TestResults
         dotnet test --no-restore --configuration Release --verbosity normal \
           /p:CollectCoverage=true \
-          /p:CoverletOutput=TestResults/coverage.cobertura.xml \
+          /p:CoverletOutput=$(pwd)/TestResults/coverage.cobertura.xml \
           /p:CoverletOutputFormat=cobertura \
           /p:Threshold=80 \
           /p:ThresholdType=line
