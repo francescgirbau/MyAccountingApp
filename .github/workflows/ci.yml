@@ -48,7 +48,21 @@ jobs:
       
     - name: Generate coverage report
       run: |
-        reportgenerator -reports:"$COVERAGE" -targetdir:coveragereport -reporttypes:Html
+        # Trobar fitxer de cobertura
+        COVERAGE=$(find . -type f -name 'coverage.cobertura.xml' | head -n 1)
+        echo "Coverage file found at: $COVERAGE"
+    
+        # Instal·lar reportgenerator
+        dotnet tool install dotnet-reportgenerator-globaltool \
+          --tool-path reportgeneratortool \
+          --version 5.2.4 \
+          --ignore-failed-sources
+    
+        # Generar informe
+        ./reportgeneratortool/reportgenerator \
+          -reports:"$COVERAGE" \
+          -targetdir:coveragereport \
+          -reporttypes:Html
 
     - name: Upload coverage report as artifact
       uses: actions/upload-artifact@v4
