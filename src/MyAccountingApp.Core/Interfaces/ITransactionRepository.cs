@@ -8,27 +8,27 @@ namespace MyAccountingApp.Core.Interfaces;
 public interface ITransactionRepository
 {
     /// <summary>
-    /// Adds a new transaction to the repository.
+    /// Initializes the repository with a collection of transactions.
+    /// </summary>
+    /// <param name="transactions">The transaction to add.</param>
+    public void Initialize(IEnumerable<Transaction> transactions);
+
+    /// <summary>
+    /// Adds or update a transaction to the repository.
     /// </summary>
     /// <param name="transaction">The transaction to add.</param>
-    void Add(Transaction transaction);
+    public void AddOrUpdate(Transaction transaction);
 
     /// <summary>
     /// Gets all transactions stored in the repository.
     /// </summary>
     /// <returns>An enumerable of all transactions.</returns>
-    IEnumerable<Transaction> GetAll();
+    public IEnumerable<Transaction> GetAll();
 
     /// <summary>
-    /// Gets a transaction by its unique identifier.
+    /// Deletes a transaction from the repository.
     /// </summary>
-    /// <param name="id">The unique identifier of the transaction.</param>
-    /// <returns>The transaction if found; otherwise, null.</returns>
-    Transaction? GetTransaction(Guid id);
-
-    /// <summary>
-    /// Deletes a transaction from the repository by its unique identifier.
-    /// </summary>
-    /// <param name="id">The unique identifier of the transaction to delete.</param>
-    void Delete(Guid id);
+    /// <param name="transaction">The transaction to delete.</param>
+    /// <returns>True if the transaction was found and removed; otherwise, false.</returns>
+    public bool Delete(Transaction transaction);
 }

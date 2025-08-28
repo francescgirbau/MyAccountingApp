@@ -16,26 +16,10 @@ public class InMemoryConversionRepository : IConversionRepository
     /// </summary>
     /// <param name="conversion">The conversion to add.</param>
     /// <exception cref="InvalidOperationException">Thrown if a conversion for the date already exists.</exception>
-    public void Add(Conversion conversion)
+    public void AddOrUpdate(Conversion conversion)
     {
-        if (!this._conversions.Any(c => c.MatchesDate(conversion.Date)))
-        {
-            this._conversions.Add(conversion);
-        }
-        else
-        {
-            throw new InvalidOperationException($"A conversion already exists for the date {conversion.Date:yyyy-MM-dd}.");
-        }
-    }
-
-    /// <summary>
-    /// Determines whether a conversion exists for the specified date.
-    /// </summary>
-    /// <param name="date">The date to check.</param>
-    /// <returns>True if a conversion exists; otherwise, false.</returns>
-    public bool ExistsForDate(DateTime date)
-    {
-        return this._conversions.Any(c => c.MatchesDate(date));
+        this._conversions.RemoveAll(c => c.Date == conversion.Date);
+        this._conversions.Add(conversion);
     }
 
     /// <summary>
@@ -55,5 +39,15 @@ public class InMemoryConversionRepository : IConversionRepository
     public Conversion? GetByDate(DateTime date)
     {
         return this._conversions.FirstOrDefault(c => c.MatchesDate(date));
+    }
+
+    /// <summary>
+    /// Initializes the repository with a collection of conversions, replacing any existing data.
+    /// </summary>
+    /// <param name="conversions">The list of conversions.</param>
+    public void Initialize(IEnumerable<Conversion> conversions)
+    {
+        this._conversions.Clear();
+        this._conversions.AddRange(conversions);
     }
 }

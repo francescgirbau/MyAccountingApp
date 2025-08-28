@@ -20,30 +20,28 @@ public class CompositeTransactionRepository : ITransactionRepository
         this._jsonRepo = new JsonTransactionRepository(jsonPath);
         this._memoryRepo = new InMemoryTransactionRepository();
 
-        foreach (Transaction transaction in this._jsonRepo.GetAll())
-        {
-            this._memoryRepo.Add(transaction);
-        }
+        this._memoryRepo.Initialize(this._jsonRepo.GetAll());
     }
 
     /// <summary>
     /// Adds a transaction to both in-memory and JSON repositories.
     /// </summary>
     /// <param name="transaction">The transaction to add.</param>
-    public void Add(Transaction transaction)
+    public void AddOrUpdate(Transaction transaction)
     {
-        this._memoryRepo.Add(transaction);
-        this._jsonRepo.Add(transaction);
+        this._memoryRepo.AddOrUpdate(transaction);
+        this._jsonRepo.AddOrUpdate(transaction);
     }
 
     /// <summary>
     /// Deletes a transaction from both in-memory and JSON repositories.
     /// </summary>
-    /// <param name="id">The ID of the transaction to delete.</param>
-    public void Delete(Guid id)
+    /// <param name="transaction">The ID of the transaction to delete.</param>
+    /// <returns>True if the transaction was found and removed; otherwise, false.</returns> 
+    public bool Delete(Transaction transaction)
     {
-        this._memoryRepo.Delete(id);
-        this._jsonRepo.Delete(id);
+        this._jsonRepo.Delete(transaction);
+        return this._memoryRepo.Delete(transaction);
     }
 
     /// <summary>
@@ -56,12 +54,15 @@ public class CompositeTransactionRepository : ITransactionRepository
     }
 
     /// <summary>
-    /// Gets a transaction by ID from the in-memory repository.
+    /// Initializes the repositories with the provided collection of transactions.
     /// </summary>
-    /// <param name="id">The ID of the transaction.</param>
-    /// <returns>The transaction if found; otherwise, null.</returns>
-    public Transaction? GetTransaction(Guid id)
+    /// <remarks>This method initializes both the in-memory and JSON-based repositories with the same set of
+    /// transactions. Ensure that the provided collection contains all necessary transactions before calling this
+    /// method.</remarks>
+    /// <param name="transactions">A collection of <see cref="Transaction"/> objects to be used for initialization. Cannot be null.</param>
+    public void Initialize(IEnumerable<Transaction> transactions)
     {
-        return this._memoryRepo.GetTransaction(id);
+        this._memoryRepo.Initialize(transactions);
+        this._jsonRepo.Initialize(transactions);
     }
 }

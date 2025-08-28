@@ -2,7 +2,7 @@
 using MyAccountingApp.Core.Enums;
 using MyAccountingApp.Core.Interfaces;
 
-namespace MyAccountingApp.Tests.Fakes;
+namespace MyAccountingApp.TestUtilities.Fakes;
 
 public class FakeConversionRepository : IConversionRepository
 {
@@ -22,19 +22,14 @@ public class FakeConversionRepository : IConversionRepository
     public FakeConversionRepository()
     {
         Conversion conversion = new(this._fakeDate, this._fakeSource, this._fakeQuotes);
-        this.Add(conversion);
+        this.AddOrUpdate(conversion);
         this.CalledAdd = false; // We want to add only if it is added externally
     }
 
-    public void Add(Conversion conversion)
+    public void AddOrUpdate(Conversion conversion)
     {
         this.CalledAdd = true;
         this._conversions.Add(conversion);
-    }
-
-    public bool ExistsForDate(DateTime date)
-    {
-        return this._conversions.Any(c => c.Date.Date == date.Date);
     }
 
     public IEnumerable<Conversion> GetAll()
@@ -45,5 +40,11 @@ public class FakeConversionRepository : IConversionRepository
     public Conversion? GetByDate(DateTime date)
     {
         return this._conversions.FirstOrDefault(c => c.Date.Date == date.Date);
+    }
+
+    public void Initialize(IEnumerable<Conversion> conversions)
+    {
+        this._conversions.Clear();
+        this._conversions.AddRange(conversions);
     }
 }

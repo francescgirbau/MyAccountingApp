@@ -11,7 +11,6 @@ namespace MyAccountingApp.Infrastructure.Repositories;
 public class JsonConversionRepository : IConversionRepository
 {
     private readonly string _filePath;
-    private readonly List<Conversion> _conversions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JsonConversionRepository"/> class.
@@ -20,19 +19,6 @@ public class JsonConversionRepository : IConversionRepository
     public JsonConversionRepository(string filePath)
     {
         this._filePath = filePath;
-        this._conversions = new List<Conversion>();
-
-        if (File.Exists(this._filePath))
-        {
-            string json = File.ReadAllText(this._filePath);
-            JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true, Converters = { new JsonStringEnumConverter() } };
-            List<Conversion>? conversions = JsonSerializer.Deserialize<List<Conversion>>(json, options);
-
-            if (conversions != null)
-            {
-                this._conversions = conversions;
-            }
-        }
     }
 
     /// <summary>
@@ -40,25 +26,13 @@ public class JsonConversionRepository : IConversionRepository
     /// </summary>
     /// <param name="conversion">The conversion to add.</param>
     /// <exception cref="InvalidOperationException">Thrown if a conversion for the date already exists.</exception>
-    public void Add(Conversion conversion)
+    public void AddOrUpdate(Conversion conversion)
     {
-        if (this._conversions.Any(c => c.MatchesDate(conversion.Date)))
-        {
-            throw new InvalidOperationException($"Ja existeix una conversió per la data {conversion.Date:yyyy-MM-dd}");
-        }
+        List<Conversion> conversions = this.GetAll().ToList();
 
-        this._conversions.Add(conversion);
-        this.Save();
-    }
-
-    /// <summary>
-    /// Checks if a conversion exists for the specified date.
-    /// </summary>
-    /// <param name="date">The date to check.</param>
-    /// <returns>True if a conversion exists; otherwise, false.</returns>
-    public bool ExistsForDate(DateTime date)
-    {
-        return this._conversions.Any(c => c.MatchesDate(date));
+        conversions.RemoveAll(c => c.Date == conversion.Date);
+        conversions.Add(conversion);
+        this.Initialize(conversions);
     }
 
     /// <summary>
@@ -67,7 +41,19 @@ public class JsonConversionRepository : IConversionRepository
     /// <returns>An enumerable of all conversions.</returns>
     public IEnumerable<Conversion> GetAll()
     {
-        return this._conversions;
+        if (File.Exists(this._filePath) && new FileInfo(this._filePath).Length > 0)
+        {
+            string json = File.ReadAllText(this._filePath);
+            JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true, Converters = { new JsonStringEnumConverter() } };
+            List<Conversion>? conversions = JsonSerializer.Deserialize<List<Conversion>>(json, options);
+
+            if (conversions != null)
+            {
+                return conversions;
+            }
+        }
+
+        return new List<Conversion>();
     }
 
     /// <summary>
@@ -77,13 +63,12 @@ public class JsonConversionRepository : IConversionRepository
     /// <returns>The conversion if found; otherwise, null.</returns>
     public Conversion? GetByDate(DateTime date)
     {
-        return this._conversions.FirstOrDefault(c => c.MatchesDate(date));
+        List<Conversion> conversions = this.GetAll().ToList();
+
+        return conversions.FirstOrDefault(c => c.MatchesDate(date));
     }
 
-    /// <summary>
-    /// Saves the conversions to the JSON file.
-    /// </summary>
-    private void Save()
+    public void Initialize(IEnumerable<Conversion> conversions)
     {
         JsonSerializerOptions options = new()
         {
@@ -91,7 +76,7 @@ public class JsonConversionRepository : IConversionRepository
             Converters = { new JsonStringEnumConverter() },
         };
 
-        string json = JsonSerializer.Serialize(this._conversions, options);
+        string json = JsonSerializer.Serialize(conversions, options);
 
         File.WriteAllText(this._filePath, json);
     }

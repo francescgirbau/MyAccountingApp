@@ -1,6 +1,7 @@
 ﻿using MyAccountingApp.Core.Enums;
 using MyAccountingApp.Core.Interfaces;
-namespace MyAccountingApp.Tests.Fakes;
+
+namespace MyAccountingApp.TestUtilities.Fakes;
 
 public class FakeCurrencyConverter : ICurrencyConverter
 {

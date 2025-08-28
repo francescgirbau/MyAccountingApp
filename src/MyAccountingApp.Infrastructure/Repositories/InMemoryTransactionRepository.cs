@@ -13,9 +13,15 @@ public class InMemoryTransactionRepository : ITransactionRepository
 
     /// <summary>
     /// Adds a new transaction to the repository.
+    /// In case of a duplicate ID, the existing transaction is replaced.
     /// </summary>
     /// <param name="transaction">The transaction to add.</param>
-    public void Add(Transaction transaction) => this._transactions.Add(transaction);
+    public void AddOrUpdate(Transaction transaction)
+    {
+        _ = this.Delete(transaction);
+
+        this._transactions.Add(transaction);
+    }
 
     /// <summary>
     /// Gets all transactions stored in the repository.
@@ -24,26 +30,22 @@ public class InMemoryTransactionRepository : ITransactionRepository
     public IEnumerable<Transaction> GetAll() => this._transactions;
 
     /// <summary>
-    /// Gets a transaction by its unique identifier.
+    /// Deletes a transaction from the repository by its unique identifier.
     /// </summary>
-    /// <param name="id">The unique identifier of the transaction.</param>
-    /// <returns>The transaction if found; otherwise, null.</returns>
-    public Transaction? GetTransaction(Guid id)
+    /// <param name="transaction">The transaction to delete.</param>
+    /// <returns>True if the transaction was found and removed; otherwise, false.</returns>
+    public bool Delete(Transaction transaction)
     {
-        return this._transactions.FirstOrDefault(t => t.Id == id);
+        return this._transactions.RemoveAll(tx => tx.Id == transaction.Id) > 0;
     }
 
     /// <summary>
-    /// Deletes a transaction from the repository by its unique identifier.
+    /// The Initialize method clears any existing transactions and populates the repository with the provided collection.
     /// </summary>
-    /// <param name="id">The unique identifier of the transaction to delete.</param>
-    public void Delete(Guid id)
+    /// <param name="transactions">The transactions to initialize the repository with.</param>
+    public void Initialize(IEnumerable<Transaction> transactions)
     {
-        Transaction? transaction = this.GetTransaction(id);
-
-        if (transaction != null)
-        {
-            this._transactions.Remove(transaction);
-        }
+        this._transactions.Clear();
+        this._transactions.AddRange(transactions);
     }
 }

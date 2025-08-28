@@ -16,5 +16,5 @@ public interface ICurrencyConverter
     /// A task that represents the asynchronous operation. The task result contains a dictionary
     /// mapping currency pair codes (e.g., "EURUSD") to their conversion rates.
     /// </returns>
-    Task<Dictionary<string, double>> FetchAllRatesAsync(Currencies source, DateTime date);
+    public Task<Dictionary<string, double>> FetchAllRatesAsync(Currencies source, DateTime date);
 }

@@ -8,11 +8,6 @@ namespace MyAccountingApp.Core.Entities;
 public class Conversion
 {
     /// <summary>
-    /// Gets the unique identifier for the conversion.
-    /// </summary>
-    public Guid Id { get; }
-
-    /// <summary>
     /// Gets the date of the conversion.
     /// </summary>
     public DateTime Date { get; }
@@ -36,7 +31,6 @@ public class Conversion
     /// <exception cref="ArgumentException">Thrown if the source currency is not EUR.</exception>
     public Conversion(DateTime date, Currencies source, Dictionary<Currencies, double>? quotes = null)
     {
-        this.Id = Guid.NewGuid();
         this.Date = date.Date;
         this.Source = source;
         this.Quotes = quotes ?? new Dictionary<Currencies, double>();

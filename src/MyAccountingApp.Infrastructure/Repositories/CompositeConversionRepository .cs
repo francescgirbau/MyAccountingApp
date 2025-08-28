@@ -21,31 +21,19 @@ public class CompositeConversionRepository : IConversionRepository
         this._jsonRepo = new JsonConversionRepository(jsonPath);
         this._memoryRepo = new InMemoryConversionRepository();
 
-        // Pre-load existing conversions from JSON into memory
-        foreach (Conversion conversion in this._jsonRepo.GetAll())
-        {
-            this._memoryRepo.Add(conversion);
-        }
+        List<Conversion> conversions = this._jsonRepo.GetAll().ToList();
+
+        this._memoryRepo.Initialize(conversions);
     }
 
     /// <summary>
     /// Adds a conversion to both in-memory and JSON repositories.
     /// </summary>
     /// <param name="conversion">The conversion to add.</param>
-    public void Add(Conversion conversion)
+    public void AddOrUpdate(Conversion conversion)
     {
-        this._memoryRepo.Add(conversion);
-        this._jsonRepo.Add(conversion); // Persistence
-    }
-
-    /// <summary>
-    /// Determines whether a conversion exists for the specified date.
-    /// </summary>
-    /// <param name="date">The date to check.</param>
-    /// <returns>True if a conversion exists; otherwise, false.</returns>
-    public bool ExistsForDate(DateTime date)
-    {
-        return this._memoryRepo.ExistsForDate(date);
+        this._memoryRepo.AddOrUpdate(conversion);
+        this._jsonRepo.AddOrUpdate(conversion);
     }
 
     /// <summary>
@@ -65,5 +53,15 @@ public class CompositeConversionRepository : IConversionRepository
     public Conversion? GetByDate(DateTime date)
     {
         return this._memoryRepo.GetByDate(date);
+    }
+
+    /// <summary>
+    /// Initializes the repositories with the provided collection of conversions.
+    /// <param name="conversions">The list of conversions.</param>
+    /// </summary>
+    public void Initialize(IEnumerable<Conversion> conversions)
+    {
+        this._memoryRepo.Initialize(conversions);
+        this._jsonRepo.Initialize(conversions);
     }
 }

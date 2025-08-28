@@ -9,20 +9,20 @@ namespace MyAccountingApp.Application.Services;
 /// Provides currency rate retrieval and caching functionality.
 /// Uses a repository for local storage and an external API for fetching rates.
 /// </summary>
-public class CurrencyRateService : ICurrencyRateService
+public class CurencyRateService : ICurrencyRateService
 {
     private readonly IConversionRepository _repository;
     private readonly ICurrencyConverter _api;
     private readonly Currencies _source;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="CurrencyRateService"/> class.
+    /// Initializes a new instance of the <see cref="CurencyRateService"/> class.
     /// </summary>
     /// <param name="repository">Repository for storing currency conversions.</param>
     /// <param name="api">External API for fetching currency rates.</param>
     /// <param name="source">Base currency for conversion.</param>
     /// <exception cref="ArgumentException">Thrown if the source currency is not EUR.</exception>
-    public CurrencyRateService(IConversionRepository repository, ICurrencyConverter api, Currencies source)
+    public CurencyRateService(IConversionRepository repository, ICurrencyConverter api, Currencies source)
     {
         this._repository = repository;
         this._api = api;
@@ -37,7 +37,7 @@ public class CurrencyRateService : ICurrencyRateService
     /// <exception cref="ArgumentException">Thrown if the base currency is not EUR.</exception>
     private void Validate()
     {
-        string parentType = nameof(CurrencyRateService);
+        string parentType = nameof(CurencyRateService);
 
         if (this._source != Currencies.EUR)
         {
@@ -77,7 +77,7 @@ public class CurrencyRateService : ICurrencyRateService
             }
         }
 
-        this._repository.Add(conversion);
+        this._repository.AddOrUpdate(conversion);
 
         return conversion.Quotes;
     }

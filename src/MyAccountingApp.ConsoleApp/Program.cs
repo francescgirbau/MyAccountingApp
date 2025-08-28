@@ -6,11 +6,11 @@ using MyAccountingApp.Infrastructure.Services;
 CompositeConversionRepository repo = new CompositeConversionRepository("conversions.json");
 CurrencyConverter api = new CurrencyConverter();
 Currencies source = Currencies.EUR;
-CurrencyRateService service = new CurrencyRateService(repo, api, source);
+CurencyRateService service = new CurencyRateService(repo, api, source);
 
 DateTime targetDate = new DateTime(2024, 12, 1);
 
-if (!repo.ExistsForDate(targetDate))
+if (repo.GetByDate(targetDate) == null)
 {
     Console.WriteLine("No hi havia conversió per aquesta data. Es farà la crida a l'API...");
 
