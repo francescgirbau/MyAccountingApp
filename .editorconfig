@@ -1,0 +1,33 @@
+﻿# .editorconfig — Configuració StyleCop bàsica
+root = true
+
+[*.cs]
+
+#### Codestyle general ####
+charset = utf-8-bom
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+#### StyleCop — Disabled rules ####
+dotnet_diagnostic.SA0001.severity = none  # Braces must not be on the same line as code
+dotnet_diagnostic.IDE0007.severity = none
+dotnet_diagnostic.SA1000.severity = none   # Keywords must be spaced correctly
+dotnet_diagnostic.SA1600.severity = none   # Require XML documentation for public members
+dotnet_diagnostic.SA1633.severity = none   # Require file header
+dotnet_diagnostic.SA1200.severity = none   # Using directives must be placed correctly
+dotnet_diagnostic.SA1201.severity = none   # Elements must appear in the correct order (fields, methods, etc.)
+dotnet_diagnostic.SA1202.severity = none   # Elements must be ordered by access level (public, internal, protected, private)
+dotnet_diagnostic.SA1516.severity = none   # Elements must be separated by a blank line
+dotnet_diagnostic.SA1129.severity = none   # Use object initializers instead of assignments
+dotnet_diagnostic.SA1309.severity = none   # Field names must not begin with an underscore
+dotnet_diagnostic.SA1310.severity = none   # Field names must not contain Hungarian notation
+dotnet_diagnostic.SA1602.severity = none   # Enumeration items must be documented
+
+#### Example of keeping some useful rules active ####
+dotnet_diagnostic.SA1500.severity = error  # Braces must not be on the same line as code
+dotnet_diagnostic.SA1101.severity = error  # Prefix instance members with 'this.'
+dotnet_diagnostic.IDE0008.severity = error # Force explicit types instead of 'var'
+dotnet_diagnostic.SA1507.severity = error  #  Code should not contain multiple blank lines in a row
+dotnet_diagnostic.SA1518.severity = error  # Use line endings correctly at end of file

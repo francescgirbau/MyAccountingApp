@@ -1,6 +1,7 @@
 ﻿using MyAccountingApp.Core.Enums;
 using MyAccountingApp.Core.Interfaces;
-namespace MyAccountingApp.Tests.Fakes;
+
+namespace MyAccountingApp.TestUtilities.Fakes;
 
 public class FakeCurrencyConverter : ICurrencyConverter
 {
@@ -10,7 +11,7 @@ public class FakeCurrencyConverter : ICurrencyConverter
         return new Dictionary<string, double>
         {
             { "EURUSD", 1.1 },
-            { "EURCAD", 1.5 }
+            { "EURCAD", 1.5 },
         };
     }
 }

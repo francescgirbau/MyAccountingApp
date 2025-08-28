@@ -2,22 +2,33 @@
 
 namespace MyAccountingApp.Core.Interfaces;
 
+/// <summary>
+/// Defines methods for storing and retrieving currency conversions.
+/// </summary>
 public interface IConversionRepository
 {
-    void Add(Conversion conversion);
+    /// <summary>
+    /// Adds a new currency conversion or updates an existing conversion to the repository.
+    /// </summary>
+    /// <param name="conversion">The conversion to add.</param>
+    public void AddOrUpdate(Conversion conversion);
 
     /// <summary>
-    /// Retorna la conversió per data, o null si no existeix
+    /// Gets the currency conversion for the specified date, or null if not found.
     /// </summary>
-    Conversion? GetByDate(DateTime date);
+    /// <param name="date">The date of the conversion.</param>
+    /// <returns>The conversion if found; otherwise, null.</returns>
+    public Conversion? GetByDate(DateTime date);
 
     /// <summary>
-    /// Comprova si ja hi ha una conversió guardada per una data concreta
+    /// Initializes the repository with a collection of conversions.
     /// </summary>
-    bool ExistsForDate(DateTime date);
+    /// <param name="conversions">The transaction to add.</param>
+    public void Initialize(IEnumerable<Conversion> conversions);
 
     /// <summary>
-    /// Retorna totes les conversions guardades (per tests o backup)
+    /// Gets all currency conversions stored in the repository.
     /// </summary>
-    IEnumerable<Conversion> GetAll();
+    /// <returns>An enumerable of all conversions.</returns>
+    public IEnumerable<Conversion> GetAll();
 }

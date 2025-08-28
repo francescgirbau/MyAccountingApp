@@ -5,47 +5,67 @@ using MyAccountingApp.Core.Interfaces;
 
 namespace MyAccountingApp.Application.Services;
 
-public class CurrencyRateService : ICurrencyRateService
+/// <summary>
+/// Provides currency rate retrieval and caching functionality.
+/// Uses a repository for local storage and an external API for fetching rates.
+/// </summary>
+public class CurencyRateService : ICurrencyRateService
 {
     private readonly IConversionRepository _repository;
     private readonly ICurrencyConverter _api;
     private readonly Currencies _source;
 
-    private static readonly Currencies[] SupportedCurrencies = Enum.GetValues<Currencies>();
-
-    public CurrencyRateService(IConversionRepository repository, ICurrencyConverter api, Currencies source)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CurencyRateService"/> class.
+    /// </summary>
+    /// <param name="repository">Repository for storing currency conversions.</param>
+    /// <param name="api">External API for fetching currency rates.</param>
+    /// <param name="source">Base currency for conversion.</param>
+    /// <exception cref="ArgumentException">Thrown if the source currency is not EUR.</exception>
+    public CurencyRateService(IConversionRepository repository, ICurrencyConverter api, Currencies source)
     {
-        _repository = repository;
-        _api = api;
-        _source = source;
-        Validate();
-
+        this._repository = repository;
+        this._api = api;
+        this._source = source;
+        this.Validate();
     }
 
+    /// <summary>
+    /// Validates the base currency. Currently only EUR is supported.
+    /// ToDo, remove limitation to support non EUR as base currency.
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown if the base currency is not EUR.</exception>
     private void Validate()
     {
-        string parentType = nameof(CurrencyRateService);
-        //ToDo, remove limitation to support non EUR as base currency
-        if (_source != Currencies.EUR)
+        string parentType = nameof(CurencyRateService);
+
+        if (this._source != Currencies.EUR)
         {
-            string message = $"The {nameof(_source)} must be {Currencies.EUR}, you provided {_source}";
+            string message = $"The {nameof(this._source)} must be {Currencies.EUR}, you provided {this._source}";
             throw new ArgumentException(message, parentType);
         }
     }
 
+    /// <summary>
+    /// Gets currency conversion quotes for a specific date.
+    /// If not cached, fetches from the external API and stores the result.
+    /// </summary>
+    /// <param name="date">The date for which to retrieve currency quotes.</param>
+    /// <returns>
+    /// A dictionary mapping target currencies to their conversion rates.
+    /// </returns>
     public async Task<Dictionary<Currencies, double>> GetQuotes(DateTime date)
     {
-
-        Conversion? conversion = _repository.GetByDate(date);
+        Conversion? conversion = this._repository.GetByDate(date);
 
         if (conversion != null)
         {
             return conversion.Quotes;
         }
 
-        Dictionary<string, double> rates = await _api.FetchAllRatesAsync(_source, date);
+        Dictionary<string, double> rates = await this._api.FetchAllRatesAsync(this._source, date);
 
-        conversion = new Conversion(date, _source);
+        conversion = new Conversion(date, this._source);
 
         foreach (KeyValuePair<string, double> kv in rates)
         {
@@ -57,10 +77,8 @@ public class CurrencyRateService : ICurrencyRateService
             }
         }
 
-        _repository.Add(conversion);
-
+        this._repository.AddOrUpdate(conversion);
 
         return conversion.Quotes;
     }
-
 }

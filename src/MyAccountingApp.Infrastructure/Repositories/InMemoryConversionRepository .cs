@@ -3,34 +3,51 @@ using MyAccountingApp.Core.Interfaces;
 
 namespace MyAccountingApp.Infrastructure.Repositories;
 
+/// <summary>
+/// In-memory repository for storing and retrieving currency conversions.
+/// Intended for fast, non-persistent operations such as testing or caching.
+/// </summary>
 public class InMemoryConversionRepository : IConversionRepository
 {
     private readonly List<Conversion> _conversions = new();
 
-    public void Add(Conversion conversion)
+    /// <summary>
+    /// Adds a new conversion to the repository if one for the same date does not already exist.
+    /// </summary>
+    /// <param name="conversion">The conversion to add.</param>
+    /// <exception cref="InvalidOperationException">Thrown if a conversion for the date already exists.</exception>
+    public void AddOrUpdate(Conversion conversion)
     {
-        if (!_conversions.Any(c => c.MatchesDate(conversion.Date)))
-        {
-            _conversions.Add(conversion);
-        }
-        else
-        {
-            throw new InvalidOperationException($"Ja existeix una conversió per la data {conversion.Date:yyyy-MM-dd}");
-        }
+        this._conversions.RemoveAll(c => c.Date == conversion.Date);
+        this._conversions.Add(conversion);
     }
 
-    public bool ExistsForDate(DateTime date)
-    {
-        return _conversions.Any(c => c.MatchesDate(date));
-    }
-
+    /// <summary>
+    /// Gets all conversions stored in the repository.
+    /// </summary>
+    /// <returns>An enumerable of all conversions.</returns>
     public IEnumerable<Conversion> GetAll()
     {
-        return _conversions;
+        return this._conversions;
     }
 
+    /// <summary>
+    /// Gets the conversion for the specified date, or null if not found.
+    /// </summary>
+    /// <param name="date">The date of the conversion.</param>
+    /// <returns>The conversion if found; otherwise, null.</returns>
     public Conversion? GetByDate(DateTime date)
     {
-        return _conversions.FirstOrDefault(c => c.MatchesDate(date));
+        return this._conversions.FirstOrDefault(c => c.MatchesDate(date));
+    }
+
+    /// <summary>
+    /// Initializes the repository with a collection of conversions, replacing any existing data.
+    /// </summary>
+    /// <param name="conversions">The list of conversions.</param>
+    public void Initialize(IEnumerable<Conversion> conversions)
+    {
+        this._conversions.Clear();
+        this._conversions.AddRange(conversions);
     }
 }

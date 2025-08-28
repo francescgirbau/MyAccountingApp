@@ -1,0 +1,56 @@
+name: .NET CI
+
+on:
+  push:
+    branches: ["*"] # Qualsevol branca
+  pull_request:
+    branches: [main] # PR cap a main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.0.304
+
+    - name: Restore & Build
+      run: dotnet build --configuration Release
+
+    - name: Run StyleCop (linter)
+      run: dotnet build --configuration Release -warnaserror
+
+    - name: Run tests with coverage (min 80%)
+      run: |
+        dotnet test --configuration Release --collect:"XPlat Code Coverage"
+        COVERAGE=$(find . -type f -name 'coverage.cobertura.xml' | head -n 1)
+        echo "Coverage file found at: $COVERAGE"
+
+        dotnet tool install dotnet-reportgenerator-globaltool \
+          --tool-path reportgeneratortool \
+          --version 5.2.4 \
+          --ignore-failed-sources
+
+        ./reportgeneratortool/reportgenerator \
+          -reports:"$COVERAGE" \
+          -targetdir:coveragereport \
+          -reporttypes:Html
+
+        PERCENT=$(grep -oP '<coverage .*line-rate="\K[0-9.]+' "$COVERAGE" | head -n 1 | awk '{print $1*100}')
+        echo "Line coverage: $PERCENT%"
+
+        if (( $(echo "$PERCENT < 80" | bc -l) )); then
+          echo "Coverage below 80%"
+          exit 1
+        fi
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coveragereport
