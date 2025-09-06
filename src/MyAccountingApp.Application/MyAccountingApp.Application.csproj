@@ -13,7 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MyAccountingApp.Core\MyAccountingApp.Core.csproj" />
-    <ProjectReference Include="..\MyAccountingApp.Infrastructure\MyAccountingApp.Infrastructure.csproj" />
+    <ProjectReference Include="..\MyAccountingApp.Domain\MyAccountingApp.Domain.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

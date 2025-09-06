@@ -1,7 +1,7 @@
 ﻿using MyAccountingApp.Application.Services;
-using MyAccountingApp.Core.Enums;
-using MyAccountingApp.Infrastructure.Repositories;
-using MyAccountingApp.Infrastructure.Services;
+using MyAccountingApp.Core.Repositories;
+using MyAccountingApp.Core.Services;
+using MyAccountingApp.Domain.Enums;
 
 CompositeConversionRepository repo = new CompositeConversionRepository("conversions.json");
 CurrencyConverter api = new CurrencyConverter();
