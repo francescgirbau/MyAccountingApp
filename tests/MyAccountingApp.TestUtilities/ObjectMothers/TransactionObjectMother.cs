@@ -13,7 +13,7 @@ public static class TransactionObjectMother
         return new Transaction(
             date: DateTime.UtcNow,
             description: description,
-            money: new Money() { Amount = amount, Currency = currency },
+            money: new Money(amount: amount, currency: currency.ToString()),
             category: TransactionCategory.INCOME);
     }
 
@@ -25,7 +25,7 @@ public static class TransactionObjectMother
         return new Transaction(
             date: DateTime.UtcNow,
             description: description,
-            money: new Money() { Amount = amount, Currency = currency },
+            money: new Money(amount: amount, currency: currency.ToString()),
             category: TransactionCategory.EXPENSE);
     }
 
@@ -37,7 +37,7 @@ public static class TransactionObjectMother
         return new Transaction(
             date: DateTime.UtcNow,
             description: description,
-            money: new Money() { Amount = amount, Currency = currency },
+            money: new Money(amount: amount, currency: currency.ToString()),
             category: TransactionCategory.TRANSFER);
     }
 }

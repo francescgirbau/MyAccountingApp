@@ -1,6 +1,4 @@
-﻿using MyAccountingApp.Domain.Enums;
-
-namespace MyAccountingApp.Domain.ValueObjects;
+﻿namespace MyAccountingApp.Domain.ValueObjects;
 
 /// <summary>
 /// Represents a monetary value with an amount and a currency.
@@ -8,12 +6,29 @@ namespace MyAccountingApp.Domain.ValueObjects;
 public record Money
 {
     /// <summary>
-    /// Gets or initializes the amount of money.
+    /// Gets the amount of money.
     /// </summary>
-    public double Amount { get; init; }
+    public double Amount { get; }
 
     /// <summary>
-    /// Gets or initializes the currency of the money.
+    /// Gets the currency of the money.
     /// </summary>
-    public Currencies Currency { get; init; }
+    public string Currency { get; }
+
+    /// <summary>
+    /// The constructor for the Money value object.
+    /// </summary>
+    /// <param name="amount">The amount of money</param>
+    /// <param name="currency">The currency code</param>
+    /// <exception cref="ArgumentException"></exception>
+    public Money(double amount, string currency)
+    {
+        if (string.IsNullOrWhiteSpace(currency) || currency.Length != 3)
+        {
+            throw new ArgumentException("Currency code must be a valid ISO 4217 code.", nameof(currency));
+        }
+
+        this.Amount = amount;
+        this.Currency = currency.ToUpperInvariant();
+    }
 }
