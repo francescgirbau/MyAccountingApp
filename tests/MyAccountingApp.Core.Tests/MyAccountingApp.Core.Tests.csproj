@@ -4,7 +4,6 @@
 		<TargetFramework>net9.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-		<IsPackable>false</IsPackable>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -13,6 +12,7 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+		<PackageReference Include="Moq" Version="4.20.72" />
 		<PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -25,11 +25,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\MyAccountingApp.Core\MyAccountingApp.Core.csproj" />
-		<ProjectReference Include="..\MyAccountingApp.TestUtilities\MyAccountingApp.TestUtilities.csproj" />
+		<Using Include="Xunit" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<Using Include="Xunit" />
+		<ProjectReference Include="..\..\src\MyAccountingApp.Core\MyAccountingApp.Core.csproj" />
+		<ProjectReference Include="..\..\src\MyAccountingApp.Infrastructure\MyAccountingApp.Infrastructure.csproj" />
+		<ProjectReference Include="..\MyAccountingApp.TestUtilities\MyAccountingApp.TestUtilities.csproj" />
 	</ItemGroup>
 </Project>

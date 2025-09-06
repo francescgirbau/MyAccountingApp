@@ -1,6 +1,6 @@
-﻿using MyAccountingApp.Core.Entities;
-using MyAccountingApp.Core.Enums;
-using MyAccountingApp.Core.Interfaces;
+﻿using MyAccountingApp.Domain.Entities;
+using MyAccountingApp.Domain.Enums;
+using MyAccountingApp.Domain.Interfaces;
 
 namespace MyAccountingApp.TestUtilities.Fakes;
 

@@ -9,7 +9,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MyAccountingApp.Core\MyAccountingApp.Core.csproj" />
-    <ProjectReference Include="..\MyAccountingApp.Infrastructure\MyAccountingApp.Infrastructure.csproj" />
     <ProjectReference Include="..\MyAccountingApp.Application\MyAccountingApp.Application.csproj" />
   </ItemGroup>
 

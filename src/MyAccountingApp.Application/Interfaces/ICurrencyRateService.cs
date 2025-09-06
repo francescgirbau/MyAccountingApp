@@ -1,4 +1,4 @@
-﻿using MyAccountingApp.Core.Enums;
+﻿using MyAccountingApp.Domain.Enums;
 
 namespace MyAccountingApp.Application.Interfaces;
 

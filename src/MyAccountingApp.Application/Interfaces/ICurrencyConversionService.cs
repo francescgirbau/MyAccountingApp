@@ -1,5 +1,5 @@
-﻿using MyAccountingApp.Core.Enums;
-using MyAccountingApp.Core.ValueObjects;
+﻿using MyAccountingApp.Domain.Enums;
+using MyAccountingApp.Domain.ValueObjects;
 
 namespace MyAccountingApp.Application.Interfaces;
 

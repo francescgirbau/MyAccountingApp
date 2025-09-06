@@ -1,6 +1,6 @@
-﻿using MyAccountingApp.Core.Entities;
-using MyAccountingApp.Core.Enums;
-using MyAccountingApp.Core.ValueObjects;
+﻿using MyAccountingApp.Domain.Entities;
+using MyAccountingApp.Domain.Enums;
+using MyAccountingApp.Domain.ValueObjects;
 
 namespace MyAccountingApp.TestUtilities.ObjectMothers;
 public static class TransactionObjectMother

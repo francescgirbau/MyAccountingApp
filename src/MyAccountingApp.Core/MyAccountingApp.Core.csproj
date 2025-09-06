@@ -17,4 +17,8 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\MyAccountingApp.Domain\MyAccountingApp.Domain.csproj" />
+  </ItemGroup>
+
 </Project>

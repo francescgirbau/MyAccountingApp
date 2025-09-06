@@ -24,13 +24,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Using Include="Xunit" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\..\src\MyAccountingApp.Application\MyAccountingApp.Application.csproj" />
 		<ProjectReference Include="..\..\src\MyAccountingApp.Core\MyAccountingApp.Core.csproj" />
 		<ProjectReference Include="..\MyAccountingApp.TestUtilities\MyAccountingApp.TestUtilities.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<Using Include="Xunit" />
+	</ItemGroup>
 </Project>
