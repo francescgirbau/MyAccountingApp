@@ -11,7 +11,7 @@ public class TransactionTests
     {
         // Arrange
         DateTime date = new DateTime(2025, 8, 27);
-        Money money = new Money() { Amount = 100, Currency = Currencies.EUR };
+        Money money = new Money(amount: 100, currency: Currencies.EUR.ToString());
         string description = "Test Transaction";
         TransactionCategory category = TransactionCategory.INCOME;
 
@@ -34,7 +34,7 @@ public class TransactionTests
     {
         // Arrange
         DateTime date = DateTime.Now;
-        Money money = new Money() { Amount = 0, Currency = Currencies.EUR };
+        Money money = new Money(amount: 0, currency: Currencies.EUR.ToString());
 
         // Act
         ArgumentException ex = Assert.Throws<ArgumentException>(() =>
@@ -49,7 +49,7 @@ public class TransactionTests
     {
         // Arrange
         DateTime date = DateTime.Now;
-        Money money = new Money() { Amount = -50, Currency = Currencies.EUR };
+        Money money = new Money(amount: -50, currency: Currencies.EUR.ToString());
 
         // Act
         ArgumentException ex = Assert.Throws<ArgumentException>(() =>
@@ -64,7 +64,7 @@ public class TransactionTests
     {
         // Arrange
         DateTime date = DateTime.Now;
-        Money money = new Money() { Amount = 50, Currency = Currencies.EUR };
+        Money money = new Money(amount: 50, currency: Currencies.EUR.ToString());
 
         // Act
         ArgumentException ex = Assert.Throws<ArgumentException>(() =>
