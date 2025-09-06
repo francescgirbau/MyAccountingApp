@@ -5,23 +5,23 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyAccountingApp.Core", "src\MyAccountingApp.Core\MyAccountingApp.Core.csproj", "{B65F70F0-8FB7-4DF3-951D-A9D7DF2FF4E6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyAccountingApp.Application", "src\MyAccountingApp.Application\MyAccountingApp.Application.csproj", "{B3511861-3541-442C-A527-768B83E22B6F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyAccountingApp.ConsoleApp", "src\MyAccountingApp.ConsoleApp\MyAccountingApp.ConsoleApp.csproj", "{96E1EAFE-B912-4276-BB87-964B535D34CD}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyAccountingApp.Application", "src\MyAccountingApp.Application\MyAccountingApp.Application.csproj", "{B3511861-3541-442C-A527-768B83E22B6F}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyAccountingApp.TestUtilities", "tests\MyAccountingApp.TestUtilities\MyAccountingApp.TestUtilities.csproj", "{DAA50238-7F13-4F77-9106-0F5517BED2CF}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyAccountingApp.Application.Tests", "tests\MyAccountingApp.Application.Tests\MyAccountingApp.Application.Tests.csproj", "{3EC7F6A8-9E11-EEB3-3DA3-EE96A6948DAD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyAccountingApp.Core", "src\MyAccountingApp.Core\MyAccountingApp.Core.csproj", "{B65F70F0-8FB7-4DF3-951D-A9D7DF2FF4E6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyAccountingApp.Domain", "src\MyAccountingApp.Domain\MyAccountingApp.Domain.csproj", "{6C330C6A-E9CF-4CF4-97BD-A10A4FA426CD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyAccountingApp.Domain.Tests", "tests\MyAccountingApp.Domain.Tests\MyAccountingApp.Domain.Tests.csproj", "{C47D27DE-9B63-47F8-100D-52407D4398FA}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyAccountingApp.Application.Tests", "tests\MyAccountingApp.Application.Tests\MyAccountingApp.Application.Tests.csproj", "{3EC7F6A8-9E11-EEB3-3DA3-EE96A6948DAD}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyAccountingApp.Core.Tests", "tests\MyAccountingApp.Core.Tests\MyAccountingApp.Core.Tests.csproj", "{D1A323FB-AE0A-672F-9F8E-32E145E0667B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyAccountingApp.Domain.Tests", "tests\MyAccountingApp.Domain.Tests\MyAccountingApp.Domain.Tests.csproj", "{C47D27DE-9B63-47F8-100D-52407D4398FA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyAccountingApp.TestUtilities", "tests\MyAccountingApp.TestUtilities\MyAccountingApp.TestUtilities.csproj", "{DAA50238-7F13-4F77-9106-0F5517BED2CF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
