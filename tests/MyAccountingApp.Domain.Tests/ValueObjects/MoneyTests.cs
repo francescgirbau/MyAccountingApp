@@ -89,7 +89,7 @@ namespace MyAccountingApp.Tests.Domain.ValueObjects
             Money m2 = new Money(50, "USD");
 
             // Act & Assert
-            Assert.NotEqual(m1.Amount, m2.Amount);
+            Assert.Equal(m1.Amount, m2.Amount);
         }
     }
 }
