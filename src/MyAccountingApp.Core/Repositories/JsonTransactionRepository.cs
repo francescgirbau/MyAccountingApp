@@ -37,7 +37,7 @@ public class JsonTransactionRepository : ITransactionRepository
     /// Deletes a transaction from the repository by its unique identifier.
     /// </summary>
     /// <param name="transaction">The transaction to delete.</param>
-    /// <returns>True if the transaction was found and removed; otherwise, false.</returns> 
+    /// <returns>True if the transaction was found and removed; otherwise, false.</returns>
     public bool Delete(Transaction transaction)
     {
         List<Transaction> transactions = this.GetAll().ToList();

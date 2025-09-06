@@ -37,7 +37,7 @@ public class CompositeTransactionRepository : ITransactionRepository
     /// Deletes a transaction from both in-memory and JSON repositories.
     /// </summary>
     /// <param name="transaction">The ID of the transaction to delete.</param>
-    /// <returns>True if the transaction was found and removed; otherwise, false.</returns> 
+    /// <returns>True if the transaction was found and removed; otherwise, false.</returns>
     public bool Delete(Transaction transaction)
     {
         this._jsonRepo.Delete(transaction);

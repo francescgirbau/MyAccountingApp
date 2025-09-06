@@ -43,15 +43,14 @@ public class JsonTransactionRepositoryTests : IDisposable
         // Assert
         IEnumerable<Transaction> all = repo.GetAll();
 
-        Transaction transactionIncome = all.FirstOrDefault(t => t.Id == expectedTransactionIncome.Id)!;
-        Transaction transactionExpense = all.FirstOrDefault(t => t.Id == expectedTransactionExpense.Id)!;
-        Transaction transactionTransfer = all.FirstOrDefault(t => t.Id == expectedTransactionTransfer.Id)!;
+        Transaction transactionIncome = all.First(t => t.Id == expectedTransactionIncome.Id);
+        Transaction transactionExpense = all.First(t => t.Id == expectedTransactionExpense.Id);
+        Transaction transactionTransfer = all.First(t => t.Id == expectedTransactionTransfer.Id);
 
         Assert.True(IsSameTransaction(expectedTransactionIncome, transactionIncome));
         Assert.True(IsSameTransaction(expectedTransactionExpense, transactionExpense));
         Assert.True(IsSameTransaction(expectedTransactionTransfer, transactionTransfer));
         Assert.Equal(3, all.Count());
-
     }
 
     private static bool IsSameTransaction(Transaction t1, Transaction t2)

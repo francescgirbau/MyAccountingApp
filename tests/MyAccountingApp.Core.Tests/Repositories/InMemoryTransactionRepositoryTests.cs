@@ -57,7 +57,6 @@ public class InMemoryTransactionRepositoryTests
         Assert.Contains(transactionExpense, all);
         Assert.Contains(transactionTranser, all);
         Assert.Equal(3, all.Count());
-
     }
 
     [Fact]
