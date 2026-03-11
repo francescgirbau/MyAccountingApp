@@ -10,8 +10,14 @@ public enum AssetTransactionType
     /// Remove an asset sale transaction.
     /// </summary>
     Sell,
+
     /// <summary>
     /// It is the payment of a dividend.
     /// </summary>
     Dividend,
+
+    /// <summary>
+    /// It is the payment of foreign taxes.
+    /// </summary>
+    TaxWithholding,
 }

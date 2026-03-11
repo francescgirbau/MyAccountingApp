@@ -17,7 +17,7 @@ public class AssetTransaction
     /// </summary>
     public double Quantity { get; private set; }
     /// <summary>
-    /// The type of asset transaction (buy, sell, dividend, etc.).
+    /// The type of asset transaction (buy, sell, dividend, tax withholding).
     /// </summary>
     public AssetTransactionType Type { get; private set; }
 
@@ -40,9 +40,9 @@ public class AssetTransaction
             throw new ArgumentException(message, parentType);
         }
 
-        if (this.Type == AssetTransactionType.Buy && this.Transaction.Category != TransactionCategory.EXPENSE)
+        if ((this.Type == AssetTransactionType.Buy || this.Type == AssetTransactionType.TaxWithholding) && this.Transaction.Category != TransactionCategory.EXPENSE)
         {
-            string message = $"The {nameof(this.Transaction.Category)} must be {TransactionCategory.EXPENSE} for {nameof(AssetTransactionType.Buy)}, you provided {this.Transaction.Category}.";
+            string message = $"The {nameof(this.Transaction.Category)} must be {TransactionCategory.EXPENSE} for {nameof(AssetTransactionType.TaxWithholding)} or {nameof(AssetTransactionType.Buy)}, you provided {this.Transaction.Category}.";
             throw new ArgumentException(message, parentType);
         }
 

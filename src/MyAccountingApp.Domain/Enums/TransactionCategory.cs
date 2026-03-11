@@ -19,4 +19,9 @@ public enum TransactionCategory
     /// A transfer transaction.
     /// </summary>
     TRANSFER = 2,
+
+    /// <summary>
+    /// A deposit transaction.
+    /// </summary>
+    DEPOSIT = 3,
 }

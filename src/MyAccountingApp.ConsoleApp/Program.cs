@@ -1,6 +1,7 @@
 ﻿using MyAccountingApp.Application.Services;
 using MyAccountingApp.Core.Repositories;
 using MyAccountingApp.Core.Services;
+using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.ValueObjects;
 
@@ -10,6 +11,24 @@ Currencies source = Currencies.EUR;
 CurencyRateService service = new CurencyRateService(repo, api, source);
 
 DateTime targetDate = new DateTime(2024, 12, 1);
+
+InteractiveBrokersAgent ibAgent = new InteractiveBrokersAgent();
+
+string filePath = "C:/Users/Francesc/source/repos/MyAccountingApp/csv/U8997440_20220523_20221230.csv";
+
+IEnumerable<Transaction> transactionResult = ibAgent.ParseTransactionsAsync(filePath).Result;
+
+if (transactionResult == null || !transactionResult.Any())
+{
+    Console.WriteLine("There are not transactions");
+}
+else
+{
+    foreach (Transaction tx in transactionResult)
+    {
+        Console.WriteLine($"{tx.Date:yyyy-MM-dd} | {tx.Description} | {tx.Money.Amount}{tx.Money.Currency} | {tx.Category}");
+    }
+}
 
 YahooMarketPriceService priceService = new YahooMarketPriceService();
 

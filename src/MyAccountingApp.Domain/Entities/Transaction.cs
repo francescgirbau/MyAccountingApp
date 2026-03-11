@@ -91,16 +91,16 @@ public class Transaction
             throw new ArgumentException(message, parentType);
         }
 
-        if (this.Money.Amount > 0 && this.Category == TransactionCategory.EXPENSE)
+        if (this.Money.Amount > 0 && (this.Category == TransactionCategory.EXPENSE || this.Category == TransactionCategory.TRANSFER))
         {
-            string message = $"The {nameof(this.Money.Amount)} cannot be positive, when the transaction is an {nameof(TransactionCategory.EXPENSE)}, you provided {this.Money.Amount} {this.Money.Currency}";
+            string message = $"The {nameof(this.Money.Amount)} cannot be positive, when the transaction is an {nameof(TransactionCategory.EXPENSE)} or {nameof(TransactionCategory.TRANSFER)}, you provided {this.Money.Amount} {this.Money.Currency}";
 
             throw new ArgumentException(message, parentType);
         }
 
-        if (this.Money.Amount < 0 && this.Category == TransactionCategory.INCOME)
+        if (this.Money.Amount < 0 && (this.Category == TransactionCategory.INCOME || this.Category == TransactionCategory.DEPOSIT))
         {
-            string message = $"The {nameof(this.Money.Amount)} cannot be negative, when the transaction is an {nameof(TransactionCategory.INCOME)}, you provided {this.Money.Amount} {this.Money.Currency}";
+            string message = $"The {nameof(this.Money.Amount)} cannot be negative, when the transaction is an {nameof(TransactionCategory.INCOME)} or {nameof(TransactionCategory.DEPOSIT)}, you provided {this.Money.Amount} {this.Money.Currency}";
 
             throw new ArgumentException(message, parentType);
         }
