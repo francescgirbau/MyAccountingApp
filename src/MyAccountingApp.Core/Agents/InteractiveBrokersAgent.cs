@@ -1,6 +1,16 @@
-﻿using System.Net.Http.Json;
+﻿namespace MyAccountingApp.Core.Agents;
+
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using MyAccountingApp.Core.DTOs;
+using MyAccountingApp.Core.Interfaces;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
@@ -8,169 +18,160 @@ using MyAccountingApp.Domain.ValueObjects;
 
 public class InteractiveBrokersAgent : ITransactionAgent, IAssetTransactionAgent
 {
-    private const string BASE_ADDRESS = "http://localhost:11434/"; // Ollama server address
-    private const string MODEL_NAME = "llama3"; // O el model que hagis baixat a Ollama
-    private readonly HttpClient _httpClient;
+    private readonly IOllamaClient ollamaClient;
+    private readonly IInteractiveBrokersPromptBuilder promptBuilder;
+    private readonly string modelName;
+    private readonly JsonSerializerOptions jsonOptions;
+    private readonly int maxRetries;
+    private readonly int initialDelayMs;
+    private readonly ILogger<InteractiveBrokersAgent> logger;
 
-    public InteractiveBrokersAgent(HttpClient? httpClient = null)
+    public InteractiveBrokersAgent(
+        IOllamaClient ollamaClient,
+        IInteractiveBrokersPromptBuilder promptBuilder,
+        string modelName,
+        ILogger<InteractiveBrokersAgent> logger,
+        int maxRetries = 3,
+        int initialDelayMs = 1000)
     {
-        this._httpClient = httpClient ?? new HttpClient { BaseAddress = new Uri(BASE_ADDRESS) };
+        this.ollamaClient = ollamaClient ?? throw new ArgumentNullException(nameof(ollamaClient));
+        this.promptBuilder = promptBuilder ?? throw new ArgumentNullException(nameof(promptBuilder));
+        this.modelName = string.IsNullOrWhiteSpace(modelName)
+            ? throw new ArgumentException("Model name must be provided.", nameof(modelName))
+            : modelName;
+        this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        this.maxRetries = maxRetries;
+        this.initialDelayMs = initialDelayMs;
+
+        this.jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
     }
 
-    public async Task<IEnumerable<Transaction>> ParseTransactionsAsync(string filePath)
+    public async Task<IEnumerable<Transaction>> ParseTransactionsAsync(
+        string filePath,
+        CancellationToken cancellationToken = default)
     {
-        string csvContent = await File.ReadAllTextAsync(filePath);
-        string prompt = BuildTransactionPrompt(csvContent);
+        return await this.ParseAsync(
+            filePath,
+            this.promptBuilder.BuildTransactionsPrompt,
+            this.DeserializeTransactions,
+            this.MapToTransaction,
+            cancellationToken).ConfigureAwait(false);
+    }
 
-        string jsonResponse = await this.CallOllamaAsync(prompt);
+    public async Task<IEnumerable<AssetTransaction>> ParseAssetTransactionsAsync(
+        string filePath,
+        CancellationToken cancellationToken = default)
+    {
+        return await this.ParseAsync(
+            filePath,
+            this.promptBuilder.BuildAssetTransactionsPrompt,
+            this.DeserializeAssetTransactions,
+            this.MapToAssetTransaction,
+            cancellationToken).ConfigureAwait(false);
+    }
 
-        JsonSerializerOptions options = new JsonSerializerOptions()
+    private async Task<IEnumerable<TOutput>> ParseAsync<TDto, TOutput>(
+        string filePath,
+        Func<string, string> promptBuilder,
+        Func<string, IReadOnlyCollection<TDto>> deserializer,
+        Func<TDto, TOutput> mapper,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+
+        this.logger.LogInformation("Parsing file: {FilePath}", filePath);
+
+        string csvContent = await File.ReadAllTextAsync(filePath, cancellationToken).ConfigureAwait(false);
+        string prompt = promptBuilder(csvContent);
+
+        string json = await this.ExecuteWithRetryAsync(prompt, cancellationToken).ConfigureAwait(false);
+        IReadOnlyCollection<TDto> dtos = deserializer(json);
+
+        List<TOutput> results = new List<TOutput>(dtos.Count);
+        foreach (TDto dto in dtos)
         {
-            PropertyNameCaseInsensitive = true,
-        };
+            results.Add(mapper(dto));
+        }
 
-        List<TransactionResponse>? transactionResponses = JsonSerializer.Deserialize<List<TransactionResponse>>(jsonResponse, options);
+        this.logger.LogInformation("Successfully parsed {Count} transactions from {FilePath}", results.Count, filePath);
 
-        if (transactionResponses != null)
+        return results;
+    }
+
+    private async Task<string> ExecuteWithRetryAsync(string prompt, CancellationToken cancellationToken)
+    {
+        int delay = this.initialDelayMs;
+
+        for (int attempt = 0; attempt <= this.maxRetries; attempt++)
         {
-            List<Transaction> transactions = new List<Transaction>();
-            foreach (TransactionResponse tr in transactionResponses)
+            try
             {
-                if (DateTime.TryParse(tr.Date, out DateTime date) &&
-                    !string.IsNullOrWhiteSpace(tr.Money.Currency) &&
-                    Enum.TryParse(tr.Category, true, out TransactionCategory category))
-                {
-                    Money money = new Money(tr.Money.Amount, tr.Money.Currency);
-
-                    Transaction transaction = new Transaction(date, tr.Description, money, category);
-
-                    transactions.Add(transaction);
-                }
+                this.logger.LogDebug("Calling Ollama model {ModelName}, attempt {Attempt}", this.modelName, attempt + 1);
+                return await this.ollamaClient.GenerateAsync(this.modelName, prompt, cancellationToken).ConfigureAwait(false);
             }
-
-            return transactions;
-        }
-
-        return new List<Transaction>();
-    }
-
-    public async Task<IEnumerable<AssetTransaction>> ParseAssetTransactionsAsync(string filePath)
-    {
-        string csvContent = await File.ReadAllTextAsync(filePath);
-        string prompt = BuildAssetTransactionPrompt(csvContent);
-
-        string jsonResponse = await this.CallOllamaAsync(prompt);
-
-        List<AssetTransactionResponse>? assetTransactionResponses = JsonSerializer.Deserialize<List<AssetTransactionResponse>>(jsonResponse);
-
-        if (assetTransactionResponses != null)
-        {
-            List<AssetTransaction> assetTransactions = new List<AssetTransaction>();
-
-            foreach (AssetTransactionResponse atr in assetTransactionResponses)
+            catch (Exception ex) when (attempt < this.maxRetries && !cancellationToken.IsCancellationRequested)
             {
-                if (DateTime.TryParse(atr.Transaction.Date, out DateTime date) &&
-                    !string.IsNullOrWhiteSpace(atr.Transaction.Money.Currency) &&
-                    Enum.TryParse(atr.Transaction.Category, true, out TransactionCategory category) &&
-                    Enum.TryParse(atr.Type, true, out AssetTransactionType type))
-                {
-                    Money money = new Money(atr.Transaction.Money.Amount, atr.Transaction.Money.Currency);
-                    Transaction transaction = new Transaction(date, atr.Transaction.Description, money, category);
-                    AssetTransaction assetTransaction = new AssetTransaction(transaction, atr.Symbol, atr.Quantity, type);
-                    assetTransactions.Add(assetTransaction);
-                }
+                this.logger.LogWarning(ex, "Ollama call failed, attempt {Attempt}/{MaxRetries}. Retrying in {Delay}ms", attempt + 1, this.maxRetries, delay);
+                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                delay *= 2;
             }
-
-            return assetTransactions;
         }
 
-        return new List<AssetTransaction>();
+        this.logger.LogError("Failed to generate response after {MaxRetries} attempts", this.maxRetries + 1);
+        throw new InvalidOperationException($"Failed to generate response after {this.maxRetries + 1} attempts.");
     }
 
-    private async Task<string> CallOllamaAsync(string prompt)
+    private IReadOnlyCollection<TransactionResponse> DeserializeTransactions(string json)
     {
-        var request = new
-        {
-            model = MODEL_NAME,
-            prompt = prompt,
-            stream = false,
-        };
-
-        using HttpResponseMessage response = await this._httpClient.PostAsJsonAsync("api/generate", request);
-        response.EnsureSuccessStatusCode();
-
-        OllamaResponse? result = await response.Content.ReadFromJsonAsync<OllamaResponse>();
-
-        if (result == null)
-        {
-            throw new InvalidOperationException("Invalid response from Ollama API.");
-        }
-
-        return result.GetJsonFromResponse();
+        TransactionResponseWrapper? wrapper = JsonSerializer.Deserialize<TransactionResponseWrapper>(json, this.jsonOptions);
+        return wrapper?.Transactions ?? throw new InvalidOperationException("Cannot parse transactions from Ollama JSON.");
     }
 
-    private static string BuildTransactionPrompt(string csvContent)
+    private IReadOnlyCollection<AssetTransactionResponse> DeserializeAssetTransactions(string json)
     {
-        return $@"
-You are a financial data parser. 
-Your task is to read the following Interactive Brokers CSV data and output a JSON array of 'TransactionResponse' objects.
-
-Definition of a Transaction:
-- A transaction is a movement of money NOT related to any asset.
-- Each transaction has:
-  - date: ISO 8601 format (YYYY-MM-DD)
-  - description: text describing the transaction
-  - money: object {{ amount: number, currency: string }}
-  - category: one of ['EXPENSE', 'INCOME', 'TRANSFER', 'DEPOSIT'] no other values are allowed.
-- Most transactions are DEPOSIT or TRANSFER because they come from or go to another owned account.
-- Include as EXPENSE any commissions or payments done at account level NOT related to stocks or assets.
-- Amounts:
-  - Money coming IN must be positive (DEPOSIT or INCOME)
-  - Money going OUT must be negative (EXPENSE or TRANSFER)
-- IMPORTANT: Transactions that belong to this list must NOT appear in the AssetTransaction list.
-
-CSV data:
-{csvContent}
-
-Output rules:
-- Return ONLY valid JSON
-- No explanations, no extra text
-";
+        AssetTransactionResponseWrapper? wrapper = JsonSerializer.Deserialize<AssetTransactionResponseWrapper>(json, this.jsonOptions);
+        return wrapper?.AssetTransactions ?? throw new InvalidOperationException("Cannot parse asset transactions from Ollama JSON.");
     }
-    private static string BuildAssetTransactionPrompt(string csvContent)
+
+    private Transaction MapToTransaction(TransactionResponse dto)
     {
-        return $@"
-You are a financial data parser. 
-Your task is to read the following Interactive Brokers CSV data and output a JSON array of 'AssetTransactionResponse' objects.
-
-Definition of an AssetTransaction:
-- An AssetTransaction is a transaction related to assets (stocks, ETFs, funds, bonds, etc.).
-- Each AssetTransaction contains:
-  - transaction: each transaction has:
-      - date: ISO 8601 format (YYYY-MM-DD)
-      - description: text describing the transaction
-      - money: object {{ amount: number, currency: string }}
-      - category: one of ['EXPENSE', 'INCOME'] no other values are allowed.
-  - symbol: stock ticker or asset identifier
-  - quantity: number (positive for buy, negative for sell)
-  - type: one of ['BUY', 'SELL', 'DIVIDEND', 'TAX_WITHHOLDING']
-- Include in this list any transactions related to the assets, such as:
-  - Dividend payments
-  - Asset-related taxes
-  - Buys and sells
-  - Corporate actions
-- Amounts:
-  - Money coming IN must be positive (income)
-  - Money going OUT must be negative (expense)
-- IMPORTANT: A transaction cannot appear in both the AssetTransaction list and the Transaction list.
-
-CSV data:
-{csvContent}
-
-Output rules:
-- Return ONLY valid JSON
-- No explanations, no extra text
-";
+        Money money = new Money(dto.Money.Amount, dto.Money.Currency);
+        return new Transaction(
+            DateTime.Parse(dto.Date, CultureInfo.InvariantCulture),
+            dto.Description,
+            money,
+            Enum.Parse<TransactionCategory>(dto.Category, ignoreCase: true));
     }
 
+    private AssetTransaction MapToAssetTransaction(AssetTransactionResponse dto)
+    {
+        Money money = new Money(dto.Money.Amount, dto.Money.Currency);
+        TransactionCategory category = dto.Type.Equals("Buy", StringComparison.OrdinalIgnoreCase) || dto.Type.Equals("TaxWithholding", StringComparison.OrdinalIgnoreCase)
+            ? TransactionCategory.EXPENSE
+            : TransactionCategory.INCOME;
+
+        Transaction transaction = new Transaction(
+            DateOnly.Parse(dto.Date, CultureInfo.InvariantCulture).ToDateTime(TimeOnly.MinValue),
+            dto.Description,
+            money,
+            category);
+
+        return new AssetTransaction(
+            transaction,
+            dto.AssetName,
+            dto.Type.Equals("Dividend", StringComparison.OrdinalIgnoreCase) ? 0 : dto.Quantity,
+            Enum.Parse<AssetTransactionType>(dto.Type, ignoreCase: true));
+    }
+
+    private sealed class TransactionResponseWrapper
+    {
+        [JsonPropertyName("transactions")]
+        public List<TransactionResponse>? Transactions { get; set; }
+    }
+
+    private sealed class AssetTransactionResponseWrapper
+    {
+        [JsonPropertyName("assetTransactions")]
+        public List<AssetTransactionResponse>? AssetTransactions { get; set; }
+    }
 }

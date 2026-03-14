@@ -7,23 +7,23 @@ public class TransactionResponse
     /// Gets the date of the transaction.
     /// </summary>
     [JsonPropertyName("date")]
-    public string Date { get; private set; }
+    required public string Date { get; init; }
 
     /// <summary>
     /// Gets the description of the transaction.
     /// </summary>
     [JsonPropertyName("description")]
-    public string Description { get; private set; }
+    required public string Description { get; init; }
 
     /// <summary>
     /// Gets the monetary value of the transaction.
     /// </summary>
     [JsonPropertyName("money")]
-    public MoneyResponse Money { get; private set; }
+    required public MoneyResponse Money { get; init; }
 
     /// <summary>
     /// Gets the category of the transaction (expense, income, or transfer).
     /// </summary>
     [JsonPropertyName("category")]
-    public string Category { get; private set; }
+    required public string Category { get; init; }
 }

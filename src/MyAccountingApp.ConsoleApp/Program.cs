@@ -1,4 +1,7 @@
-﻿using MyAccountingApp.Application.Services;
+﻿using Microsoft.Extensions.Logging;
+using MyAccountingApp.Application.Services;
+using MyAccountingApp.Core.Agents;
+using MyAccountingApp.Core.Interfaces;
 using MyAccountingApp.Core.Repositories;
 using MyAccountingApp.Core.Services;
 using MyAccountingApp.Domain.Entities;
@@ -12,11 +15,27 @@ CurencyRateService service = new CurencyRateService(repo, api, source);
 
 DateTime targetDate = new DateTime(2024, 12, 1);
 
-InteractiveBrokersAgent ibAgent = new InteractiveBrokersAgent();
+ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
+ILogger<InteractiveBrokersAgent> logger = loggerFactory.CreateLogger<InteractiveBrokersAgent>();
+ILogger<OllamaClient> ollamaLogger = loggerFactory.CreateLogger<OllamaClient>();
+
+HttpClient httpClient = new HttpClient
+{
+    BaseAddress = new Uri("http://localhost:11434"),
+    Timeout = TimeSpan.FromMinutes(5),
+};
+IOllamaClient ollamaClient = new OllamaClient(httpClient, ollamaLogger);
+IInteractiveBrokersPromptBuilder promptBuilder = new InteractiveBrokersPromptBuilder();
+
+InteractiveBrokersAgent ibAgent = new InteractiveBrokersAgent(
+    ollamaClient,
+    promptBuilder,
+    "llama3",
+    logger);
 
 string filePath = "C:/Users/Francesc/source/repos/MyAccountingApp/csv/U8997440_20220523_20221230.csv";
 
-IEnumerable<Transaction> transactionResult = ibAgent.ParseTransactionsAsync(filePath).Result;
+IEnumerable<Transaction> transactionResult = await ibAgent.ParseTransactionsAsync(filePath);
 
 if (transactionResult == null || !transactionResult.Any())
 {
@@ -27,6 +46,22 @@ else
     foreach (Transaction tx in transactionResult)
     {
         Console.WriteLine($"{tx.Date:yyyy-MM-dd} | {tx.Description} | {tx.Money.Amount}{tx.Money.Currency} | {tx.Category}");
+    }
+}
+
+Console.WriteLine("\n--- Asset Transactions ---\n");
+
+IEnumerable<AssetTransaction> assetTransactionResult = await ibAgent.ParseAssetTransactionsAsync(filePath);
+
+if (assetTransactionResult == null || !assetTransactionResult.Any())
+{
+    Console.WriteLine("There are not asset transactions");
+}
+else
+{
+    foreach (AssetTransaction tx in assetTransactionResult)
+    {
+        Console.WriteLine($"{tx.Transaction.Date:yyyy-MM-dd} | {tx.Symbol} | {tx.Transaction.Money.Amount}{tx.Transaction.Money.Currency} | {tx.Type}");
     }
 }
 
@@ -58,8 +93,7 @@ if (repo.GetByDate(targetDate) == null)
 {
     Console.WriteLine("No hi havia conversió per aquesta data. Es farà la crida a l'API...");
 
-    // Fem servir la lògica del servei per obtenir un tipus de canvi, això ja força a guardar tota la conversió
-    double rate = 1; // await service.GetExchangeRateAsync(Currencies.USD, targetDate);
+    double rate = 1;
 
     Console.WriteLine($"S'ha guardat la conversió per la data {targetDate:yyyy-MM-dd} amb EUR → USD = {rate}");
 }

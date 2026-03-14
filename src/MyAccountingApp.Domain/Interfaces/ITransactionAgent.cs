@@ -12,8 +12,9 @@ namespace MyAccountingApp.Domain.Interfaces
         /// Reads a file and converts its contents into standardized transactions.
         /// </summary>
         /// <param name="filePath">Path to the CSV or Excel file.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>List of standardized transactions.</returns>
-        public Task<IEnumerable<Transaction>> ParseTransactionsAsync(string filePath);
+        public Task<IEnumerable<Transaction>> ParseTransactionsAsync(string filePath, CancellationToken cancellationToken = default);
 
     }
 }

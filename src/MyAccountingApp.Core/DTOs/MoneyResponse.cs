@@ -7,11 +7,11 @@ public class MoneyResponse
     /// Gets the amount of money.
     /// </summary>
     [JsonPropertyName("amount")]
-    public double Amount { get; private set; }
+    required public double Amount { get; init; }
 
     /// <summary>
     /// Gets the currency of the money.
     /// </summary>
     [JsonPropertyName("currency")]
-    public string Currency { get; private set; }
+    required public string Currency { get; init; }
 }

@@ -1,29 +1,23 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace MyAccountingApp.Core.DTOs;
 public class AssetTransactionResponse
 {
-    /// <summary>
-    /// The associated financial transaction.
-    /// </summary>
-    [JsonPropertyName("transaction")]
-    public TransactionResponse Transaction { get; private set; }
+    [JsonPropertyName("date")]
+    required public string Date { get; init; }
 
-    /// <summary>
-    /// The asset symbol (e.g., stock ticker).
-    /// </summary>
-    [JsonPropertyName("symbol")]
-    public string Symbol { get; private set; }
+    [JsonPropertyName("description")]
+    required public string Description { get; init; }
 
-    /// <summary>
-    /// The quantity of the asset involved in the transaction.
-    /// </summary>
+    [JsonPropertyName("money")]
+    required public MoneyResponse Money { get; init; }
+
+    [JsonPropertyName("assetName")]
+    required public string AssetName { get; init; }
+
     [JsonPropertyName("quantity")]
-    public double Quantity { get; private set; }
+    required public double Quantity { get; init; }
 
-    /// <summary>
-    /// The type of asset transaction (buy, sell, dividend, tax withholding).
-    /// </summary>
     [JsonPropertyName("type")]
-    public string Type { get; private set; }
+    required public string Type { get; init; }
 }

@@ -12,6 +12,7 @@ public interface IAssetTransactionAgent
     /// Reads a file and converts its contents into standardized asset transactions.
     /// </summary>
     /// <param name="filePath">Path to the CSV or Excel file.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of standardized asset transactions.</returns>
-    Task<IEnumerable<AssetTransaction>> ParseAssetTransactionsAsync(string filePath);
+    Task<IEnumerable<AssetTransaction>> ParseAssetTransactionsAsync(string filePath, CancellationToken cancellationToken = default);
 }

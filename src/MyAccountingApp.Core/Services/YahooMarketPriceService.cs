@@ -55,5 +55,4 @@ public class YahooMarketPriceService : IMarketPriceService
             _ => throw new NotSupportedException($"Unknown market '{market}' for currency mapping")
         };
     }
-
 }
