@@ -16,7 +16,7 @@ using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
 using MyAccountingApp.Domain.ValueObjects;
 
-public class InteractiveBrokersAgent : ITransactionAgent, IAssetTransactionAgent
+public class InteractiveBrokersAgent : IAgent
 {
     private readonly IOllamaClient ollamaClient;
     private readonly IInteractiveBrokersPromptBuilder promptBuilder;
@@ -46,56 +46,37 @@ public class InteractiveBrokersAgent : ITransactionAgent, IAssetTransactionAgent
         this.jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
     }
 
-    public async Task<IEnumerable<Transaction>> ParseTransactionsAsync(
+    public async Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions)> ParseAllAsync(
         string filePath,
         CancellationToken cancellationToken = default)
-    {
-        return await this.ParseAsync(
-            filePath,
-            this.promptBuilder.BuildTransactionsPrompt,
-            this.DeserializeTransactions,
-            this.MapToTransaction,
-            cancellationToken).ConfigureAwait(false);
-    }
-
-    public async Task<IEnumerable<AssetTransaction>> ParseAssetTransactionsAsync(
-        string filePath,
-        CancellationToken cancellationToken = default)
-    {
-        return await this.ParseAsync(
-            filePath,
-            this.promptBuilder.BuildAssetTransactionsPrompt,
-            this.DeserializeAssetTransactions,
-            this.MapToAssetTransaction,
-            cancellationToken).ConfigureAwait(false);
-    }
-
-    private async Task<IEnumerable<TOutput>> ParseAsync<TDto, TOutput>(
-        string filePath,
-        Func<string, string> promptBuilder,
-        Func<string, IReadOnlyCollection<TDto>> deserializer,
-        Func<TDto, TOutput> mapper,
-        CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 
-        this.logger.LogInformation("Parsing file: {FilePath}", filePath);
+        this.logger.LogInformation("Parsing all transactions from: {FilePath}", filePath);
 
         string csvContent = await File.ReadAllTextAsync(filePath, cancellationToken).ConfigureAwait(false);
-        string prompt = promptBuilder(csvContent);
+        string prompt = this.promptBuilder.BuildAllTransactionsPrompt(csvContent);
 
         string json = await this.ExecuteWithRetryAsync(prompt, cancellationToken).ConfigureAwait(false);
-        IReadOnlyCollection<TDto> dtos = deserializer(json);
 
-        List<TOutput> results = new List<TOutput>(dtos.Count);
-        foreach (TDto dto in dtos)
+        var (transactions, assetTransactions) = this.DeserializeAll(json);
+
+        List<Transaction> mappedTransactions = new List<Transaction>(transactions.Count);
+        foreach (var dto in transactions)
         {
-            results.Add(mapper(dto));
+            mappedTransactions.Add(this.MapToTransaction(dto));
         }
 
-        this.logger.LogInformation("Successfully parsed {Count} transactions from {FilePath}", results.Count, filePath);
+        List<AssetTransaction> mappedAssetTransactions = new List<AssetTransaction>(assetTransactions.Count);
+        foreach (var dto in assetTransactions)
+        {
+            mappedAssetTransactions.Add(this.MapToAssetTransaction(dto));
+        }
 
-        return results;
+        this.logger.LogInformation("Parsed {TransactionCount} transactions and {AssetTransactionCount} asset transactions",
+            mappedTransactions.Count, mappedAssetTransactions.Count);
+
+        return (mappedTransactions, mappedAssetTransactions);
     }
 
     private async Task<string> ExecuteWithRetryAsync(string prompt, CancellationToken cancellationToken)
@@ -133,6 +114,12 @@ public class InteractiveBrokersAgent : ITransactionAgent, IAssetTransactionAgent
         return wrapper?.AssetTransactions ?? throw new InvalidOperationException("Cannot parse asset transactions from Ollama JSON.");
     }
 
+    private (IReadOnlyCollection<TransactionResponse> Transactions, IReadOnlyCollection<AssetTransactionResponse> AssetTransactions) DeserializeAll(string json)
+    {
+        AllTransactionsWrapper? wrapper = JsonSerializer.Deserialize<AllTransactionsWrapper>(json, this.jsonOptions);
+        return (wrapper?.Transactions ?? new List<TransactionResponse>(), wrapper?.AssetTransactions ?? new List<AssetTransactionResponse>());
+    }
+
     private Transaction MapToTransaction(TransactionResponse dto)
     {
         Money money = new Money(dto.Money.Amount, dto.Money.Currency);
@@ -146,7 +133,7 @@ public class InteractiveBrokersAgent : ITransactionAgent, IAssetTransactionAgent
     private AssetTransaction MapToAssetTransaction(AssetTransactionResponse dto)
     {
         Money money = new Money(dto.Money.Amount, dto.Money.Currency);
-        TransactionCategory category = dto.Type.Equals("Buy", StringComparison.OrdinalIgnoreCase) || dto.Type.Equals("TaxWithholding", StringComparison.OrdinalIgnoreCase)
+        TransactionCategory category = dto.Type.Equals("Buy", StringComparison.OrdinalIgnoreCase)
             ? TransactionCategory.EXPENSE
             : TransactionCategory.INCOME;
 
@@ -159,7 +146,7 @@ public class InteractiveBrokersAgent : ITransactionAgent, IAssetTransactionAgent
         return new AssetTransaction(
             transaction,
             dto.AssetName,
-            dto.Type.Equals("Dividend", StringComparison.OrdinalIgnoreCase) ? 0 : dto.Quantity,
+            dto.Quantity,
             Enum.Parse<AssetTransactionType>(dto.Type, ignoreCase: true));
     }
 
@@ -171,6 +158,15 @@ public class InteractiveBrokersAgent : ITransactionAgent, IAssetTransactionAgent
 
     private sealed class AssetTransactionResponseWrapper
     {
+        [JsonPropertyName("assetTransactions")]
+        public List<AssetTransactionResponse>? AssetTransactions { get; set; }
+    }
+
+    private sealed class AllTransactionsWrapper
+    {
+        [JsonPropertyName("transactions")]
+        public List<TransactionResponse>? Transactions { get; set; }
+
         [JsonPropertyName("assetTransactions")]
         public List<AssetTransactionResponse>? AssetTransactions { get; set; }
     }

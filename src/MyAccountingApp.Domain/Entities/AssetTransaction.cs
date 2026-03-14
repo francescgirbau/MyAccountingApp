@@ -1,4 +1,4 @@
-using MyAccountingApp.Domain.Enums;
+﻿using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.ValueObjects;
 
 namespace MyAccountingApp.Domain.Entities;
@@ -28,9 +28,9 @@ public class AssetTransaction
             throw new ArgumentException(message, parentType);
         }
 
-        if ((this.Type == AssetTransactionType.Buy || this.Type == AssetTransactionType.TaxWithholding) && this.Transaction.Category != TransactionCategory.EXPENSE)
+        if (this.Type == AssetTransactionType.Buy && this.Transaction.Category != TransactionCategory.EXPENSE)
         {
-            string message = $"The {nameof(this.Transaction.Category)} must be {TransactionCategory.EXPENSE} for {nameof(AssetTransactionType.TaxWithholding)} or {nameof(AssetTransactionType.Buy)}, you provided {this.Transaction.Category}.";
+            string message = $"The {nameof(this.Transaction.Category)} must be {TransactionCategory.EXPENSE} for {nameof(AssetTransactionType.Buy)}, you provided {this.Transaction.Category}.";
             throw new ArgumentException(message, parentType);
         }
 

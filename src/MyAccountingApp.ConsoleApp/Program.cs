@@ -35,15 +35,17 @@ InteractiveBrokersAgent ibAgent = new InteractiveBrokersAgent(
 
 string filePath = "C:/Users/Francesc/source/repos/MyAccountingApp/csv/U8997440_20220523_20221230.csv";
 
-IEnumerable<Transaction> transactionResult = await ibAgent.ParseTransactionsAsync(filePath);
+var (transactions, assetTransactions) = await ibAgent.ParseAllAsync(filePath);
 
-if (transactionResult == null || !transactionResult.Any())
+Console.WriteLine("--- Transactions ---\n");
+
+if (transactions == null || !transactions.Any())
 {
     Console.WriteLine("There are not transactions");
 }
 else
 {
-    foreach (Transaction tx in transactionResult)
+    foreach (Transaction tx in transactions)
     {
         Console.WriteLine($"{tx.Date:yyyy-MM-dd} | {tx.Description} | {tx.Money.Amount}{tx.Money.Currency} | {tx.Category}");
     }
@@ -51,15 +53,13 @@ else
 
 Console.WriteLine("\n--- Asset Transactions ---\n");
 
-IEnumerable<AssetTransaction> assetTransactionResult = await ibAgent.ParseAssetTransactionsAsync(filePath);
-
-if (assetTransactionResult == null || !assetTransactionResult.Any())
+if (assetTransactions == null || !assetTransactions.Any())
 {
     Console.WriteLine("There are not asset transactions");
 }
 else
 {
-    foreach (AssetTransaction tx in assetTransactionResult)
+    foreach (AssetTransaction tx in assetTransactions)
     {
         Console.WriteLine($"{tx.Transaction.Date:yyyy-MM-dd} | {tx.Symbol} | {tx.Transaction.Money.Amount}{tx.Transaction.Money.Currency} | {tx.Type}");
     }

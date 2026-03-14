@@ -6,16 +6,10 @@
 public interface IInteractiveBrokersPromptBuilder
 {
     /// <summary>
-    /// Builds a prompt to extract regular transactions from a CSV file.
+    /// Builds a prompt to extract all transactions (both regular and asset) from a CSV file.
     /// </summary>
     /// <param name="csvContent">The full CSV file content.</param>
     /// <returns>The prompt text to send to the model.</returns>
-    string BuildTransactionsPrompt(string csvContent);
+    string BuildAllTransactionsPrompt(string csvContent);
 
-    /// <summary>
-    /// Builds a prompt to extract asset transactions from a CSV file.
-    /// </summary>
-    /// <param name="csvContent">The full CSV file content.</param>
-    /// <returns>The prompt text to send to the model.</returns>
-    string BuildAssetTransactionsPrompt(string csvContent);
 }
