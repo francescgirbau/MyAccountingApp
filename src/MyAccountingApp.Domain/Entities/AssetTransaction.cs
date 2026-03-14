@@ -1,24 +1,12 @@
-﻿using MyAccountingApp.Domain.Enums;
+using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.ValueObjects;
 
 namespace MyAccountingApp.Domain.Entities;
 public class AssetTransaction
 {
-    /// <summary>
-    /// The associated financial transaction.
-    /// </summary>
     public Transaction Transaction { get; private set; }
-    /// <summary>
-    /// The asset symbol (e.g., stock ticker).
-    /// </summary>
     public string Symbol { get; private set; }
-    /// <summary>
-    /// The quantity of the asset involved in the transaction.
-    /// </summary>
     public double Quantity { get; private set; }
-    /// <summary>
-    /// The type of asset transaction (buy, sell, dividend, tax withholding).
-    /// </summary>
     public AssetTransactionType Type { get; private set; }
 
     public AssetTransaction(Transaction transaction, string symbol, double quantity, AssetTransactionType type)
@@ -46,21 +34,15 @@ public class AssetTransaction
             throw new ArgumentException(message, parentType);
         }
 
-        if ((this.Type == AssetTransactionType.Sell || this.Type == AssetTransactionType.Dividend) && this.Transaction.Category != TransactionCategory.INCOME)
+        if (this.Type == AssetTransactionType.Sell && this.Transaction.Category != TransactionCategory.INCOME)
         {
-            string message = $"The {nameof(this.Transaction.Category)} must be {TransactionCategory.INCOME} for {nameof(AssetTransactionType.Dividend)} or {nameof(AssetTransactionType.Sell)}, you provided {this.Transaction.Category}.";
+            string message = $"The {nameof(this.Transaction.Category)} must be {TransactionCategory.INCOME} for {nameof(AssetTransactionType.Sell)}, you provided {this.Transaction.Category}.";
             throw new ArgumentException(message, parentType);
         }
 
-        if (this.Quantity <= 0 && this.Type != AssetTransactionType.Dividend)
+        if (this.Quantity <= 0)
         {
-            string message = $"The {nameof(this.Quantity)} must be greater than zero for non {nameof(AssetTransactionType.Dividend)}, you provided {this.Quantity}.";
-            throw new ArgumentException(message, parentType);
-        }
-
-        if (this.Quantity != 0 && this.Type == AssetTransactionType.Dividend)
-        {
-            string message = $"The {nameof(this.Quantity)} must zero for {nameof(AssetTransactionType.Dividend)}, you provided {this.Quantity}.";
+            string message = $"The {nameof(this.Quantity)} must be greater than zero, you provided {this.Quantity}.";
             throw new ArgumentException(message, parentType);
         }
     }
@@ -75,6 +57,5 @@ public class AssetTransaction
         double unitaryAmount = Transaction.Money.Amount / Quantity;
 
         return new Money(unitaryAmount, Transaction.Money.Currency);
-
     }
 }
