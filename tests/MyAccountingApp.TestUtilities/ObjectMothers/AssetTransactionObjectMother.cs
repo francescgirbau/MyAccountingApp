@@ -37,19 +37,4 @@ public static class AssetTransactionObjectMother
 
         return new AssetTransaction(transaction, symbol, quantity, AssetTransactionType.Buy);
     }
-
-    public static AssetTransaction CreateDividend(
-        string symbol = "AAPL",
-        double amount = 50,
-        string currency = "USD")
-    {
-        var transaction = new Transaction(
-            date: DateTime.UtcNow,
-            description: "Dividend transaction",
-            money: new Money(amount, currency),
-            category: TransactionCategory.INCOME
-        );
-
-        return new AssetTransaction(transaction, symbol, 0, AssetTransactionType.Dividend);
-    }
 }
