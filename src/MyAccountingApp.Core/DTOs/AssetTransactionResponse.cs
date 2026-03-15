@@ -1,23 +1,23 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace MyAccountingApp.Core.DTOs;
 public class AssetTransactionResponse
 {
     [JsonPropertyName("date")]
-    required public string Date { get; init; }
+    public string? Date { get; init; }
 
     [JsonPropertyName("description")]
-    required public string Description { get; init; }
+    public string? Description { get; init; }
 
     [JsonPropertyName("money")]
-    required public MoneyResponse Money { get; init; }
+    public MoneyResponse? Money { get; init; }
 
-    [JsonPropertyName("assetName")]
-    required public string AssetName { get; init; }
+    [JsonPropertyName("symbol")]
+    public string? Symbol { get; init; }
 
     [JsonPropertyName("quantity")]
-    required public double Quantity { get; init; }
+    public double Quantity { get; init; }
 
     [JsonPropertyName("type")]
-    required public string Type { get; init; }
+    public string? Type { get; init; }
 }

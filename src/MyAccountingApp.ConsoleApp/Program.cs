@@ -22,7 +22,7 @@ ILogger<OllamaClient> ollamaLogger = loggerFactory.CreateLogger<OllamaClient>();
 HttpClient httpClient = new HttpClient
 {
     BaseAddress = new Uri("http://localhost:11434"),
-    Timeout = TimeSpan.FromMinutes(5),
+    Timeout = TimeSpan.FromMinutes(3),
 };
 IOllamaClient ollamaClient = new OllamaClient(httpClient, ollamaLogger);
 IInteractiveBrokersPromptBuilder promptBuilder = new InteractiveBrokersPromptBuilder();
@@ -35,7 +35,7 @@ InteractiveBrokersAgent ibAgent = new InteractiveBrokersAgent(
 
 string filePath = "C:/Users/Francesc/source/repos/MyAccountingApp/csv/U8997440_20220523_20221230.csv";
 
-var (transactions, assetTransactions) = await ibAgent.ParseAllAsync(filePath);
+(IEnumerable<Transaction> transactions, IEnumerable<AssetTransaction> assetTransactions) = await ibAgent.ParseAllAsync(filePath);
 
 Console.WriteLine("--- Transactions ---\n");
 

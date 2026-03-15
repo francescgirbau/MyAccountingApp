@@ -1,4 +1,4 @@
-﻿namespace MyAccountingApp.Core.Services;
+namespace MyAccountingApp.Core.Services;
 
 using System;
 using System.Net.Http;
@@ -10,26 +10,17 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MyAccountingApp.Core.Interfaces;
 
-/// <summary>
-/// Default HTTP-based implementation of <see cref="IOllamaClient"/>.
-/// </summary>
 public class OllamaClient : IOllamaClient
 {
     private readonly HttpClient httpClient;
     private readonly ILogger<OllamaClient>? logger;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="OllamaClient"/> class.
-    /// </summary>
-    /// <param name="httpClient">The HTTP client used to call the Ollama API.</param>
-    /// <param name="logger">Optional logger for debugging.</param>
     public OllamaClient(HttpClient httpClient, ILogger<OllamaClient>? logger = null)
     {
         this.httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         this.logger = logger;
     }
 
-    /// <inheritdoc/>
     public async Task<string> GenerateAsync(
         string modelName,
         string prompt,

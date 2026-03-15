@@ -1,4 +1,4 @@
-﻿namespace MyAccountingApp.Core.Agents;
+namespace MyAccountingApp.Core.Agents;
 
 using System;
 using System.Collections.Generic;
@@ -59,18 +59,26 @@ public class InteractiveBrokersAgent : IAgent
 
         string json = await this.ExecuteWithRetryAsync(prompt, cancellationToken).ConfigureAwait(false);
 
-        var (transactions, assetTransactions) = this.DeserializeAll(json);
+        (IReadOnlyCollection<TransactionResponse> transactions, IReadOnlyCollection<AssetTransactionResponse> assetTransactions) = this.DeserializeAll(json);
 
-        List<Transaction> mappedTransactions = new List<Transaction>(transactions.Count);
-        foreach (var dto in transactions)
+        List<Transaction> mappedTransactions = new List<Transaction>();
+        foreach (TransactionResponse dto in transactions)
         {
-            mappedTransactions.Add(this.MapToTransaction(dto));
+            Transaction tx = this.MapToTransaction(dto);
+            if (tx != null)
+            {
+                mappedTransactions.Add(tx);
+            }
         }
 
-        List<AssetTransaction> mappedAssetTransactions = new List<AssetTransaction>(assetTransactions.Count);
-        foreach (var dto in assetTransactions)
+        List<AssetTransaction> mappedAssetTransactions = new List<AssetTransaction>();
+        foreach (AssetTransactionResponse dto in assetTransactions)
         {
-            mappedAssetTransactions.Add(this.MapToAssetTransaction(dto));
+            AssetTransaction atx = this.MapToAssetTransaction(dto);
+            if (atx != null)
+            {
+                mappedAssetTransactions.Add(atx);
+            }
         }
 
         this.logger.LogInformation("Parsed {TransactionCount} transactions and {AssetTransactionCount} asset transactions",
@@ -102,50 +110,86 @@ public class InteractiveBrokersAgent : IAgent
         throw new InvalidOperationException($"Failed to generate response after {this.maxRetries + 1} attempts.");
     }
 
-    private IReadOnlyCollection<TransactionResponse> DeserializeTransactions(string json)
-    {
-        TransactionResponseWrapper? wrapper = JsonSerializer.Deserialize<TransactionResponseWrapper>(json, this.jsonOptions);
-        return wrapper?.Transactions ?? throw new InvalidOperationException("Cannot parse transactions from Ollama JSON.");
-    }
-
-    private IReadOnlyCollection<AssetTransactionResponse> DeserializeAssetTransactions(string json)
-    {
-        AssetTransactionResponseWrapper? wrapper = JsonSerializer.Deserialize<AssetTransactionResponseWrapper>(json, this.jsonOptions);
-        return wrapper?.AssetTransactions ?? throw new InvalidOperationException("Cannot parse asset transactions from Ollama JSON.");
-    }
-
     private (IReadOnlyCollection<TransactionResponse> Transactions, IReadOnlyCollection<AssetTransactionResponse> AssetTransactions) DeserializeAll(string json)
     {
-        AllTransactionsWrapper? wrapper = JsonSerializer.Deserialize<AllTransactionsWrapper>(json, this.jsonOptions);
+        string cleanedJson = this.CleanJson(json);
+        AllTransactionsWrapper? wrapper = JsonSerializer.Deserialize<AllTransactionsWrapper>(cleanedJson, this.jsonOptions);
         return (wrapper?.Transactions ?? new List<TransactionResponse>(), wrapper?.AssetTransactions ?? new List<AssetTransactionResponse>());
+    }
+
+    private string CleanJson(string json)
+    {
+        string result = json.Trim();
+
+        if (result.StartsWith("```json"))
+        {
+            result = result.Substring(7);
+        }
+        else if (result.StartsWith("```"))
+        {
+            result = result.Substring(3);
+        }
+
+        if (result.EndsWith("```"))
+        {
+            result = result.Substring(0, result.Length - 3);
+        }
+
+        result = result.Trim();
+
+        int start = result.IndexOf('{');
+        int end = result.LastIndexOf('}');
+
+        if (start >= 0 && end > start)
+        {
+            result = result.Substring(start, end - start + 1);
+        }
+
+        return result;
+    }
+
+    private DateTime ParseDate(string dateStr)
+    {
+        string cleaned = dateStr.Split(',')[0].Trim();
+        return DateTime.Parse(cleaned, CultureInfo.InvariantCulture);
     }
 
     private Transaction MapToTransaction(TransactionResponse dto)
     {
+        if (dto.Money == null || string.IsNullOrEmpty(dto.Category))
+        {
+            return null;
+        }
+
         Money money = new Money(dto.Money.Amount, dto.Money.Currency);
         return new Transaction(
-            DateTime.Parse(dto.Date, CultureInfo.InvariantCulture),
-            dto.Description,
+            this.ParseDate(dto.Date ?? DateTime.Now.ToString("yyyy-MM-dd")),
+            dto.Description ?? "Unknown",
             money,
-            Enum.Parse<TransactionCategory>(dto.Category, ignoreCase: true));
+            Enum.TryParse<TransactionCategory>(dto.Category, ignoreCase: true, out TransactionCategory category) ? category : TransactionCategory.EXPENSE);
     }
 
     private AssetTransaction MapToAssetTransaction(AssetTransactionResponse dto)
     {
+        if (dto.Money == null || string.IsNullOrEmpty(dto.Type) || string.IsNullOrEmpty(dto.Symbol))
+        {
+            return null;
+        }
+
         Money money = new Money(dto.Money.Amount, dto.Money.Currency);
         TransactionCategory category = dto.Type.Equals("Buy", StringComparison.OrdinalIgnoreCase)
             ? TransactionCategory.EXPENSE
             : TransactionCategory.INCOME;
 
         Transaction transaction = new Transaction(
-            DateOnly.Parse(dto.Date, CultureInfo.InvariantCulture).ToDateTime(TimeOnly.MinValue),
+            this.ParseDate(dto.Date),
             dto.Description,
             money,
             category);
 
         return new AssetTransaction(
             transaction,
-            dto.AssetName,
+            dto.Symbol,
             dto.Quantity,
             Enum.Parse<AssetTransactionType>(dto.Type, ignoreCase: true));
     }
