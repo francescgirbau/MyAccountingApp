@@ -28,7 +28,6 @@ public class InteractiveBrokersPromptBuilder : IInteractiveBrokersPromptBuilder
         sb.AppendLine("  - EXPENSE: For taxes (Tax), fees (Fee), commissions (Commission), or any other expense.");
         sb.AppendLine("  - TRANSFER: For transfers between accounts (e.g., 'Transfer to Main Account', 'Transfer from Sub-Account').");
         sb.AppendLine("  - DEPOSIT: For deposits into your account (e.g., 'Electronic Fund Transfer' if it's a credit).");
-        sb.AppendLine("  - FEE: For any fee that appears explicitly (e.g., 'Fee: Wire Fee', 'Fee: Overnight Finance Charge').");
         sb.AppendLine();
         sb.AppendLine("Category: 'assetTransactions' (Buys and Sells of Assets)");
         sb.AppendLine();

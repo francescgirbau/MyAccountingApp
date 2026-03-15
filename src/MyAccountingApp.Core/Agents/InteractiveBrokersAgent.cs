@@ -162,11 +162,22 @@ public class InteractiveBrokersAgent : IAgent
         }
 
         Money money = new Money(dto.Money.Amount, dto.Money.Currency);
+        
+        TransactionCategory category = TransactionCategory.EXPENSE;
+        if (Enum.TryParse<TransactionCategory>(dto.Category, ignoreCase: true, out TransactionCategory parsedCategory))
+        {
+            category = parsedCategory;
+        }
+        else if (dto.Category?.Equals("FEE", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            category = TransactionCategory.EXPENSE;
+        }
+
         return new Transaction(
             this.ParseDate(dto.Date ?? DateTime.Now.ToString("yyyy-MM-dd")),
             dto.Description ?? "Unknown",
             money,
-            Enum.TryParse<TransactionCategory>(dto.Category, ignoreCase: true, out TransactionCategory category) ? category : TransactionCategory.EXPENSE);
+            category);
     }
 
     private AssetTransaction MapToAssetTransaction(AssetTransactionResponse dto)

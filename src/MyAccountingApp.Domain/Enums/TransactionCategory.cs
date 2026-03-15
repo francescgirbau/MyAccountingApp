@@ -6,5 +6,4 @@ public enum TransactionCategory
     INCOME = 1,
     TRANSFER = 2,
     DEPOSIT = 3,
-    FEE = 4,
 }
