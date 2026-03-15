@@ -54,7 +54,7 @@ public class TransactionTests
         // Act
         Transaction transaction = new Transaction(date, "Negative income", money, TransactionCategory.INCOME);
 
-        // Assert - should adjust to positive
+        // Assert - should adjust to positive too
         Assert.True(transaction.Money.Amount > 0);
     }
 
@@ -68,7 +68,7 @@ public class TransactionTests
         // Act
         Transaction transaction = new Transaction(date, "Positive expense", money, TransactionCategory.EXPENSE);
 
-        // Assert - should adjust to negative
-        Assert.True(transaction.Money.Amount < 0);
+        // Assert - should adjust to positve too
+        Assert.True(transaction.Money.Amount > 0);
     }
 }

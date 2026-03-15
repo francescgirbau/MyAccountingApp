@@ -50,12 +50,8 @@ public class Transaction
         this.Date = date;
         this.Description = description;
         this.Category = category;
-
-        double amount = Math.Abs(money.Amount);
-        bool shouldBePositive = category == TransactionCategory.INCOME || category == TransactionCategory.DEPOSIT;
-        double finalAmount = shouldBePositive ? amount : -amount;
-
-        this.Money = new Money(finalAmount, money.Currency);
+        
+        this.Money = new Money(Math.Abs(money.Amount), money.Currency);
 
         this.Validate();
     }

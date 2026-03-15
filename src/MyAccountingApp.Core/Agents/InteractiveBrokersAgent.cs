@@ -180,12 +180,12 @@ public class InteractiveBrokersAgent : IAgent
 
         result = result.Trim();
 
-        int start = result.IndexOf('{');
-        int end = result.LastIndexOf('}');
+        int firstBrace = result.IndexOf('{');
+        int lastBrace = result.LastIndexOf('}');
 
-        if (start >= 0 && end > start)
+        if (firstBrace >= 0 && lastBrace > firstBrace)
         {
-            result = result.Substring(start, end - start + 1);
+            result = result.Substring(firstBrace, lastBrace - firstBrace + 1);
         }
 
         return result;
@@ -209,7 +209,7 @@ public class InteractiveBrokersAgent : IAgent
             return null;
         }
 
-        Money money = new Money(dto.Money.Amount, dto.Money.Currency);
+        Money money = new Money(Math.Abs(dto.Money.Amount), dto.Money.Currency);
         return new Transaction(
             this.ParseDate(dto.Date ?? DateTime.Now.ToString("yyyy-MM-dd")),
             dto.Description ?? "Unknown",
@@ -224,7 +224,7 @@ public class InteractiveBrokersAgent : IAgent
             return null;
         }
 
-        Money money = new Money(dto.Money.Amount, dto.Money.Currency ?? "EUR");
+        Money money = new Money(Math.Abs(dto.Money.Amount), dto.Money.Currency ?? "EUR");
         return new Transaction(
             this.ParseDate(dto.Date ?? DateTime.Now.ToString("yyyy-MM-dd")),
             dto.Description ?? "Unknown",
@@ -239,7 +239,7 @@ public class InteractiveBrokersAgent : IAgent
             return null;
         }
 
-        Money money = new Money(dto.Money.Amount, dto.Money.Currency ?? "EUR");
+        Money money = new Money(Math.Abs(dto.Money.Amount), dto.Money.Currency ?? "EUR");
         return new Transaction(
             this.ParseDate(dto.Date ?? DateTime.Now.ToString("yyyy-MM-dd")),
             dto.Description ?? "Unknown",
@@ -254,21 +254,21 @@ public class InteractiveBrokersAgent : IAgent
             return null;
         }
 
-        Money money = new Money(dto.Money.Amount, dto.Money.Currency ?? "EUR");
-
         bool isBuy = dto.Quantity > 0;
+        
         TransactionCategory category = isBuy ? TransactionCategory.EXPENSE : TransactionCategory.INCOME;
+        AssetTransactionType type = isBuy ? AssetTransactionType.Buy : AssetTransactionType.Sell;
 
         Transaction transaction = new Transaction(
             this.ParseDate(dto.Date ?? DateTime.Now.ToString("yyyy-MM-dd")),
             dto.Symbol,
-            money,
+            new Money(Math.Abs(dto.Money.Amount), dto.Money.Currency ?? "EUR"),
             category);
 
         return new AssetTransaction(
             transaction,
             dto.Symbol,
-            dto.Quantity,
-            isBuy ? AssetTransactionType.Buy : AssetTransactionType.Sell);
+            Math.Abs(dto.Quantity),
+            type);
     }
 }
