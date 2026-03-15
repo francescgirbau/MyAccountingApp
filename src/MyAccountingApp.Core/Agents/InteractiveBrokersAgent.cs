@@ -146,7 +146,18 @@ public class InteractiveBrokersAgent : IAgent
     {
         string cleanedJson = this.CleanJson(json);
         TradesResponse? response = JsonSerializer.Deserialize<TradesResponse>(cleanedJson, this.jsonOptions);
-        return response ?? new TradesResponse();
+        
+        if (response == null)
+        {
+            return new TradesResponse();
+        }
+
+        response.Trades ??= new List<TradeResponse>();
+        response.Diposits ??= new List<DipositResponse>();
+        response.Dividends ??= new List<DividendResponse>();
+        response.Others ??= new List<OtherResponse>();
+
+        return response;
     }
 
     private string CleanJson(string json)
@@ -246,7 +257,6 @@ public class InteractiveBrokersAgent : IAgent
         Money money = new Money(dto.Money.Amount, dto.Money.Currency ?? "EUR");
 
         bool isBuy = dto.Quantity > 0;
-
         TransactionCategory category = isBuy ? TransactionCategory.EXPENSE : TransactionCategory.INCOME;
 
         Transaction transaction = new Transaction(
@@ -258,7 +268,7 @@ public class InteractiveBrokersAgent : IAgent
         return new AssetTransaction(
             transaction,
             dto.Symbol,
-            Math.Abs(dto.Quantity),
+            dto.Quantity,
             isBuy ? AssetTransactionType.Buy : AssetTransactionType.Sell);
     }
 }

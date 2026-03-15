@@ -1,4 +1,4 @@
-﻿using MyAccountingApp.Domain.Enums;
+using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.ValueObjects;
 
 namespace MyAccountingApp.Domain.Entities;
@@ -13,7 +13,7 @@ public class AssetTransaction
     {
         Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
         Symbol = symbol;
-        Quantity = quantity;
+        Quantity = Math.Abs(quantity);
         Type = type;
 
         this.Validate();
@@ -21,29 +21,14 @@ public class AssetTransaction
 
     private void Validate()
     {
-        string parentType = nameof(AssetTransaction);
         if (string.IsNullOrWhiteSpace(this.Symbol))
         {
-            string message = $"The {nameof(this.Symbol)} cannot be null or empty.";
-            throw new ArgumentException(message, parentType);
-        }
-
-        if (this.Type == AssetTransactionType.Buy && this.Transaction.Category != TransactionCategory.EXPENSE)
-        {
-            string message = $"The {nameof(this.Transaction.Category)} must be {TransactionCategory.EXPENSE} for {nameof(AssetTransactionType.Buy)}, you provided {this.Transaction.Category}.";
-            throw new ArgumentException(message, parentType);
-        }
-
-        if (this.Type == AssetTransactionType.Sell && this.Transaction.Category != TransactionCategory.INCOME)
-        {
-            string message = $"The {nameof(this.Transaction.Category)} must be {TransactionCategory.INCOME} for {nameof(AssetTransactionType.Sell)}, you provided {this.Transaction.Category}.";
-            throw new ArgumentException(message, parentType);
+            throw new ArgumentException("Symbol cannot be null or empty.");
         }
 
         if (this.Quantity <= 0)
         {
-            string message = $"The {nameof(this.Quantity)} must be greater than zero, you provided {this.Quantity}.";
-            throw new ArgumentException(message, parentType);
+            throw new ArgumentException("Quantity must be greater than zero.");
         }
     }
 
@@ -54,7 +39,7 @@ public class AssetTransaction
             return new Money(0, this.Transaction.Money.Currency);
         }
 
-        double unitaryAmount = Transaction.Money.Amount / Quantity;
+        double unitaryAmount = Math.Abs(Transaction.Money.Amount) / Quantity;
 
         return new Money(unitaryAmount, Transaction.Money.Currency);
     }
