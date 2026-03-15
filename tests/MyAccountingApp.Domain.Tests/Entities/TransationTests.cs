@@ -45,32 +45,30 @@ public class TransactionTests
     }
 
     [Fact]
-    public void Constructor_ShouldThrow_WhenAmountNegativeAndCategoryIncome()
+    public void Constructor_ShouldAdjustSign_WhenCategoryIsIncome()
     {
         // Arrange
         DateTime date = DateTime.Now;
         Money money = new Money(amount: -50, currency: Currencies.EUR.ToString());
 
         // Act
-        ArgumentException ex = Assert.Throws<ArgumentException>(() =>
-            new Transaction(date, "Negative income", money, TransactionCategory.INCOME));
+        Transaction transaction = new Transaction(date, "Negative income", money, TransactionCategory.INCOME);
 
-        // Assert
-        Assert.Contains("cannot be negative", ex.Message);
+        // Assert - should adjust to positive
+        Assert.True(transaction.Money.Amount > 0);
     }
 
     [Fact]
-    public void Constructor_ShouldThrow_WhenAmountPositiveAndCategoryExpense()
+    public void Constructor_ShouldAdjustSign_WhenCategoryIsExpense()
     {
         // Arrange
         DateTime date = DateTime.Now;
         Money money = new Money(amount: 50, currency: Currencies.EUR.ToString());
 
         // Act
-        ArgumentException ex = Assert.Throws<ArgumentException>(() =>
-            new Transaction(date, "Positive expense", money, TransactionCategory.EXPENSE));
+        Transaction transaction = new Transaction(date, "Positive expense", money, TransactionCategory.EXPENSE);
 
-        // Assert
-        Assert.Contains("cannot be positive", ex.Message);
+        // Assert - should adjust to negative
+        Assert.True(transaction.Money.Amount < 0);
     }
 }

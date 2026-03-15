@@ -30,7 +30,7 @@ public static class TransactionObjectMother
     }
 
     public static Transaction ValidTransfer(
-        double amount = 200,
+        double amount = -200,
         Currencies currency = Currencies.EUR,
         string description = "Test Transfer")
     {
@@ -39,5 +39,17 @@ public static class TransactionObjectMother
             description: description,
             money: new Money(amount: amount, currency: currency.ToString()),
             category: TransactionCategory.TRANSFER);
+    }
+
+    public static Transaction ValidDeposit(
+    double amount = 200,
+    Currencies currency = Currencies.EUR,
+    string description = "Test Deposit")
+    {
+        return new Transaction(
+            date: DateTime.UtcNow,
+            description: description,
+            money: new Money(amount: amount, currency: currency.ToString()),
+            category: TransactionCategory.DEPOSIT);
     }
 }

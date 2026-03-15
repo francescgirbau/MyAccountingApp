@@ -364,3 +364,7 @@ FodyWeavers.xsd
 
 # Persisten databases
 .json
+
+# Test files for agents
+
+csv/

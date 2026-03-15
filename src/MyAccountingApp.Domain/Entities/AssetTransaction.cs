@@ -1,4 +1,4 @@
-using MyAccountingApp.Domain.Enums;
+﻿using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.ValueObjects;
 
 namespace MyAccountingApp.Domain.Entities;

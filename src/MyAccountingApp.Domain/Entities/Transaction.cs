@@ -49,8 +49,13 @@ public class Transaction
         this.Id = Guid.NewGuid();
         this.Date = date;
         this.Description = description;
-        this.Money = money;
         this.Category = category;
+
+        double amount = Math.Abs(money.Amount);
+        bool shouldBePositive = category == TransactionCategory.INCOME || category == TransactionCategory.DEPOSIT;
+        double finalAmount = shouldBePositive ? amount : -amount;
+
+        this.Money = new Money(finalAmount, money.Currency);
 
         this.Validate();
     }
@@ -87,20 +92,6 @@ public class Transaction
         if (this.Money.Amount == 0)
         {
             string message = $"The {nameof(this.Money.Amount)} cannot be zero, you provided {this.Money.Amount} {this.Money.Currency}";
-
-            throw new ArgumentException(message, parentType);
-        }
-
-        if (this.Money.Amount > 0 && this.Category == TransactionCategory.EXPENSE)
-        {
-            string message = $"The {nameof(this.Money.Amount)} cannot be positive, when the transaction is an {nameof(TransactionCategory.EXPENSE)}, you provided {this.Money.Amount} {this.Money.Currency}";
-
-            throw new ArgumentException(message, parentType);
-        }
-
-        if (this.Money.Amount < 0 && this.Category == TransactionCategory.INCOME)
-        {
-            string message = $"The {nameof(this.Money.Amount)} cannot be negative, when the transaction is an {nameof(TransactionCategory.INCOME)}, you provided {this.Money.Amount} {this.Money.Currency}";
 
             throw new ArgumentException(message, parentType);
         }
