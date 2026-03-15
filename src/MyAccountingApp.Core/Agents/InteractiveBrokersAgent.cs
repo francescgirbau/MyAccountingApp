@@ -1,11 +1,10 @@
-namespace MyAccountingApp.Core.Agents;
+﻿namespace MyAccountingApp.Core.Agents;
 
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -59,30 +58,63 @@ public class InteractiveBrokersAgent : IAgent
 
         string json = await this.ExecuteWithRetryAsync(prompt, cancellationToken).ConfigureAwait(false);
 
-        (IReadOnlyCollection<TransactionResponse> transactions, IReadOnlyCollection<AssetTransactionResponse> assetTransactions) = this.DeserializeAll(json);
+        TradesResponse response = this.DeserializeAll(json);
 
         List<Transaction> mappedTransactions = new List<Transaction>();
-        foreach (TransactionResponse dto in transactions)
+
+        if (response.Diposits != null)
         {
-            Transaction tx = this.MapToTransaction(dto);
-            if (tx != null)
+            foreach (DipositResponse dto in response.Diposits)
             {
-                mappedTransactions.Add(tx);
+                Transaction tx = this.MapDipositToTransaction(dto);
+                if (tx != null)
+                {
+                    mappedTransactions.Add(tx);
+                }
+            }
+        }
+
+        if (response.Dividends != null)
+        {
+            foreach (DividendResponse dto in response.Dividends)
+            {
+                Transaction tx = this.MapDividendToTransaction(dto);
+                if (tx != null)
+                {
+                    mappedTransactions.Add(tx);
+                }
+            }
+        }
+
+        if (response.Others != null)
+        {
+            foreach (OtherResponse dto in response.Others)
+            {
+                Transaction tx = this.MapOtherToTransaction(dto);
+                if (tx != null)
+                {
+                    mappedTransactions.Add(tx);
+                }
             }
         }
 
         List<AssetTransaction> mappedAssetTransactions = new List<AssetTransaction>();
-        foreach (AssetTransactionResponse dto in assetTransactions)
+        if (response.Trades != null)
         {
-            AssetTransaction atx = this.MapToAssetTransaction(dto);
-            if (atx != null)
+            foreach (TradeResponse dto in response.Trades)
             {
-                mappedAssetTransactions.Add(atx);
+                AssetTransaction atx = this.MapTradeToAssetTransaction(dto);
+                if (atx != null)
+                {
+                    mappedAssetTransactions.Add(atx);
+                }
             }
         }
 
-        this.logger.LogInformation("Parsed {TransactionCount} transactions and {AssetTransactionCount} asset transactions",
-            mappedTransactions.Count, mappedAssetTransactions.Count);
+        this.logger.LogInformation(
+            "Parsed {TransactionCount} transactions and {AssetTransactionCount} asset transactions",
+            mappedTransactions.Count,
+            mappedAssetTransactions.Count);
 
         return (mappedTransactions, mappedAssetTransactions);
     }
@@ -110,11 +142,11 @@ public class InteractiveBrokersAgent : IAgent
         throw new InvalidOperationException($"Failed to generate response after {this.maxRetries + 1} attempts.");
     }
 
-    private (IReadOnlyCollection<TransactionResponse> Transactions, IReadOnlyCollection<AssetTransactionResponse> AssetTransactions) DeserializeAll(string json)
+    private TradesResponse DeserializeAll(string json)
     {
         string cleanedJson = this.CleanJson(json);
-        AllTransactionsWrapper? wrapper = JsonSerializer.Deserialize<AllTransactionsWrapper>(cleanedJson, this.jsonOptions);
-        return (wrapper?.Transactions ?? new List<TransactionResponse>(), wrapper?.AssetTransactions ?? new List<AssetTransactionResponse>());
+        TradesResponse? response = JsonSerializer.Deserialize<TradesResponse>(cleanedJson, this.jsonOptions);
+        return response ?? new TradesResponse();
     }
 
     private string CleanJson(string json)
@@ -150,79 +182,83 @@ public class InteractiveBrokersAgent : IAgent
 
     private DateTime ParseDate(string dateStr)
     {
+        if (string.IsNullOrEmpty(dateStr))
+        {
+            return DateTime.Now;
+        }
+
         string cleaned = dateStr.Split(',')[0].Trim();
         return DateTime.Parse(cleaned, CultureInfo.InvariantCulture);
     }
 
-    private Transaction MapToTransaction(TransactionResponse dto)
+    private Transaction MapDipositToTransaction(DipositResponse dto)
     {
-        if (dto.Money == null || string.IsNullOrEmpty(dto.Category))
+        if (dto.Money == null)
         {
             return null;
         }
 
         Money money = new Money(dto.Money.Amount, dto.Money.Currency);
-        
-        TransactionCategory category = TransactionCategory.EXPENSE;
-        if (Enum.TryParse<TransactionCategory>(dto.Category, ignoreCase: true, out TransactionCategory parsedCategory))
-        {
-            category = parsedCategory;
-        }
-        else if (dto.Category?.Equals("FEE", StringComparison.OrdinalIgnoreCase) == true)
-        {
-            category = TransactionCategory.EXPENSE;
-        }
-
         return new Transaction(
             this.ParseDate(dto.Date ?? DateTime.Now.ToString("yyyy-MM-dd")),
             dto.Description ?? "Unknown",
             money,
-            category);
+            TransactionCategory.DEPOSIT);
     }
 
-    private AssetTransaction MapToAssetTransaction(AssetTransactionResponse dto)
+    private Transaction MapDividendToTransaction(DividendResponse dto)
     {
-        if (dto.Money == null || string.IsNullOrEmpty(dto.Type) || string.IsNullOrEmpty(dto.Symbol))
+        if (dto.Money == null)
         {
             return null;
         }
 
-        Money money = new Money(dto.Money.Amount, dto.Money.Currency);
-        TransactionCategory category = dto.Type.Equals("Buy", StringComparison.OrdinalIgnoreCase)
-            ? TransactionCategory.EXPENSE
-            : TransactionCategory.INCOME;
+        Money money = new Money(dto.Money.Amount, dto.Money.Currency ?? "EUR");
+        return new Transaction(
+            this.ParseDate(dto.Date ?? DateTime.Now.ToString("yyyy-MM-dd")),
+            dto.Description ?? "Unknown",
+            money,
+            TransactionCategory.INCOME);
+    }
+
+    private Transaction MapOtherToTransaction(OtherResponse dto)
+    {
+        if (dto.Money == null)
+        {
+            return null;
+        }
+
+        Money money = new Money(dto.Money.Amount, dto.Money.Currency ?? "EUR");
+        return new Transaction(
+            this.ParseDate(dto.Date ?? DateTime.Now.ToString("yyyy-MM-dd")),
+            dto.Description ?? "Unknown",
+            money,
+            TransactionCategory.EXPENSE);
+    }
+
+    private AssetTransaction MapTradeToAssetTransaction(TradeResponse dto)
+    {
+        if (dto.Money == null || string.IsNullOrEmpty(dto.Symbol))
+        {
+            return null;
+        }
+
+        Money money = new Money(dto.Money.Amount, dto.Money.Currency ?? "EUR");
+
+        bool isBuy = dto.Quantity > 0;
+
+        TransactionCategory category = isBuy ? TransactionCategory.EXPENSE : TransactionCategory.INCOME;
 
         Transaction transaction = new Transaction(
-            this.ParseDate(dto.Date),
-            dto.Description,
+            this.ParseDate(dto.Date ?? DateTime.Now.ToString("yyyy-MM-dd")),
+            dto.Symbol,
             money,
             category);
 
         return new AssetTransaction(
             transaction,
             dto.Symbol,
-            dto.Quantity,
-            Enum.Parse<AssetTransactionType>(dto.Type, ignoreCase: true));
-    }
-
-    private sealed class TransactionResponseWrapper
-    {
-        [JsonPropertyName("transactions")]
-        public List<TransactionResponse>? Transactions { get; set; }
-    }
-
-    private sealed class AssetTransactionResponseWrapper
-    {
-        [JsonPropertyName("assetTransactions")]
-        public List<AssetTransactionResponse>? AssetTransactions { get; set; }
-    }
-
-    private sealed class AllTransactionsWrapper
-    {
-        [JsonPropertyName("transactions")]
-        public List<TransactionResponse>? Transactions { get; set; }
-
-        [JsonPropertyName("assetTransactions")]
-        public List<AssetTransactionResponse>? AssetTransactions { get; set; }
+            Math.Abs(dto.Quantity),
+            isBuy ? AssetTransactionType.Buy : AssetTransactionType.Sell);
     }
 }

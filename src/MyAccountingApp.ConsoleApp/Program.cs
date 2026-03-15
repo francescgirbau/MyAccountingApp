@@ -61,7 +61,7 @@ else
 {
     foreach (AssetTransaction tx in assetTransactions)
     {
-        Console.WriteLine($"{tx.Transaction.Date:yyyy-MM-dd} | {tx.Symbol} | {tx.Transaction.Money.Amount}{tx.Transaction.Money.Currency} | {tx.Type}");
+        Console.WriteLine($"{tx.Transaction.Date:yyyy-MM-dd} | {tx.Symbol} | {tx.Quantity} | {tx.Transaction.Money.Amount}{tx.Transaction.Money.Currency} | {tx.Type}");
     }
 }
 
