@@ -34,7 +34,7 @@ public class CurrencyConverter : ICurrencyConverter
         string dateString = date.ToString("yyyy-MM-dd");
         string currencyList = string.Join(",", Enum.GetValues<Currencies>().Where(c => c != source).Select(c => c.ToString()));
 
-        string url = $"https://api.exchangerate.host/historical?access_key={_apiKey}&date={dateString}&source={source}&currencies={currencyList}";
+        string url = $"https://api.exchangerate.host/historical?access_key={this._apiKey}&date={dateString}&source={source}&currencies={currencyList}";
 
         HttpResponseMessage response = await this._httpClient.GetAsync(url);
         response.EnsureSuccessStatusCode();
