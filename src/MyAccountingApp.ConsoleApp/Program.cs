@@ -48,7 +48,7 @@ string[] folderPaths = new string[]
 {
     "C:/Users/Francesc/source/repos/MyAccountingApp/csv/IBKR/TRADES",
     "C:/Users/Francesc/source/repos/MyAccountingApp/csv/IBKR/OTHER",
-    "C:/Users/Francesc/source/repos/MyAccountingApp/csv/IBKR/CORPORATE"
+    "C:/Users/Francesc/source/repos/MyAccountingApp/csv/IBKR/CORPORATE",
 };
 
 List<Transaction> allTransactions = new List<Transaction>();
@@ -57,11 +57,11 @@ List<AssetTransaction> allAssetTransactions = new List<AssetTransaction>();
 foreach (string folderPath in folderPaths)
 {
     string[] csvFiles = Directory.GetFiles(folderPath, "*.csv");
-    
+
     foreach (string csvFile in csvFiles)
     {
         Console.WriteLine($"\n=== Processing: {Path.GetFileName(csvFile)} ===\n");
-        
+
         if (folderPath.Contains("CORPORATE"))
         {
             IEnumerable<AssetTransaction> corporateAssetTransactions = await ibAgent.ParseCorporateActionsAsync(csvFile);
