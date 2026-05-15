@@ -14,7 +14,7 @@ public class CurrencyConverterTests
         string responseContent = @"{""success"":true,""quotes"":{""EURUSD"":1.1,""EURGBP"":0.85}}";
         HttpClient httpClient = FakeHttpClient.CreateFakeHttpClient(responseContent, HttpStatusCode.OK);
 
-        CurrencyConverter converter = new CurrencyConverter(httpClient);
+        CurrencyConverter converter = new CurrencyConverter("test-api-key", httpClient);
 
         // Act
         Dictionary<string, double> result = await converter.FetchAllRatesAsync(Currencies.EUR, new DateTime(2024, 1, 1));
@@ -30,7 +30,7 @@ public class CurrencyConverterTests
         string responseContent = @"{""success"":false,""error"":{""info"":""Invalid API key""}}";
         HttpClient httpClient = FakeHttpClient.CreateFakeHttpClient(responseContent, HttpStatusCode.OK);
 
-        CurrencyConverter converter = new CurrencyConverter(httpClient);
+        CurrencyConverter converter = new CurrencyConverter("test-api-key", httpClient);
 
         // Act
         Exception ex = await Assert.ThrowsAsync<Exception>(() =>
@@ -45,7 +45,7 @@ public class CurrencyConverterTests
     {
         // Arrange
         HttpClient httpClient = FakeHttpClient.CreateFakeHttpClient("{}", HttpStatusCode.BadRequest);
-        CurrencyConverter converter = new CurrencyConverter(httpClient);
+        CurrencyConverter converter = new CurrencyConverter("test-api-key", httpClient);
 
         // Act & Assert
         await Assert.ThrowsAsync<HttpRequestException>(() =>

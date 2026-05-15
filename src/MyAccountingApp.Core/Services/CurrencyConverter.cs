@@ -10,19 +10,12 @@ namespace MyAccountingApp.Core.Services;
 /// </summary>
 public class CurrencyConverter : ICurrencyConverter
 {
-    /// <summary>
-    /// The API key used for authentication with the external currency rate service.
-    /// </summary>
-    private const string API_KEY = "3038e2941e7364716db9169d95d531"; // ToDo : Move to configuration
-
+    private readonly string _apiKey;
     private readonly HttpClient _httpClient;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CurrencyConverter"/> class.
-    /// </summary>
-    /// <param name="httpClient">Optional HTTP client for making API requests. If not provided, a new instance is created.</param>
-    public CurrencyConverter(HttpClient? httpClient = null)
+    public CurrencyConverter(string apiKey, HttpClient? httpClient = null)
     {
+        this._apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
         this._httpClient = httpClient ?? new HttpClient();
     }
 
@@ -41,7 +34,7 @@ public class CurrencyConverter : ICurrencyConverter
         string dateString = date.ToString("yyyy-MM-dd");
         string currencyList = string.Join(",", Enum.GetValues<Currencies>().Where(c => c != source).Select(c => c.ToString()));
 
-        string url = $"https://api.exchangerate.host/historical?access_key={API_KEY}cd&date={dateString}&source={source}&currencies={currencyList}";
+        string url = $"https://api.exchangerate.host/historical?access_key={this._apiKey}&date={dateString}&source={source}&currencies={currencyList}";
 
         HttpResponseMessage response = await this._httpClient.GetAsync(url);
         response.EnsureSuccessStatusCode();
