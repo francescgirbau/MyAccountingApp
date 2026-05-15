@@ -10,11 +10,14 @@ using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.ValueObjects;
 
 IConfigurationRoot config = new ConfigurationBuilder()
-    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+    .AddEnvironmentVariables()
     .Build();
 
 string currencyApiKey = config["CurrencyApi:ApiKey"]
-    ?? throw new InvalidOperationException("CurrencyApi:ApiKey not found in appsettings.json");
+    ?? Environment.GetEnvironmentVariable("CURRENCY_API_KEY")
+    ?? throw new InvalidOperationException(
+        "CurrencyApi:ApiKey not found. Set it in appsettings.json or the CURRENCY_API_KEY environment variable.");
 
 CompositeConversionRepository repo = new CompositeConversionRepository("conversions.json");
 CurrencyConverter api = new CurrencyConverter(currencyApiKey);
