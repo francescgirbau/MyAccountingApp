@@ -3,4 +3,5 @@ public enum AssetTransactionType
 {
     Buy,
     Sell,
+    CorporateAction,
 }

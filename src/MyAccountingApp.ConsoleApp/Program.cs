@@ -15,37 +15,67 @@ CurencyRateService service = new CurencyRateService(repo, api, source);
 
 DateTime targetDate = new DateTime(2024, 12, 1);
 
-ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
-ILogger<InteractiveBrokersAgent> logger = loggerFactory.CreateLogger<InteractiveBrokersAgent>();
+ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
+ILogger<InteractiveBrokersCsvAgent> logger = loggerFactory.CreateLogger<InteractiveBrokersCsvAgent>();
 ILogger<OllamaClient> ollamaLogger = loggerFactory.CreateLogger<OllamaClient>();
 
 HttpClient httpClient = new HttpClient
 {
     BaseAddress = new Uri("http://localhost:11434"),
-    Timeout = TimeSpan.FromMinutes(3),
+    Timeout = TimeSpan.FromMinutes(10),
 };
 IOllamaClient ollamaClient = new OllamaClient(httpClient, ollamaLogger);
-IInteractiveBrokersPromptBuilder promptBuilder = new InteractiveBrokersPromptBuilder();
+ICsvParser csvParser = new InteractiveBrokersCsvParser();
 
-InteractiveBrokersAgent ibAgent = new InteractiveBrokersAgent(
+InteractiveBrokersCsvAgent ibAgent = new InteractiveBrokersCsvAgent(
+    csvParser,
     ollamaClient,
-    promptBuilder,
     "llama3",
     logger);
 
-string filePath = "C:/Users/Francesc/source/repos/MyAccountingApp/csv/U8997440_20220523_20221230.csv";
+string[] folderPaths = new string[]
+{
+    "C:/Users/Francesc/source/repos/MyAccountingApp/csv/IBKR/TRADES",
+    "C:/Users/Francesc/source/repos/MyAccountingApp/csv/IBKR/OTHER",
+    "C:/Users/Francesc/source/repos/MyAccountingApp/csv/IBKR/CORPORATE"
+};
 
-(IEnumerable<Transaction> transactions, IEnumerable<AssetTransaction> assetTransactions) = await ibAgent.ParseAllAsync(filePath);
+List<Transaction> allTransactions = new List<Transaction>();
+List<AssetTransaction> allAssetTransactions = new List<AssetTransaction>();
+
+foreach (string folderPath in folderPaths)
+{
+    string[] csvFiles = Directory.GetFiles(folderPath, "*.csv");
+    
+    foreach (string csvFile in csvFiles)
+    {
+        Console.WriteLine($"\n=== Processing: {Path.GetFileName(csvFile)} ===\n");
+        
+        if (folderPath.Contains("CORPORATE"))
+        {
+            IEnumerable<AssetTransaction> corporateAssetTransactions = await ibAgent.ParseCorporateActionsAsync(csvFile);
+            allAssetTransactions.AddRange(corporateAssetTransactions);
+        }
+        else
+        {
+            (IEnumerable<Transaction> transactions, IEnumerable<AssetTransaction> assetTransactions) = await ibAgent.ParseAllAsync(csvFile);
+            allTransactions.AddRange(transactions);
+            allAssetTransactions.AddRange(assetTransactions);
+        }
+    }
+}
+
+Console.WriteLine("\n=== ALL TRANSACTIONS ===\n");
 
 Console.WriteLine("--- Transactions ---\n");
 
-if (transactions == null || !transactions.Any())
+if (allTransactions == null || !allTransactions.Any())
 {
     Console.WriteLine("There are not transactions");
 }
 else
 {
-    foreach (Transaction tx in transactions)
+    foreach (Transaction tx in allTransactions)
     {
         Console.WriteLine($"{tx.Date:yyyy-MM-dd} | {tx.Description} | {tx.Money.Amount}{tx.Money.Currency} | {tx.Category}");
     }
@@ -53,17 +83,19 @@ else
 
 Console.WriteLine("\n--- Asset Transactions ---\n");
 
-if (assetTransactions == null || !assetTransactions.Any())
+if (allAssetTransactions == null || !allAssetTransactions.Any())
 {
     Console.WriteLine("There are not asset transactions");
 }
 else
 {
-    foreach (AssetTransaction tx in assetTransactions)
+    foreach (AssetTransaction tx in allAssetTransactions)
     {
         Console.WriteLine($"{tx.Transaction.Date:yyyy-MM-dd} | {tx.Symbol} | {tx.Quantity} | {tx.Transaction.Money.Amount}{tx.Transaction.Money.Currency} | {tx.Type}");
     }
 }
+
+Console.WriteLine($"\nTotal: {allTransactions.Count} transactions, {allAssetTransactions.Count} asset transactions");
 
 YahooMarketPriceService priceService = new YahooMarketPriceService();
 
