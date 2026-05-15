@@ -24,9 +24,9 @@ public class InteractiveBrokersCsvParser : ICsvParser
         };
 
         List<IBKRTransactionRecord> records = new List<IBKRTransactionRecord>();
-        
+
         string[] lines = await File.ReadAllLinesAsync(filePath);
-        
+
         string[]? headerRow = null;
         foreach (string line in lines)
         {
@@ -35,27 +35,27 @@ public class InteractiveBrokersCsvParser : ICsvParser
                 headerRow = line.Replace("Transaction History,Header,", string.Empty).Split(',');
                 continue;
             }
-            
+
             if (!line.StartsWith("Transaction History,Data,"))
             {
                 continue;
             }
-            
+
             string dataPart = line.Replace("Transaction History,Data,", string.Empty);
             string[] values = this.ParseCsvLine(dataPart);
-            
+
             if (headerRow == null || values.Length == 0)
             {
                 continue;
             }
-            
+
             IBKRTransactionRecord record = new IBKRTransactionRecord();
-            
+
             for (int i = 0; i < headerRow.Length && i < values.Length; i++)
             {
                 string header = headerRow[i].Trim();
                 string value = values[i].Trim();
-                
+
                 switch (header)
                 {
                     case "Date":
@@ -100,22 +100,22 @@ public class InteractiveBrokersCsvParser : ICsvParser
                         break;
                 }
             }
-            
+
             if (!string.IsNullOrEmpty(record.Date))
             {
                 records.Add(record);
             }
         }
-        
+
         return records;
     }
-    
+
     private string[] ParseCsvLine(string line)
     {
         List<string> result = new List<string>();
         bool inQuotes = false;
         string current = string.Empty;
-        
+
         foreach (char c in line)
         {
             if (c == '"')
@@ -132,7 +132,7 @@ public class InteractiveBrokersCsvParser : ICsvParser
                 current += c;
             }
         }
-        
+
         result.Add(current);
         return result.ToArray();
     }
@@ -140,9 +140,9 @@ public class InteractiveBrokersCsvParser : ICsvParser
     public async Task<IEnumerable<IBKRCorporateActionRecord>> ParseCorporateActionsAsync(string filePath)
     {
         List<IBKRCorporateActionRecord> records = new List<IBKRCorporateActionRecord>();
-        
+
         string[] lines = await File.ReadAllLinesAsync(filePath);
-        
+
         string[]? headerRow = null;
         foreach (string line in lines)
         {
@@ -151,27 +151,27 @@ public class InteractiveBrokersCsvParser : ICsvParser
                 headerRow = line.Replace("Corporate Actions,Header,", string.Empty).Split(',');
                 continue;
             }
-            
+
             if (!line.StartsWith("Corporate Actions,Data,"))
             {
                 continue;
             }
-            
+
             string dataPart = line.Replace("Corporate Actions,Data,", string.Empty);
             string[] values = this.ParseCsvLine(dataPart);
-            
+
             if (headerRow == null || values.Length == 0)
             {
                 continue;
             }
-            
+
             IBKRCorporateActionRecord record = new IBKRCorporateActionRecord();
-            
+
             for (int i = 0; i < headerRow.Length && i < values.Length; i++)
             {
                 string header = headerRow[i].Trim();
                 string value = values[i].Trim();
-                
+
                 switch (header)
                 {
                     case "Asset Category":
@@ -206,13 +206,13 @@ public class InteractiveBrokersCsvParser : ICsvParser
                         break;
                 }
             }
-            
+
             if (!string.IsNullOrEmpty(record.Description) && record.Description.Contains("Merged", StringComparison.OrdinalIgnoreCase))
             {
                 records.Add(record);
             }
         }
-        
+
         return records;
     }
 }

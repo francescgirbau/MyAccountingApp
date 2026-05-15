@@ -10,9 +10,9 @@ public class AssetTransaction
     public AssetTransactionType Type { get; private set; }
 
     public AssetTransaction(
-        Transaction transaction, 
-        string symbol, 
-        double quantity, 
+        Transaction transaction,
+        string symbol,
+        double quantity,
         AssetTransactionType type)
     {
         Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));

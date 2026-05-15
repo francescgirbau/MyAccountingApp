@@ -126,23 +126,23 @@ public class InteractiveBrokersCsvAgent : IAgent
         double quantity = this.ParseAmount(record.Quantity ?? "0");
         double proceeds = this.ParseAmount(record.Proceeds ?? "0");
         string currency = record.Currency ?? "EUR";
-        
+
         if (currency == "-" || string.IsNullOrEmpty(currency))
         {
             currency = "EUR";
         }
-        
+
         string description = record.Description ?? string.Empty;
-        
+
         string symbol = this.ExtractSymbolFromDescription(description);
-        
+
         bool isSell = quantity < 0;
-        
+
         TransactionCategory category = isSell ? TransactionCategory.INCOME : TransactionCategory.EXPENSE;
         AssetTransactionType type = isSell ? AssetTransactionType.Sell : AssetTransactionType.Buy;
 
         DateTime date = this.ParseDate(record.ReportDate);
-        
+
         Transaction transaction = new Transaction(
             date,
             symbol,
@@ -175,7 +175,7 @@ public class InteractiveBrokersCsvAgent : IAgent
         catch
         {
         }
-        
+
         return "UNKNOWN";
     }
 
@@ -186,23 +186,23 @@ public class InteractiveBrokersCsvAgent : IAgent
         string symbol = record.Symbol ?? string.Empty;
         string description = record.Description ?? string.Empty;
         string transactionType = record.TransactionType ?? string.Empty;
-        
+
         bool isOption = this.IsOption(symbol) || this.IsOptionByDescription(description);
-        
+
         if (isOption)
         {
             Transaction transaction = this.MapOptionToTransaction(record);
             return (false, transaction, null);
         }
-        
+
         bool hasSymbol = !string.IsNullOrEmpty(symbol) && symbol != "-";
-        
+
         if (hasSymbol)
         {
             AssetTransaction assetTransaction = this.MapToAssetTransaction(record);
             return (true, null, assetTransaction);
         }
-        
+
         Transaction transaction2 = this.MapToTransaction(record);
         return (false, transaction2, null);
     }
@@ -211,18 +211,18 @@ public class InteractiveBrokersCsvAgent : IAgent
     {
         double amount = this.ParseAmount(record.NetAmount ?? record.GrossAmount ?? "0");
         string currency = record.PriceCurrency ?? "EUR";
-        
+
         if (currency == "-" || string.IsNullOrEmpty(currency))
         {
             currency = "EUR";
         }
-        
+
         string symbol = record.Symbol ?? "UNKNOWN";
         string underlyingSymbol = this.ExtractUnderlyingSymbol(symbol);
-        
+
         double quantity = this.ParseAmount(record.Quantity ?? "0");
         bool isBuy = quantity > 0;
-        
+
         TransactionCategory category = isBuy ? TransactionCategory.EXPENSE : TransactionCategory.INCOME;
 
         DateTime date = this.ParseDate(record.Date);
@@ -240,13 +240,13 @@ public class InteractiveBrokersCsvAgent : IAgent
         {
             return "UNKNOWN";
         }
-        
+
         int spaceIndex = symbol.IndexOf(' ');
         if (spaceIndex > 0)
         {
             return symbol.Substring(0, spaceIndex).Trim();
         }
-        
+
         return symbol;
     }
 
@@ -262,20 +262,20 @@ public class InteractiveBrokersCsvAgent : IAgent
         }
 
         double quantity = this.CalculateCorporateActionQuantity(record.Description, amount, currency);
-        
+
         string baseSymbol = await this.ExtractCorporateActionSymbolAsync(record, cancellationToken);
-        
+
         TransactionCategory category = TransactionCategory.INCOME;
         AssetTransactionType type = AssetTransactionType.Sell;
-        
+
         DateTime date = this.ParseDate(record.Date);
-        
+
         Transaction transaction = new Transaction(
             date,
             baseSymbol,
             new Money(Math.Abs(amount), currency),
             category);
-        
+
         return new AssetTransaction(
             transaction,
             baseSymbol,
@@ -300,7 +300,7 @@ public class InteractiveBrokersCsvAgent : IAgent
         catch
         {
         }
-        
+
         return 1;
     }
 
@@ -309,12 +309,12 @@ public class InteractiveBrokersCsvAgent : IAgent
         try
         {
             string upper = description.ToUpperInvariant();
-            
+
             var match = System.Text.RegularExpressions.Regex.Match(
-                upper, 
-                @"(\d+[.,]?\d*)\s*(?:USD|CAD|EUR|GBP|AUD)\s*(?:PER\s*SHARE|PER\s*SH)", 
+                upper,
+                @"(\d+[.,]?\d*)\s*(?:USD|CAD|EUR|GBP|AUD)\s*(?:PER\s*SHARE|PER\s*SH)",
                 System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            
+
             if (match.Success)
             {
                 string priceStr = match.Groups[1].Value.Replace(",", ".");
@@ -323,12 +323,12 @@ public class InteractiveBrokersCsvAgent : IAgent
                     return price;
                 }
             }
-            
+
             match = System.Text.RegularExpressions.Regex.Match(
-                upper, 
-                @"FOR\s+(\d+[.,]?\d*)\s*(?:USD|CAD|EUR|GBP|AUD)", 
+                upper,
+                @"FOR\s+(\d+[.,]?\d*)\s*(?:USD|CAD|EUR|GBP|AUD)",
                 System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            
+
             if (match.Success)
             {
                 string priceStr = match.Groups[1].Value.Replace(",", ".");
@@ -341,7 +341,7 @@ public class InteractiveBrokersCsvAgent : IAgent
         catch
         {
         }
-        
+
         return 0;
     }
 
@@ -350,13 +350,13 @@ public class InteractiveBrokersCsvAgent : IAgent
         CancellationToken cancellationToken)
     {
         string symbol = record.Symbol ?? "UNKNOWN";
-        
+
         int dotIndex = symbol.IndexOf('.');
         if (dotIndex > 0)
         {
             return symbol.Substring(0, dotIndex);
         }
-        
+
         return symbol;
     }
 
@@ -364,7 +364,7 @@ public class InteractiveBrokersCsvAgent : IAgent
     {
         double amount = this.ParseAmount(record.NetAmount ?? record.GrossAmount ?? "0");
         string currency = record.PriceCurrency ?? "EUR";
-        
+
         if (currency == "-" || string.IsNullOrEmpty(currency))
         {
             currency = "EUR";
@@ -374,7 +374,7 @@ public class InteractiveBrokersCsvAgent : IAgent
 
         string transactionType = (record.TransactionType ?? "").ToLower();
         string descLower = (record.Description ?? "").ToLower();
-        
+
         if (transactionType.Contains("deposit") || descLower.Contains("deposit") || descLower.Contains("transfer"))
         {
             category = TransactionCategory.DEPOSIT;
@@ -399,10 +399,10 @@ public class InteractiveBrokersCsvAgent : IAgent
         {
             category = TransactionCategory.EXPENSE;
         }
-        
+
         double quantity = this.ParseAmount(record.Quantity ?? "0");
         bool isOption = this.IsOption(record.Symbol ?? string.Empty) || this.IsOptionByDescription(descLower);
-        
+
         if (isOption)
         {
             if (quantity > 0)
@@ -429,25 +429,25 @@ public class InteractiveBrokersCsvAgent : IAgent
         double quantity = this.ParseAmount(record.Quantity ?? "0");
         double amount = this.ParseAmount(record.NetAmount ?? record.GrossAmount ?? "0");
         string currency = record.PriceCurrency ?? "EUR";
-        
+
         if (currency == "-" || string.IsNullOrEmpty(currency))
         {
             currency = "EUR";
         }
-        
+
         string symbol = record.Symbol ?? "UNKNOWN";
         string description = record.Description ?? string.Empty;
         string transactionType = record.TransactionType ?? string.Empty;
-        
+
         bool isAssignment = description.Contains("Assignment", StringComparison.OrdinalIgnoreCase);
         bool isExercise = description.Contains("Exercise", StringComparison.OrdinalIgnoreCase);
-        
+
         bool isBuy;
         AssetTransactionType type;
-        
+
         if (isAssignment || isExercise)
         {
-            bool isCall = description.Contains(" C ", StringComparison.OrdinalIgnoreCase) || 
+            bool isCall = description.Contains(" C ", StringComparison.OrdinalIgnoreCase) ||
                           description.EndsWith(" C", StringComparison.OrdinalIgnoreCase);
             isBuy = isCall;
             type = isBuy ? AssetTransactionType.Buy : AssetTransactionType.Sell;
@@ -470,7 +470,7 @@ public class InteractiveBrokersCsvAgent : IAgent
             isBuy = quantity > 0;
             type = isBuy ? AssetTransactionType.Buy : AssetTransactionType.Sell;
         }
-        
+
         TransactionCategory category = isBuy ? TransactionCategory.EXPENSE : TransactionCategory.INCOME;
 
         DateTime date = this.ParseDate(record.Date);
@@ -499,9 +499,9 @@ public class InteractiveBrokersCsvAgent : IAgent
         {
             return false;
         }
-        
+
         string upper = description.ToUpperInvariant();
-        return upper.Contains(" C ") || upper.Contains(" P ") || 
+        return upper.Contains(" C ") || upper.Contains(" P ") ||
                upper.EndsWith(" C") || upper.EndsWith(" P") ||
                upper.Contains("CALL") || upper.Contains("PUT");
     }

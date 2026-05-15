@@ -50,7 +50,7 @@ public class Transaction
         this.Date = date;
         this.Description = description;
         this.Category = category;
-        
+
         this.Money = new Money(Math.Abs(money.Amount), money.Currency);
 
         this.Validate();

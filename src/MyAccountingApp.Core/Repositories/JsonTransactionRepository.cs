@@ -83,7 +83,7 @@ public class JsonTransactionRepository : ITransactionRepository
     /// <summary>
     /// Saves the transactions to the JSON file.
     /// </summary>
-    /// <param name="transactions">The transactions to save.</param> 
+    /// <param name="transactions">The transactions to save.</param>
     public void Initialize(IEnumerable<Transaction> transactions)
     {
         JsonSerializerOptions options = new() { WriteIndented = true, Converters = { new JsonStringEnumConverter() }, };
