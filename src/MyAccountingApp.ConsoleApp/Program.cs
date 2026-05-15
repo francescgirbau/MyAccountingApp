@@ -56,6 +56,12 @@ List<AssetTransaction> allAssetTransactions = new List<AssetTransaction>();
 
 foreach (string folderPath in folderPaths)
 {
+    if (!Directory.Exists(folderPath))
+    {
+        Console.WriteLine($"La carpeta no existeix: {folderPath}");
+        continue;
+    }
+
     string[] csvFiles = Directory.GetFiles(folderPath, "*.csv");
 
     foreach (string csvFile in csvFiles)
@@ -80,9 +86,9 @@ Console.WriteLine("\n=== ALL TRANSACTIONS ===\n");
 
 Console.WriteLine("--- Transactions ---\n");
 
-if (allTransactions == null || !allTransactions.Any())
+if (!allTransactions.Any())
 {
-    Console.WriteLine("There are not transactions");
+    Console.WriteLine("There are no transactions");
 }
 else
 {
@@ -94,9 +100,9 @@ else
 
 Console.WriteLine("\n--- Asset Transactions ---\n");
 
-if (allAssetTransactions == null || !allAssetTransactions.Any())
+if (!allAssetTransactions.Any())
 {
-    Console.WriteLine("There are not asset transactions");
+    Console.WriteLine("There are no asset transactions");
 }
 else
 {
@@ -110,35 +116,51 @@ Console.WriteLine($"\nTotal: {allTransactions.Count} transactions, {allAssetTran
 
 YahooMarketPriceService priceService = new YahooMarketPriceService();
 
-Money? applePrice = await priceService.GetPriceAsync("GRF.MC");
+Money? grfPrice = await priceService.GetPriceAsync("GRF.MC");
 
-if (applePrice == null)
+if (grfPrice == null)
 {
-    Console.WriteLine("No s'ha pogut obtenir el preu de AAPL");
+    Console.WriteLine("No s'ha pogut obtenir el preu de GRF.MC");
 }
 else
 {
-    Console.WriteLine($"El preu de AAPL is {applePrice!.Amount}{applePrice!.Currency}");
+    Console.WriteLine($"El preu de GRF.MC is {grfPrice.Amount}{grfPrice.Currency}");
 }
 
-Money? dgelPrice = await priceService.GetPriceAsync("DGE.L");
+Money? dgePrice = await priceService.GetPriceAsync("DGE.L");
 
-if (dgelPrice == null)
+if (dgePrice == null)
 {
     Console.WriteLine("No s'ha pogut obtenir el preu de DGE.L");
 }
 else
 {
-    Console.WriteLine($"El preu de AAPL is {dgelPrice!.Amount}{dgelPrice!.Currency}");
+    Console.WriteLine($"El preu de DGE.L is {dgePrice.Amount}{dgePrice.Currency}");
 }
 
 if (repo.GetByDate(targetDate) == null)
 {
-    Console.WriteLine("No hi havia conversió per aquesta data. Es farà la crida a l'API...");
+    Console.WriteLine($"No hi havia conversió per {targetDate:yyyy-MM-dd}. Es farà la crida a l'API...");
 
-    double rate = 1;
+    Dictionary<string, double> rates = await api.FetchAllRatesAsync(source, targetDate);
+    Conversion conversion = new Conversion(targetDate, source);
 
-    Console.WriteLine($"S'ha guardat la conversió per la data {targetDate:yyyy-MM-dd} amb EUR → USD = {rate}");
+    foreach (KeyValuePair<string, double> kv in rates)
+    {
+        string targetCurrencyCode = kv.Key.Substring(3);
+
+        if (Enum.TryParse<Currencies>(targetCurrencyCode, out Currencies currency))
+        {
+            conversion.AddOrUpdateQuote(currency, kv.Value);
+        }
+    }
+
+    repo.AddOrUpdate(conversion);
+
+    if (conversion.TryGetQuote(Currencies.USD, out double rate))
+    {
+        Console.WriteLine($"S'ha guardat la conversió per la data {targetDate:yyyy-MM-dd} amb EUR → USD = {rate}");
+    }
 }
 else
 {
