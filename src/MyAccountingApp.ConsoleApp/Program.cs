@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using MyAccountingApp.Application.Services;
 using MyAccountingApp.Core.Agents;
 using MyAccountingApp.Core.Interfaces;
@@ -8,8 +9,15 @@ using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.ValueObjects;
 
+IConfigurationRoot config = new ConfigurationBuilder()
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+    .Build();
+
+string currencyApiKey = config["CurrencyApi:ApiKey"]
+    ?? throw new InvalidOperationException("CurrencyApi:ApiKey not found in appsettings.json");
+
 CompositeConversionRepository repo = new CompositeConversionRepository("conversions.json");
-CurrencyConverter api = new CurrencyConverter();
+CurrencyConverter api = new CurrencyConverter(currencyApiKey);
 Currencies source = Currencies.EUR;
 CurencyRateService service = new CurencyRateService(repo, api, source);
 

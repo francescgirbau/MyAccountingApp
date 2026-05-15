@@ -362,8 +362,15 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
+# LSCache files
+*.lscache
+
 # Persisten databases
 .json
+
+# User-specific app settings (contains API keys, connection strings)
+appsettings.json
+appsettings.*.json
 
 # Test files for agents
 
