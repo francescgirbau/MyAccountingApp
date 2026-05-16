@@ -10,17 +10,20 @@ public class ImportService : IImportService
     private readonly IAgent _agent;
     private readonly ITransactionRepository _transactionRepo;
     private readonly IPortfolioRepository _portfolioRepo;
+    private readonly ITransactionValidator _validator;
     private readonly ILogger<ImportService> _logger;
 
     public ImportService(
         IAgent agent,
         ITransactionRepository transactionRepo,
         IPortfolioRepository portfolioRepo,
+        ITransactionValidator validator,
         ILogger<ImportService> logger)
     {
         this._agent = agent ?? throw new ArgumentNullException(nameof(agent));
         this._transactionRepo = transactionRepo ?? throw new ArgumentNullException(nameof(transactionRepo));
         this._portfolioRepo = portfolioRepo ?? throw new ArgumentNullException(nameof(portfolioRepo));
+        this._validator = validator ?? throw new ArgumentNullException(nameof(validator));
         this._logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -51,7 +54,13 @@ public class ImportService : IImportService
                             await this._agent.ParseCorporateActionsAsync(csvFile);
                         foreach (AssetTransaction tx in corporateTransactions)
                         {
-                            this._portfolioRepo.AddOrUpdate(tx);
+                            ValidationResult vr = this._validator.Validate(tx);
+                            result.ValidationErrors.AddRange(vr.Errors);
+                            result.ValidationWarnings.AddRange(vr.Warnings);
+                            if (vr.IsValid)
+                            {
+                                this._portfolioRepo.AddOrUpdate(tx);
+                            }
                         }
 
                         result.AssetTransactions.AddRange(corporateTransactions);
@@ -63,12 +72,24 @@ public class ImportService : IImportService
 
                         foreach (Transaction tx in transactions)
                         {
-                            this._transactionRepo.AddOrUpdate(tx);
+                            ValidationResult vr = this._validator.Validate(tx);
+                            result.ValidationErrors.AddRange(vr.Errors);
+                            result.ValidationWarnings.AddRange(vr.Warnings);
+                            if (vr.IsValid)
+                            {
+                                this._transactionRepo.AddOrUpdate(tx);
+                            }
                         }
 
                         foreach (AssetTransaction tx in assetTransactions)
                         {
-                            this._portfolioRepo.AddOrUpdate(tx);
+                            ValidationResult vr = this._validator.Validate(tx);
+                            result.ValidationErrors.AddRange(vr.Errors);
+                            result.ValidationWarnings.AddRange(vr.Warnings);
+                            if (vr.IsValid)
+                            {
+                                this._portfolioRepo.AddOrUpdate(tx);
+                            }
                         }
 
                         result.Transactions.AddRange(transactions);
