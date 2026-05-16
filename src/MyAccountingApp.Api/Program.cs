@@ -23,6 +23,8 @@ builder.Services.AddSingleton<IConversionRepository>(repo);
 builder.Services.AddSingleton<ICurrencyRateService>(currencyRateService);
 builder.Services.AddSingleton<ITransactionRepository>(
     new CompositeTransactionRepository("transactions.json"));
+builder.Services.AddSingleton<IPortfolioRepository>(
+    new CompositePortfolioRepository("portfolio.json"));
 builder.Services.AddSingleton<IAgent>(sp =>
 {
     ICsvParser csvParser = new InteractiveBrokersCsvParser();
@@ -38,6 +40,18 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = Dat
 app.MapGet("/transactions", (ITransactionRepository repo) =>
 {
     IEnumerable<Transaction> transactions = repo.GetAll();
+    return Results.Ok(transactions);
+});
+
+app.MapGet("/asset-transactions", (IPortfolioRepository repo) =>
+{
+    IEnumerable<AssetTransaction> transactions = repo.GetAllTransactions();
+    return Results.Ok(transactions);
+});
+
+app.MapGet("/asset-transactions/{symbol}", (string symbol, IPortfolioRepository repo) =>
+{
+    IEnumerable<AssetTransaction> transactions = repo.GetAssetTransactions(symbol);
     return Results.Ok(transactions);
 });
 
