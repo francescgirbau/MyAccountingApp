@@ -1,4 +1,3 @@
-using FsCheck;
 using FsCheck.Xunit;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
@@ -8,26 +7,27 @@ namespace MyAccountingApp.Domain.Tests.Properties;
 public class ConversionPropertyTests
 {
     [Property]
-    public Property TryGetQuote_ReturnsStoredRate(decimal rate)
+    public bool TryGetQuote_ReturnsStoredRate(decimal rate)
     {
         rate = Math.Abs(rate);
-        if (rate == 0) rate = 1.0m;
+        if (rate == 0) { rate = 1.0m; }
 
         Conversion conversion = new Conversion(new DateTime(2024, 1, 1), Currencies.EUR);
         conversion.AddOrUpdateQuote(Currencies.USD, rate);
 
         bool found = conversion.TryGetQuote(Currencies.USD, out decimal storedRate);
 
-        return (found && storedRate == rate).ToProperty();
+        return found && storedRate == rate;
     }
 
     [Property]
-    public Property AddOrUpdateQuote_ReplacesExistingRate(decimal firstRate, decimal secondRate)
+    public bool AddOrUpdateQuote_ReplacesExistingRate(decimal firstRate, decimal secondRate)
     {
         firstRate = Math.Abs(firstRate);
         secondRate = Math.Abs(secondRate);
-        if (firstRate == 0) firstRate = 1.0m;
-        if (secondRate == 0) secondRate = 2.0m;
+        if (firstRate == 0) { firstRate = 1.0m; }
+
+        if (secondRate == 0) { secondRate = 2.0m; }
 
         Conversion conversion = new Conversion(new DateTime(2024, 1, 1), Currencies.EUR);
 
@@ -36,22 +36,22 @@ public class ConversionPropertyTests
 
         conversion.TryGetQuote(Currencies.USD, out decimal stored);
 
-        return (stored == secondRate).ToProperty();
+        return stored == secondRate;
     }
 
     [Property]
-    public Property TryGetQuote_ForDifferentCurrency_ReturnsFalse()
+    public bool TryGetQuote_ForDifferentCurrency_ReturnsFalse()
     {
         Conversion conversion = new Conversion(new DateTime(2024, 1, 1), Currencies.EUR);
         conversion.AddOrUpdateQuote(Currencies.USD, 1.1m);
 
         bool found = conversion.TryGetQuote(Currencies.CAD, out _);
 
-        return (!found).ToProperty();
+        return !found;
     }
 
     [Property]
-    public Property MatchesDate_MatchesExactDate(int year, int month, int day)
+    public bool MatchesDate_MatchesExactDate(int year, int month, int day)
     {
         month = Math.Clamp(month, 1, 12);
         day = Math.Clamp(day, 1, 28);
@@ -60,6 +60,6 @@ public class ConversionPropertyTests
         DateTime date = new DateTime(year, month, day);
         Conversion conversion = new Conversion(date, Currencies.EUR);
 
-        return conversion.MatchesDate(date).ToProperty();
+        return conversion.MatchesDate(date);
     }
 }
