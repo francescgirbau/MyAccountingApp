@@ -64,6 +64,47 @@ app.MapPost("/import", async (ImportRequest request, IImportService importServic
     return Results.Ok(result);
 });
 
+app.MapGet("/portfolio/{symbol}", (string symbol, IPortfolioRepository repo) =>
+{
+    IEnumerable<AssetTransaction> transactions = repo.GetAssetTransactions(symbol);
+    List<AssetTransaction> list = transactions.ToList();
+
+    if (list.Count == 0)
+    {
+        return Results.NotFound(new { symbol, message = "No transactions found for this symbol" });
+    }
+
+    decimal netQuantity = 0;
+    decimal totalCost = 0;
+    string currency = list[0].Transaction.Money.Currency;
+
+    foreach (AssetTransaction tx in list)
+    {
+        if (tx.Type == AssetTransactionType.Buy)
+        {
+            netQuantity += tx.Quantity;
+            totalCost += tx.Transaction.Money.Amount;
+        }
+        else
+        {
+            netQuantity -= tx.Quantity;
+            totalCost -= tx.Transaction.Money.Amount;
+        }
+    }
+
+    decimal avgCost = netQuantity > 0 ? Math.Round(totalCost / netQuantity, 4) : 0;
+
+    return Results.Ok(new
+    {
+        symbol,
+        netQuantity,
+        averageUnitaryCost = avgCost,
+        totalCostBasis = Math.Round(totalCost, 2),
+        currency,
+        transactionCount = list.Count,
+    });
+});
+
 app.MapGet("/conversions", (IConversionRepository repo, DateTime? date) =>
 {
     if (date.HasValue)
