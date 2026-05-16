@@ -15,7 +15,7 @@ public class FakeMarketPriceServiceTests
 
         // Assert
         Assert.NotNull(price);
-        Assert.Equal(150.25, price!.Amount);
+        Assert.Equal(150.25m, price!.Amount);
         Assert.Equal("USD", price.Currency);
     }
 

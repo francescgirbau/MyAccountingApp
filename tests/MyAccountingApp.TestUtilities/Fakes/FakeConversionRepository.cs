@@ -13,10 +13,10 @@ public class FakeConversionRepository : IConversionRepository
 
     private readonly Currencies _fakeSource = Currencies.EUR;
 
-    private readonly Dictionary<Currencies, double> _fakeQuotes = new()
+    private readonly Dictionary<Currencies, decimal> _fakeQuotes = new()
         {
-            { Currencies.USD, 1.1 },
-            { Currencies.CAD, 1.5 },
+            { Currencies.USD, 1.1m },
+            { Currencies.CAD, 1.5m },
         };
 
     public FakeConversionRepository()

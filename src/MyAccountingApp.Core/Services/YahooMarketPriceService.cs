@@ -14,7 +14,7 @@ public class YahooMarketPriceService : IMarketPriceService
             if (securities.TryGetValue(symbol, out Security? security))
             {
                 string currency = MapYahooMarketIntoCurrency(security.Market);
-                double amount = security.RegularMarketPrice;
+                decimal amount = (decimal)security.RegularMarketPrice;
 
                 return new Money(amount, currency);
             }

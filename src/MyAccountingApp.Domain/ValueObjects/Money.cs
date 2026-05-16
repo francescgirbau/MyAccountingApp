@@ -8,7 +8,7 @@ public record Money
     /// <summary>
     /// Gets the amount of money.
     /// </summary>
-    public double Amount { get; }
+    public decimal Amount { get; }
 
     /// <summary>
     /// Gets the currency of the money.
@@ -21,7 +21,7 @@ public record Money
     /// <param name="amount">The amount of money</param>
     /// <param name="currency">The currency code</param>
     /// <exception cref="ArgumentException"></exception>
-    public Money(double amount, string currency)
+    public Money(decimal amount, string currency)
     {
         if (string.IsNullOrWhiteSpace(currency) || currency.Length != 3)
         {

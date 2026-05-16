@@ -54,7 +54,7 @@ public class CurencyRateService : ICurrencyRateService
     /// <returns>
     /// A dictionary mapping target currencies to their conversion rates.
     /// </returns>
-    public async Task<Dictionary<Currencies, double>> GetQuotes(DateTime date)
+    public async Task<Dictionary<Currencies, decimal>> GetQuotes(DateTime date)
     {
         Conversion? conversion = this._repository.GetByDate(date);
 
@@ -63,11 +63,11 @@ public class CurencyRateService : ICurrencyRateService
             return conversion.Quotes;
         }
 
-        Dictionary<string, double> rates = await this._api.FetchAllRatesAsync(this._source, date);
+        Dictionary<string, decimal> rates = await this._api.FetchAllRatesAsync(this._source, date);
 
         conversion = new Conversion(date, this._source);
 
-        foreach (KeyValuePair<string, double> kv in rates)
+        foreach (KeyValuePair<string, decimal> kv in rates)
         {
             string targetCurrencyCode = kv.Key.Substring(3);
 

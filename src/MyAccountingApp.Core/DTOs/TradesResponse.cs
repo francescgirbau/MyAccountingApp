@@ -26,7 +26,7 @@ public class TradeResponse
     public string? Symbol { get; init; }
 
     [JsonPropertyName("quantity")]
-    public double Quantity { get; init; }
+    public decimal Quantity { get; init; }
 
     [JsonPropertyName("money")]
     public MoneyResponse? Money { get; init; }

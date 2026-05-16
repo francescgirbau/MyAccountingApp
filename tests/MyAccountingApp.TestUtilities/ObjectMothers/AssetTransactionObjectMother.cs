@@ -8,8 +8,8 @@ public static class AssetTransactionObjectMother
 {
     public static AssetTransaction CreateSell(
         string symbol = "AAPL",
-        double price = 150,
-        double quantity = 10,
+        decimal price = 150,
+        decimal quantity = 10,
         string currency = "USD")
     {
         Transaction transaction = new Transaction(
@@ -24,8 +24,8 @@ public static class AssetTransactionObjectMother
 
     public static AssetTransaction CreateBuy(
         string symbol = "AAPL",
-        double price = 150,
-        double quantity = 10,
+        decimal price = 150,
+        decimal quantity = 10,
         string currency = "USD")
     {
         Transaction transaction = new Transaction(

@@ -29,7 +29,7 @@ public class CurrencyConverter : ICurrencyConverter
     /// mapping currency pair codes (e.g., "EURUSD") to their conversion rates.
     /// </returns>
     /// <exception cref="Exception">Thrown if the API response is invalid or unsuccessful.</exception>
-    public async Task<Dictionary<string, double>> FetchAllRatesAsync(Currencies source, DateTime date)
+    public async Task<Dictionary<string, decimal>> FetchAllRatesAsync(Currencies source, DateTime date)
     {
         string dateString = date.ToString("yyyy-MM-dd");
         string currencyList = string.Join(",", Enum.GetValues<Currencies>().Where(c => c != source).Select(c => c.ToString()));

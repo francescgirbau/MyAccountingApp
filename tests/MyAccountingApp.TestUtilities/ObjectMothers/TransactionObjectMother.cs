@@ -6,7 +6,7 @@ namespace MyAccountingApp.TestUtilities.ObjectMothers;
 public static class TransactionObjectMother
 {
     public static Transaction ValidIncome(
-        double amount = 100,
+        decimal amount = 100,
         Currencies currency = Currencies.EUR,
         string description = "Test Income")
     {
@@ -18,7 +18,7 @@ public static class TransactionObjectMother
     }
 
     public static Transaction ValidExpense(
-        double amount = -50,
+        decimal amount = -50,
         Currencies currency = Currencies.EUR,
         string description = "Test Expense")
     {
@@ -30,7 +30,7 @@ public static class TransactionObjectMother
     }
 
     public static Transaction ValidTransfer(
-        double amount = -200,
+        decimal amount = -200,
         Currencies currency = Currencies.EUR,
         string description = "Test Transfer")
     {
@@ -42,7 +42,7 @@ public static class TransactionObjectMother
     }
 
     public static Transaction ValidDeposit(
-    double amount = 200,
+    decimal amount = 200,
     Currencies currency = Currencies.EUR,
     string description = "Test Deposit")
     {

@@ -36,10 +36,10 @@ public class CurrencyConversionServiceTests
 
         DateTime date = new DateTime(2023, 12, 1); // This date does not exist
         Currencies targetCurrency = Currencies.USD;
-        double expectedTargetRate = 1.1;
+        decimal expectedTargetRate = 1.1m;
 
         // Act
-        Dictionary<Currencies, double> rate = await service.GetQuotes(date);
+        Dictionary<Currencies, decimal> rate = await service.GetQuotes(date);
 
         // Assert
         Assert.Equal(rate[targetCurrency], expectedTargetRate);
@@ -59,10 +59,10 @@ public class CurrencyConversionServiceTests
 
         DateTime date = new DateTime(2005, 12, 1); // This date does  exist
         Currencies targetCurrency = Currencies.USD;
-        double expectedTargetRate = 1.1;
+        decimal expectedTargetRate = 1.1m;
 
         // Act
-        Dictionary<Currencies, double> rate = await service.GetQuotes(date);
+        Dictionary<Currencies, decimal> rate = await service.GetQuotes(date);
 
         // Assert
         Assert.Equal(rate[targetCurrency], expectedTargetRate);
@@ -76,13 +76,13 @@ public class CurrencyConversionServiceTests
         // Arrange
         ICurrencyConverter converter = new FakeCurrencyConverter();
         Currencies source = Currencies.EUR;
-        (string, double) expectedRateUsd = ("EURUSD", 1.1);
-        (string, double) expectedRateCad = ("EURCAD", 1.5);
+        (string, decimal) expectedRateUsd = ("EURUSD", 1.1m);
+        (string, decimal) expectedRateCad = ("EURCAD", 1.5m);
 
         DateTime date = new DateTime(2023, 12, 1);
 
         // Act
-        Dictionary<string, double> result = await converter.FetchAllRatesAsync(source, date);
+        Dictionary<string, decimal> result = await converter.FetchAllRatesAsync(source, date);
 
         // Assert
         Assert.True(result.ContainsKey(expectedRateUsd.Item1));

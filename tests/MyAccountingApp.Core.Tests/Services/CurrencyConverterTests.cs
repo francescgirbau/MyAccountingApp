@@ -10,14 +10,14 @@ public class CurrencyConverterTests
     public async Task FetchAllRatesAsync_ReturnsRates_WhenApiResponseIsValid()
     {
         // Arrange
-        Dictionary<string, double> expectedQuotes = new Dictionary<string, double> { { "EURUSD", 1.1 }, { "EURGBP", 0.85 } };
+        Dictionary<string, decimal> expectedQuotes = new Dictionary<string, decimal> { { "EURUSD", 1.1m }, { "EURGBP", 0.85m } };
         string responseContent = @"{""success"":true,""quotes"":{""EURUSD"":1.1,""EURGBP"":0.85}}";
         HttpClient httpClient = FakeHttpClient.CreateFakeHttpClient(responseContent, HttpStatusCode.OK);
 
         CurrencyConverter converter = new CurrencyConverter("test-api-key", httpClient);
 
         // Act
-        Dictionary<string, double> result = await converter.FetchAllRatesAsync(Currencies.EUR, new DateTime(2024, 1, 1));
+        Dictionary<string, decimal> result = await converter.FetchAllRatesAsync(Currencies.EUR, new DateTime(2024, 1, 1));
 
         // Assert
         Assert.Equal(expectedQuotes, result);

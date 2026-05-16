@@ -16,7 +16,7 @@ public class AssetTransactionResponse
     public string? Symbol { get; init; }
 
     [JsonPropertyName("quantity")]
-    public double Quantity { get; init; }
+    public decimal Quantity { get; init; }
 
     [JsonPropertyName("type")]
     public string? Type { get; init; }
