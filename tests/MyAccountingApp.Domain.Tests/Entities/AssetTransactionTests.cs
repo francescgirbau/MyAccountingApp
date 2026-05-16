@@ -40,7 +40,7 @@ public class AssetTransactionTests
         Transaction transaction = new Transaction(date, "AAPL", money, TransactionCategory.EXPENSE);
 
         Assert.Throws<ArgumentException>(() =>
-            new AssetTransaction(transaction, "", 10, AssetTransactionType.Buy));
+            new AssetTransaction(transaction, string.Empty, 10, AssetTransactionType.Buy));
     }
 
     [Fact]

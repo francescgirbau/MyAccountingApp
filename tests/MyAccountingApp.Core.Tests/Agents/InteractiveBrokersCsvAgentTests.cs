@@ -82,7 +82,7 @@ public class InteractiveBrokersCsvAgentTests
                 Date = "2024-12-18",
                 Description = "Deposit",
                 TransactionType = "Deposit",
-                Symbol = "",
+                Symbol = string.Empty,
                 Quantity = "0",
                 PriceCurrency = "EUR",
                 GrossAmount = "5000.00",
