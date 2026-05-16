@@ -35,6 +35,7 @@ builder.Services.AddSingleton<IAgent>(sp =>
 });
 builder.Services.AddSingleton<IMarketPriceService, YahooMarketPriceService>();
 builder.Services.AddSingleton<IImportService, ImportService>();
+builder.Services.AddSingleton<ITransactionValidator, TransactionValidator>();
 
 WebApplication app = builder.Build();
 
@@ -102,6 +103,35 @@ app.MapGet("/portfolio/{symbol}", (string symbol, IPortfolioRepository repo) =>
         totalCostBasis = Math.Round(totalCost, 2),
         currency,
         transactionCount = list.Count,
+    });
+});
+
+app.MapGet("/validate", (ITransactionRepository txRepo, IPortfolioRepository pfRepo, ITransactionValidator validator) =>
+{
+    List<ValidationError> allErrors = new();
+    List<ValidationError> allWarnings = new();
+
+    foreach (Transaction tx in txRepo.GetAll())
+    {
+        ValidationResult vr = validator.Validate(tx);
+        allErrors.AddRange(vr.Errors);
+        allWarnings.AddRange(vr.Warnings);
+    }
+
+    foreach (AssetTransaction tx in pfRepo.GetAllTransactions())
+    {
+        ValidationResult vr = validator.Validate(tx);
+        allErrors.AddRange(vr.Errors);
+        allWarnings.AddRange(vr.Warnings);
+    }
+
+    return Results.Ok(new
+    {
+        isValid = allErrors.Count == 0,
+        errorCount = allErrors.Count,
+        warningCount = allWarnings.Count,
+        errors = allErrors,
+        warnings = allWarnings,
     });
 });
 
