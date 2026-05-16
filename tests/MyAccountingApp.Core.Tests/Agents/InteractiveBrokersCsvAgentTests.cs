@@ -129,7 +129,7 @@ public class InteractiveBrokersCsvAgentTests
     [Fact]
     public async Task ParseAllAsync_Throws_WhenFilePathIsNull()
     {
-        await Assert.ThrowsAsync<ArgumentException>(() =>
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
             this.agent.ParseAllAsync(null!));
     }
 
