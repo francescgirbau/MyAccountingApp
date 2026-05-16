@@ -7,8 +7,6 @@ using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
 
-record ImportRequest(List<string> FolderPaths);
-
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 string currencyApiKey = builder.Configuration["CurrencyApi:ApiKey"]
@@ -148,3 +146,5 @@ app.MapGet("/conversions", (IConversionRepository repo, DateTime? date) =>
 });
 
 app.Run();
+
+record ImportRequest(List<string> FolderPaths);
