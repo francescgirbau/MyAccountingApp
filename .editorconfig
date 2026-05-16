@@ -24,6 +24,7 @@ dotnet_diagnostic.SA1129.severity = none   # Use object initializers instead of 
 dotnet_diagnostic.SA1309.severity = none   # Field names must not begin with an underscore
 dotnet_diagnostic.SA1310.severity = none   # Field names must not contain Hungarian notation
 dotnet_diagnostic.SA1602.severity = none   # Enumeration items must be documented
+dotnet_diagnostic.SA1011.severity = none   # Closing square bracket spacing (conflicts with nullable syntax)
 
 #### Example of keeping some useful rules active ####
 dotnet_diagnostic.SA1500.severity = error  # Braces must not be on the same line as code

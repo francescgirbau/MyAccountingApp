@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Logging;
 using MyAccountingApp.Application.Services;
 using MyAccountingApp.Core.Agents;
-using MyAccountingApp.Core.Interfaces;
 using MyAccountingApp.Core.Repositories;
 using MyAccountingApp.Core.Services;
 using MyAccountingApp.Domain.Entities;
@@ -28,20 +27,11 @@ DateTime targetDate = new DateTime(2024, 12, 1);
 
 ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
 ILogger<InteractiveBrokersCsvAgent> logger = loggerFactory.CreateLogger<InteractiveBrokersCsvAgent>();
-ILogger<OllamaClient> ollamaLogger = loggerFactory.CreateLogger<OllamaClient>();
 
-HttpClient httpClient = new HttpClient
-{
-    BaseAddress = new Uri("http://localhost:11434"),
-    Timeout = TimeSpan.FromMinutes(10),
-};
-IOllamaClient ollamaClient = new OllamaClient(httpClient, ollamaLogger);
 ICsvParser csvParser = new InteractiveBrokersCsvParser();
 
 InteractiveBrokersCsvAgent ibAgent = new InteractiveBrokersCsvAgent(
     csvParser,
-    ollamaClient,
-    "llama3",
     logger);
 
 string[] folderPaths = new string[]

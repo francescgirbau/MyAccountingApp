@@ -7,7 +7,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using MyAccountingApp.Core.Interfaces;
 using MyAccountingApp.Core.Models;
 using MyAccountingApp.Core.Services;
 using MyAccountingApp.Domain.Entities;
@@ -18,28 +17,14 @@ using MyAccountingApp.Domain.ValueObjects;
 public class InteractiveBrokersCsvAgent : IAgent
 {
     private readonly ICsvParser csvParser;
-    private readonly IOllamaClient ollamaClient;
-    private readonly string modelName;
-    private readonly int maxRetries;
-    private readonly int initialDelayMs;
     private readonly ILogger<InteractiveBrokersCsvAgent> logger;
 
     public InteractiveBrokersCsvAgent(
         ICsvParser csvParser,
-        IOllamaClient ollamaClient,
-        string modelName,
-        ILogger<InteractiveBrokersCsvAgent> logger,
-        int maxRetries = 3,
-        int initialDelayMs = 1000)
+        ILogger<InteractiveBrokersCsvAgent> logger)
     {
         this.csvParser = csvParser ?? throw new ArgumentNullException(nameof(csvParser));
-        this.ollamaClient = ollamaClient ?? throw new ArgumentNullException(nameof(ollamaClient));
-        this.modelName = string.IsNullOrWhiteSpace(modelName)
-            ? throw new ArgumentException("Model name must be provided.", nameof(modelName))
-            : modelName;
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        this.maxRetries = maxRetries;
-        this.initialDelayMs = initialDelayMs;
     }
 
     public async Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions)> ParseAllAsync(
@@ -79,8 +64,10 @@ public class InteractiveBrokersCsvAgent : IAgent
             }
         }
 
-        this.logger.LogInformation("Parsed {TransactionCount} transactions and {AssetTransactionCount} asset transactions",
-            transactions.Count, assetTransactions.Count);
+        this.logger.LogInformation(
+            "Parsed {TransactionCount} transactions and {AssetTransactionCount} asset transactions",
+            transactions.Count,
+            assetTransactions.Count);
 
         return (transactions, assetTransactions);
     }
@@ -169,6 +156,7 @@ public class InteractiveBrokersCsvAgent : IAgent
                 {
                     symbol = symbol.Substring(0, dotIndex);
                 }
+
                 return symbol;
             }
         }
@@ -283,7 +271,7 @@ public class InteractiveBrokersCsvAgent : IAgent
             type);
     }
 
-    private double CalculateCorporateActionQuantity(string description, double amount, string currency)
+    private double CalculateCorporateActionQuantity(string? description, double amount, string currency)
     {
         try
         {
@@ -372,8 +360,8 @@ public class InteractiveBrokersCsvAgent : IAgent
 
         TransactionCategory category = TransactionCategory.EXPENSE;
 
-        string transactionType = (record.TransactionType ?? "").ToLower();
-        string descLower = (record.Description ?? "").ToLower();
+        string transactionType = (record.TransactionType ?? string.Empty).ToLower();
+        string descLower = (record.Description ?? string.Empty).ToLower();
 
         if (transactionType.Contains("deposit") || descLower.Contains("deposit") || descLower.Contains("transfer"))
         {
@@ -506,7 +494,7 @@ public class InteractiveBrokersCsvAgent : IAgent
                upper.Contains("CALL") || upper.Contains("PUT");
     }
 
-    private DateTime ParseDate(string dateStr)
+    private DateTime ParseDate(string? dateStr)
     {
         if (string.IsNullOrEmpty(dateStr))
         {
@@ -530,7 +518,7 @@ public class InteractiveBrokersCsvAgent : IAgent
             return 0;
         }
 
-        amountStr = amountStr.Trim().Replace(",", "");
+        amountStr = amountStr.Trim().Replace(",", string.Empty);
 
         if (double.TryParse(amountStr, NumberStyles.Any, CultureInfo.InvariantCulture, out double result))
         {

@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Moq;
 using MyAccountingApp.Core.Agents;
-using MyAccountingApp.Core.Interfaces;
 using MyAccountingApp.Core.Models;
 using MyAccountingApp.Core.Services;
 using MyAccountingApp.Domain.Entities;
@@ -12,7 +11,6 @@ namespace MyAccountingApp.Core.Tests.Agents;
 public class InteractiveBrokersCsvAgentTests
 {
     private readonly Mock<ICsvParser> parserMock = new Mock<ICsvParser>();
-    private readonly Mock<IOllamaClient> ollamaMock = new Mock<IOllamaClient>();
     private readonly Mock<ILogger<InteractiveBrokersCsvAgent>> loggerMock = new Mock<ILogger<InteractiveBrokersCsvAgent>>();
     private readonly InteractiveBrokersCsvAgent agent;
 
@@ -20,8 +18,6 @@ public class InteractiveBrokersCsvAgentTests
     {
         this.agent = new InteractiveBrokersCsvAgent(
             this.parserMock.Object,
-            this.ollamaMock.Object,
-            "test-model",
             this.loggerMock.Object);
     }
 
@@ -86,7 +82,7 @@ public class InteractiveBrokersCsvAgentTests
                 Date = "2024-12-18",
                 Description = "Deposit",
                 TransactionType = "Deposit",
-                Symbol = "",
+                Symbol = string.Empty,
                 Quantity = "0",
                 PriceCurrency = "EUR",
                 GrossAmount = "5000.00",
