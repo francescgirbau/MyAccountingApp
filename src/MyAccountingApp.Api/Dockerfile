@@ -23,4 +23,4 @@ EXPOSE 8080
 
 COPY --from=build /app .
 
-ENTRYPOINT ["MyAccountingApp.Api"]
+ENTRYPOINT ["dotnet", "MyAccountingApp.Api.dll"]
