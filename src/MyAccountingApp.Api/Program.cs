@@ -31,11 +31,16 @@ builder.Services.AddSingleton<IBrokerImportService>(sp =>
     ILogger<InteractiveBrokersImportService> logger = sp.GetRequiredService<ILogger<InteractiveBrokersImportService>>();
     return new InteractiveBrokersImportService(csvParser, logger);
 });
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<IMarketPriceService, YahooMarketPriceService>();
 builder.Services.AddSingleton<IImportService, ImportService>();
 builder.Services.AddSingleton<ITransactionValidator, TransactionValidator>();
 
 WebApplication app = builder.Build();
+
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
