@@ -9,4 +9,8 @@ public interface IAgent
     Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions)> ParseAllAsync(
         string filePath,
         CancellationToken cancellationToken = default);
+
+    Task<IEnumerable<AssetTransaction>> ParseCorporateActionsAsync(
+        string filePath,
+        CancellationToken cancellationToken = default);
 }
