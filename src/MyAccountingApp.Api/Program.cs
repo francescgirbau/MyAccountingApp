@@ -55,4 +55,16 @@ app.MapGet("/asset-transactions/{symbol}", (string symbol, IPortfolioRepository 
     return Results.Ok(transactions);
 });
 
+app.MapGet("/conversions", (IConversionRepository repo, DateTime? date) =>
+{
+    if (date.HasValue)
+    {
+        Conversion? conversion = repo.GetByDate(date.Value);
+        return conversion is not null ? Results.Ok(conversion) : Results.NotFound();
+    }
+
+    IEnumerable<Conversion> conversions = repo.GetAll();
+    return Results.Ok(conversions);
+});
+
 app.Run();
