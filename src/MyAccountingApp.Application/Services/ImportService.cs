@@ -8,6 +8,10 @@ namespace MyAccountingApp.Application.Services;
 public class ImportService : IImportService
 {
     private readonly IBrokerImportService _broker;
+    private readonly ITransactionRepository _transactionRepo;
+    private readonly IPortfolioRepository _portfolioRepo;
+    private readonly ITransactionValidator _validator;
+    private readonly ILogger<ImportService> _logger;
 
     public ImportService(
         IBrokerImportService broker,
