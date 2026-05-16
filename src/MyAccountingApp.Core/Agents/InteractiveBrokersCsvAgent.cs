@@ -275,7 +275,7 @@ public class InteractiveBrokersCsvAgent : IAgent
     {
         try
         {
-            decimal pricePerShare = this.ExtractPricePerShare(description);
+            decimal pricePerShare = this.ExtractPricePerShare(description ?? string.Empty);
             if (pricePerShare > 0)
             {
                 decimal calculatedQuantity = amount / pricePerShare;

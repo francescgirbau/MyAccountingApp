@@ -11,9 +11,9 @@ namespace MyAccountingApp.TestUtilities.Fakes
         {
             _prices = prices ?? new Dictionary<string, Money>
             {
-                { "AAPL", new Money(150.25, "USD") },
-                { "TSLA", new Money(720.50, "USD") },
-                { "BMW.DE", new Money(80.75, "EUR") }
+                { "AAPL", new Money(150.25m, "USD") },
+                { "TSLA", new Money(720.50m, "USD") },
+                { "BMW.DE", new Money(80.75m, "EUR") }
             };
         }
 
