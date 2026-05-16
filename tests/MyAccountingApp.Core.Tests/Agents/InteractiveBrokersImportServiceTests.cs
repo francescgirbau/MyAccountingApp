@@ -8,15 +8,15 @@ using MyAccountingApp.Domain.ValueObjects;
 
 namespace MyAccountingApp.Core.Tests.Agents;
 
-public class InteractiveBrokersCsvAgentTests
+public class InteractiveBrokersImportServiceTests
 {
     private readonly Mock<ICsvParser> parserMock = new Mock<ICsvParser>();
-    private readonly Mock<ILogger<InteractiveBrokersCsvAgent>> loggerMock = new Mock<ILogger<InteractiveBrokersCsvAgent>>();
-    private readonly InteractiveBrokersCsvAgent agent;
+    private readonly Mock<ILogger<InteractiveBrokersImportService>> loggerMock = new Mock<ILogger<InteractiveBrokersImportService>>();
+    private readonly InteractiveBrokersImportService agent;
 
-    public InteractiveBrokersCsvAgentTests()
+    public InteractiveBrokersImportServiceTests()
     {
-        this.agent = new InteractiveBrokersCsvAgent(
+        this.agent = new InteractiveBrokersImportService(
             this.parserMock.Object,
             this.loggerMock.Object);
     }
