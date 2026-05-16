@@ -1,0 +1,13 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: src/MyAccountingApp.Api/Dockerfile
+    container_name: myaccountingapp-api
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./csv:/app/csv
+    environment:
+      - CURRENCY_API_KEY=${CURRENCY_API_KEY}

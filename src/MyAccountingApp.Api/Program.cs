@@ -7,8 +7,6 @@ using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
 
-record ImportRequest(List<string> FolderPaths);
-
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 string currencyApiKey = builder.Configuration["CurrencyApi:ApiKey"]
@@ -16,7 +14,7 @@ string currencyApiKey = builder.Configuration["CurrencyApi:ApiKey"]
     ?? throw new InvalidOperationException(
         "CurrencyApi:ApiKey not found. Set it in appsettings.json or the CURRENCY_API_KEY environment variable.");
 
-CompositeConversionRepository repo = new CompositeConversionRepository("conversions.json");
+CompositeConversionRepository repo = new CompositeConversionRepository("data/conversions.json");
 CurrencyConverter api = new CurrencyConverter(currencyApiKey);
 Currencies source = Currencies.EUR;
 CurencyRateService currencyRateService = new CurencyRateService(repo, api, source);
@@ -24,9 +22,9 @@ CurencyRateService currencyRateService = new CurencyRateService(repo, api, sourc
 builder.Services.AddSingleton<IConversionRepository>(repo);
 builder.Services.AddSingleton<ICurrencyRateService>(currencyRateService);
 builder.Services.AddSingleton<ITransactionRepository>(
-    new CompositeTransactionRepository("transactions.json"));
+    new CompositeTransactionRepository("data/transactions.json"));
 builder.Services.AddSingleton<IPortfolioRepository>(
-    new CompositePortfolioRepository("portfolio.json"));
+    new CompositePortfolioRepository("data/portfolio.json"));
 builder.Services.AddSingleton<IBrokerImportService>(sp =>
 {
     ICsvParser csvParser = new InteractiveBrokersCsvParser();
@@ -148,3 +146,5 @@ app.MapGet("/conversions", (IConversionRepository repo, DateTime? date) =>
 });
 
 app.Run();
+
+record ImportRequest(List<string> FolderPaths);
