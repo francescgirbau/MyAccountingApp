@@ -27,11 +27,11 @@ builder.Services.AddSingleton<ITransactionRepository>(
     new CompositeTransactionRepository("transactions.json"));
 builder.Services.AddSingleton<IPortfolioRepository>(
     new CompositePortfolioRepository("portfolio.json"));
-builder.Services.AddSingleton<IAgent>(sp =>
+builder.Services.AddSingleton<IBrokerImportService>(sp =>
 {
     ICsvParser csvParser = new InteractiveBrokersCsvParser();
-    ILogger<InteractiveBrokersCsvAgent> logger = sp.GetRequiredService<ILogger<InteractiveBrokersCsvAgent>>();
-    return new InteractiveBrokersCsvAgent(csvParser, logger);
+    ILogger<InteractiveBrokersImportService> logger = sp.GetRequiredService<ILogger<InteractiveBrokersImportService>>();
+    return new InteractiveBrokersImportService(csvParser, logger);
 });
 builder.Services.AddSingleton<IMarketPriceService, YahooMarketPriceService>();
 builder.Services.AddSingleton<IImportService, ImportService>();

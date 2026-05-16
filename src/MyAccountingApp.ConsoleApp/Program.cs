@@ -26,11 +26,11 @@ CurencyRateService service = new CurencyRateService(repo, api, source);
 DateTime targetDate = new DateTime(2024, 12, 1);
 
 ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
-ILogger<InteractiveBrokersCsvAgent> logger = loggerFactory.CreateLogger<InteractiveBrokersCsvAgent>();
+ILogger<InteractiveBrokersImportService> logger = loggerFactory.CreateLogger<InteractiveBrokersImportService>();
 
 ICsvParser csvParser = new InteractiveBrokersCsvParser();
 
-InteractiveBrokersCsvAgent ibAgent = new InteractiveBrokersCsvAgent(
+InteractiveBrokersImportService ibAgent = new InteractiveBrokersImportService(
     csvParser,
     logger);
 

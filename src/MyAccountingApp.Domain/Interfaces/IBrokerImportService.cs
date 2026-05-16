@@ -1,10 +1,8 @@
 using MyAccountingApp.Domain.Entities;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace MyAccountingApp.Domain.Interfaces;
 
-public interface IAgent
+public interface IBrokerImportService
 {
     Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions)> ParseAllAsync(
         string filePath,

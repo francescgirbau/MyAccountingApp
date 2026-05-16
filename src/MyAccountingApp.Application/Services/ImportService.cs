@@ -7,20 +7,20 @@ namespace MyAccountingApp.Application.Services;
 
 public class ImportService : IImportService
 {
-    private readonly IAgent _agent;
+    private readonly IBrokerImportService _broker;
     private readonly ITransactionRepository _transactionRepo;
     private readonly IPortfolioRepository _portfolioRepo;
     private readonly ITransactionValidator _validator;
     private readonly ILogger<ImportService> _logger;
 
     public ImportService(
-        IAgent agent,
+        IBrokerImportService broker,
         ITransactionRepository transactionRepo,
         IPortfolioRepository portfolioRepo,
         ITransactionValidator validator,
         ILogger<ImportService> logger)
     {
-        this._agent = agent ?? throw new ArgumentNullException(nameof(agent));
+        this._broker = broker ?? throw new ArgumentNullException(nameof(broker));
         this._transactionRepo = transactionRepo ?? throw new ArgumentNullException(nameof(transactionRepo));
         this._portfolioRepo = portfolioRepo ?? throw new ArgumentNullException(nameof(portfolioRepo));
         this._validator = validator ?? throw new ArgumentNullException(nameof(validator));
@@ -51,7 +51,7 @@ public class ImportService : IImportService
                     if (folderPath.Contains("CORPORATE", StringComparison.OrdinalIgnoreCase))
                     {
                         IEnumerable<AssetTransaction> corporateTransactions =
-                            await this._agent.ParseCorporateActionsAsync(csvFile);
+                            await this._broker.ParseCorporateActionsAsync(csvFile);
                         foreach (AssetTransaction tx in corporateTransactions)
                         {
                             ValidationResult vr = this._validator.Validate(tx);
@@ -68,7 +68,7 @@ public class ImportService : IImportService
                     else
                     {
                         (IEnumerable<Transaction> transactions, IEnumerable<AssetTransaction> assetTransactions) =
-                            await this._agent.ParseAllAsync(csvFile);
+                            await this._broker.ParseAllAsync(csvFile);
 
                         foreach (Transaction tx in transactions)
                         {

@@ -14,14 +14,14 @@ using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
 using MyAccountingApp.Domain.ValueObjects;
 
-public class InteractiveBrokersCsvAgent : IAgent
+public class InteractiveBrokersImportService : IBrokerImportService
 {
     private readonly ICsvParser csvParser;
-    private readonly ILogger<InteractiveBrokersCsvAgent> logger;
+    private readonly ILogger<InteractiveBrokersImportService> logger;
 
-    public InteractiveBrokersCsvAgent(
+    public InteractiveBrokersImportService(
         ICsvParser csvParser,
-        ILogger<InteractiveBrokersCsvAgent> logger)
+        ILogger<InteractiveBrokersImportService> logger)
     {
         this.csvParser = csvParser ?? throw new ArgumentNullException(nameof(csvParser));
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
