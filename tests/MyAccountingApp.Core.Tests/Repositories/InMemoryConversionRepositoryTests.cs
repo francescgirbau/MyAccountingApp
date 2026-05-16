@@ -27,7 +27,7 @@ public class InMemoryConversionRepositoryTests
         // Arrange
         InMemoryConversionRepository repo = new InMemoryConversionRepository();
         Conversion conv1 = new Conversion(DateTime.Today, Currencies.EUR);
-        Conversion conv2 = new Conversion(DateTime.Today, Currencies.EUR, new() { { Currencies.USD, 1.1 } });
+        Conversion conv2 = new Conversion(DateTime.Today, Currencies.EUR, new() { { Currencies.USD, 1.1m } });
 
         repo.AddOrUpdate(conv1);
 
