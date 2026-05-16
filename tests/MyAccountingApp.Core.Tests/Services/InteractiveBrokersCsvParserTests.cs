@@ -1,3 +1,4 @@
+using MyAccountingApp.Core.Models;
 using MyAccountingApp.Core.Services;
 
 namespace MyAccountingApp.Core.Tests.Services;
@@ -18,7 +19,7 @@ Transaction History,Data,2024-12-18,VET 16JAN26 10 C,Buy,VET   260116C00010000,1
         {
             await File.WriteAllTextAsync(filePath, csv);
 
-            IEnumerable<IBKRTransactionRecord> result = await parser.ParseIBKRAsync(filePath);
+            IEnumerable<IBKRTransactionRecord> result = await this.parser.ParseIBKRAsync(filePath);
             List<IBKRTransactionRecord> records = result.ToList();
 
             Assert.Equal(2, records.Count);
@@ -56,7 +57,7 @@ Transaction History,Data,2024-12-19,Test Transaction,Test,XYZ,1.0,10.0,USD,-10.0
         {
             await File.WriteAllTextAsync(filePath, csv);
 
-            IEnumerable<IBKRTransactionRecord> result = await parser.ParseIBKRAsync(filePath);
+            IEnumerable<IBKRTransactionRecord> result = await this.parser.ParseIBKRAsync(filePath);
             List<IBKRTransactionRecord> records = result.ToList();
 
             Assert.Single(records);
@@ -80,7 +81,7 @@ Transaction History,Header,Date,Description,Transaction Type,Symbol,Quantity,Pri
         {
             await File.WriteAllTextAsync(filePath, csv);
 
-            IEnumerable<IBKRTransactionRecord> result = await parser.ParseIBKRAsync(filePath);
+            IEnumerable<IBKRTransactionRecord> result = await this.parser.ParseIBKRAsync(filePath);
             List<IBKRTransactionRecord> records = result.ToList();
 
             Assert.Empty(records);
@@ -103,7 +104,7 @@ Transaction History,Data,2024-12-19,Valid record,Test,ABC,2.0,20.0,USD,-20.0,0,-
         {
             await File.WriteAllTextAsync(filePath, csv);
 
-            IEnumerable<IBKRTransactionRecord> result = await parser.ParseIBKRAsync(filePath);
+            IEnumerable<IBKRTransactionRecord> result = await this.parser.ParseIBKRAsync(filePath);
             List<IBKRTransactionRecord> records = result.ToList();
 
             Assert.Single(records);
@@ -119,7 +120,7 @@ Transaction History,Data,2024-12-19,Valid record,Test,ABC,2.0,20.0,USD,-20.0,0,-
     public async Task ParseIBKRAsync_ReturnsEmpty_WhenFileDoesNotExist()
     {
         await Assert.ThrowsAsync<FileNotFoundException>(() =>
-            parser.ParseIBKRAsync("nonexistent_file.csv"));
+            this.parser.ParseIBKRAsync("nonexistent_file.csv"));
     }
 
     [Fact]
@@ -134,7 +135,7 @@ Corporate Actions,Data,Stocks,CAD,2024-07-17,""2024-07-15, 20:25:00"",CVO.ODD.C(
         {
             await File.WriteAllTextAsync(filePath, csv);
 
-            IEnumerable<IBKRCorporateActionRecord> result = await parser.ParseCorporateActionsAsync(filePath);
+            IEnumerable<IBKRCorporateActionRecord> result = await this.parser.ParseCorporateActionsAsync(filePath);
             List<IBKRCorporateActionRecord> records = result.ToList();
 
             Assert.Single(records);
@@ -161,7 +162,7 @@ Corporate Actions,Data,Stocks,CAD,2024-07-10,""2024-07-10, 19:45:00"",CVO Tender
         {
             await File.WriteAllTextAsync(filePath, csv);
 
-            IEnumerable<IBKRCorporateActionRecord> result = await parser.ParseCorporateActionsAsync(filePath);
+            IEnumerable<IBKRCorporateActionRecord> result = await this.parser.ParseCorporateActionsAsync(filePath);
             List<IBKRCorporateActionRecord> records = result.ToList();
 
             Assert.Empty(records);

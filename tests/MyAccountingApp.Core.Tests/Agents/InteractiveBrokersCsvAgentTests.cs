@@ -4,6 +4,8 @@ using MyAccountingApp.Core.Agents;
 using MyAccountingApp.Core.Interfaces;
 using MyAccountingApp.Core.Models;
 using MyAccountingApp.Core.Services;
+using MyAccountingApp.Domain.Entities;
+using MyAccountingApp.Domain.ValueObjects;
 
 namespace MyAccountingApp.Core.Tests.Agents;
 
