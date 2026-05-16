@@ -3,6 +3,7 @@ using MyAccountingApp.Application.Services;
 using MyAccountingApp.Core.Agents;
 using MyAccountingApp.Core.Repositories;
 using MyAccountingApp.Core.Services;
+using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
 
@@ -20,6 +21,8 @@ CurencyRateService currencyRateService = new CurencyRateService(repo, api, sourc
 
 builder.Services.AddSingleton<IConversionRepository>(repo);
 builder.Services.AddSingleton<ICurrencyRateService>(currencyRateService);
+builder.Services.AddSingleton<ITransactionRepository>(
+    new CompositeTransactionRepository("transactions.json"));
 builder.Services.AddSingleton<IAgent>(sp =>
 {
     ICsvParser csvParser = new InteractiveBrokersCsvParser();
@@ -31,5 +34,11 @@ builder.Services.AddSingleton<IMarketPriceService, YahooMarketPriceService>();
 WebApplication app = builder.Build();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+
+app.MapGet("/transactions", (ITransactionRepository repo) =>
+{
+    IEnumerable<Transaction> transactions = repo.GetAll();
+    return Results.Ok(transactions);
+});
 
 app.Run();
