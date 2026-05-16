@@ -365,8 +365,8 @@ FodyWeavers.xsd
 # LSCache files
 *.lscache
 
-# Persisten databases
-.json
+# Persisten databases (*.json generated at runtime)
+*.json
 
 # User-specific app settings (contains API keys, connection strings)
 appsettings.json
@@ -375,3 +375,7 @@ appsettings.*.json
 # Test files for agents
 
 csv/
+
+# Docker
+.env
+coveragereport/
