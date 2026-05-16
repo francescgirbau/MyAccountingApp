@@ -204,6 +204,6 @@ public class InteractiveBrokersCsvAgentTests
 
         Transaction tx = transactions.First();
         Assert.Equal("VET", tx.Description);
-        Assert.Equal(110.40, tx.Money.Amount, 1);
+        Assert.Equal(110.4m, Math.Round(tx.Money.Amount, 1));
     }
 }

@@ -5,13 +5,13 @@ namespace MyAccountingApp.TestUtilities.Fakes;
 
 public class FakeCurrencyConverter : ICurrencyConverter
 {
-    public async Task<Dictionary<string, double>> FetchAllRatesAsync(Currencies source, DateTime date)
+    public async Task<Dictionary<string, decimal>> FetchAllRatesAsync(Currencies source, DateTime date)
     {
         await Task.Delay(1); // simulate async
-        return new Dictionary<string, double>
+        return new Dictionary<string, decimal>
         {
-            { "EURUSD", 1.1 },
-            { "EURCAD", 1.5 },
+            { "EURUSD", 1.1m },
+            { "EURCAD", 1.5m },
         };
     }
 }

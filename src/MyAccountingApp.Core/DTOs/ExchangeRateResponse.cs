@@ -17,7 +17,7 @@ public class ExchangeRateResponse
     /// Gets the dictionary of currency pair codes and their conversion rates.
     /// </summary>
     [JsonPropertyName("quotes")]
-    public Dictionary<string, double> Quotes { get; init; } = new();
+    public Dictionary<string, decimal> Quotes { get; init; } = new();
 
     /// <summary>
     /// Gets the error details if the API request was not successful.

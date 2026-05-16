@@ -110,8 +110,8 @@ public class InteractiveBrokersCsvAgent : IAgent
 
     private AssetTransaction? MapCorporateActionToAssetTransaction(IBKRCorporateActionRecord record)
     {
-        double quantity = this.ParseAmount(record.Quantity ?? "0");
-        double proceeds = this.ParseAmount(record.Proceeds ?? "0");
+        decimal quantity = this.ParseAmount(record.Quantity ?? "0");
+        decimal proceeds = this.ParseAmount(record.Proceeds ?? "0");
         string currency = record.Currency ?? "EUR";
 
         if (currency == "-" || string.IsNullOrEmpty(currency))
@@ -133,13 +133,13 @@ public class InteractiveBrokersCsvAgent : IAgent
         Transaction transaction = new Transaction(
             date,
             symbol,
-            new Money(Math.Abs(proceeds), currency),
+            new Money(proceeds < 0 ? -proceeds : proceeds, currency),
             category);
 
         return new AssetTransaction(
             transaction,
             symbol,
-            Math.Abs(quantity),
+            quantity < 0 ? -quantity : quantity,
             type);
     }
 
@@ -197,7 +197,7 @@ public class InteractiveBrokersCsvAgent : IAgent
 
     private Transaction MapOptionToTransaction(IBKRTransactionRecord record)
     {
-        double amount = this.ParseAmount(record.NetAmount ?? record.GrossAmount ?? "0");
+        decimal amount = this.ParseAmount(record.NetAmount ?? record.GrossAmount ?? "0");
         string currency = record.PriceCurrency ?? "EUR";
 
         if (currency == "-" || string.IsNullOrEmpty(currency))
@@ -208,7 +208,7 @@ public class InteractiveBrokersCsvAgent : IAgent
         string symbol = record.Symbol ?? "UNKNOWN";
         string underlyingSymbol = this.ExtractUnderlyingSymbol(symbol);
 
-        double quantity = this.ParseAmount(record.Quantity ?? "0");
+        decimal quantity = this.ParseAmount(record.Quantity ?? "0");
         bool isBuy = quantity > 0;
 
         TransactionCategory category = isBuy ? TransactionCategory.EXPENSE : TransactionCategory.INCOME;
@@ -218,7 +218,7 @@ public class InteractiveBrokersCsvAgent : IAgent
         return new Transaction(
             date,
             underlyingSymbol,
-            new Money(Math.Abs(amount), currency),
+            new Money(amount < 0 ? -amount : amount, currency),
             category);
     }
 
@@ -242,14 +242,14 @@ public class InteractiveBrokersCsvAgent : IAgent
         IBKRTransactionRecord record,
         CancellationToken cancellationToken)
     {
-        double amount = this.ParseAmount(record.NetAmount ?? record.GrossAmount ?? "0");
+        decimal amount = this.ParseAmount(record.NetAmount ?? record.GrossAmount ?? "0");
         string currency = record.PriceCurrency ?? "EUR";
         if (currency == "-" || string.IsNullOrEmpty(currency))
         {
             currency = "EUR";
         }
 
-        double quantity = this.CalculateCorporateActionQuantity(record.Description, amount, currency);
+        decimal quantity = this.CalculateCorporateActionQuantity(record.Description, amount, currency);
 
         string baseSymbol = await this.ExtractCorporateActionSymbolAsync(record, cancellationToken);
 
@@ -261,7 +261,7 @@ public class InteractiveBrokersCsvAgent : IAgent
         Transaction transaction = new Transaction(
             date,
             baseSymbol,
-            new Money(Math.Abs(amount), currency),
+            new Money(amount < 0 ? -amount : amount, currency),
             category);
 
         return new AssetTransaction(
@@ -271,14 +271,14 @@ public class InteractiveBrokersCsvAgent : IAgent
             type);
     }
 
-    private double CalculateCorporateActionQuantity(string? description, double amount, string currency)
+    private decimal CalculateCorporateActionQuantity(string? description, decimal amount, string currency)
     {
         try
         {
-            double pricePerShare = this.ExtractPricePerShare(description);
+            decimal pricePerShare = this.ExtractPricePerShare(description);
             if (pricePerShare > 0)
             {
-                double calculatedQuantity = amount / pricePerShare;
+                decimal calculatedQuantity = amount / pricePerShare;
                 if (calculatedQuantity > 0 && calculatedQuantity < 10000)
                 {
                     return Math.Round(calculatedQuantity, 2);
@@ -292,7 +292,7 @@ public class InteractiveBrokersCsvAgent : IAgent
         return 1;
     }
 
-    private double ExtractPricePerShare(string description)
+    private decimal ExtractPricePerShare(string description)
     {
         try
         {
@@ -306,7 +306,7 @@ public class InteractiveBrokersCsvAgent : IAgent
             if (match.Success)
             {
                 string priceStr = match.Groups[1].Value.Replace(",", ".");
-                if (double.TryParse(priceStr, System.Globalization.CultureInfo.InvariantCulture, out double price))
+                if (decimal.TryParse(priceStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal price))
                 {
                     return price;
                 }
@@ -320,7 +320,7 @@ public class InteractiveBrokersCsvAgent : IAgent
             if (match.Success)
             {
                 string priceStr = match.Groups[1].Value.Replace(",", ".");
-                if (double.TryParse(priceStr, System.Globalization.CultureInfo.InvariantCulture, out double price))
+                if (decimal.TryParse(priceStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal price))
                 {
                     return price;
                 }
@@ -350,7 +350,7 @@ public class InteractiveBrokersCsvAgent : IAgent
 
     private Transaction MapToTransaction(IBKRTransactionRecord record)
     {
-        double amount = this.ParseAmount(record.NetAmount ?? record.GrossAmount ?? "0");
+        decimal amount = this.ParseAmount(record.NetAmount ?? record.GrossAmount ?? "0");
         string currency = record.PriceCurrency ?? "EUR";
 
         if (currency == "-" || string.IsNullOrEmpty(currency))
@@ -388,7 +388,7 @@ public class InteractiveBrokersCsvAgent : IAgent
             category = TransactionCategory.EXPENSE;
         }
 
-        double quantity = this.ParseAmount(record.Quantity ?? "0");
+        decimal quantity = this.ParseAmount(record.Quantity ?? "0");
         bool isOption = this.IsOption(record.Symbol ?? string.Empty) || this.IsOptionByDescription(descLower);
 
         if (isOption)
@@ -408,14 +408,14 @@ public class InteractiveBrokersCsvAgent : IAgent
         return new Transaction(
             date,
             record.Description ?? "Unknown",
-            new Money(Math.Abs(amount), currency),
+            new Money(amount < 0 ? -amount : amount, currency),
             category);
     }
 
     private AssetTransaction MapToAssetTransaction(IBKRTransactionRecord record)
     {
-        double quantity = this.ParseAmount(record.Quantity ?? "0");
-        double amount = this.ParseAmount(record.NetAmount ?? record.GrossAmount ?? "0");
+        decimal quantity = this.ParseAmount(record.Quantity ?? "0");
+        decimal amount = this.ParseAmount(record.NetAmount ?? record.GrossAmount ?? "0");
         string currency = record.PriceCurrency ?? "EUR";
 
         if (currency == "-" || string.IsNullOrEmpty(currency))
@@ -466,13 +466,14 @@ public class InteractiveBrokersCsvAgent : IAgent
         Transaction transaction = new Transaction(
             date,
             symbol,
-            new Money(Math.Abs(amount), currency),
+            new Money(amount < 0 ? -amount : amount, currency),
             category);
 
+        decimal absQuantity = quantity < 0 ? -quantity : quantity;
         return new AssetTransaction(
             transaction,
             symbol,
-            Math.Abs(quantity) > 0 ? Math.Abs(quantity) : 1,
+            absQuantity > 0 ? absQuantity : 1,
             type);
     }
 
@@ -511,7 +512,7 @@ public class InteractiveBrokersCsvAgent : IAgent
         return DateTime.Now;
     }
 
-    private double ParseAmount(string amountStr)
+    private decimal ParseAmount(string amountStr)
     {
         if (string.IsNullOrEmpty(amountStr))
         {
@@ -520,7 +521,7 @@ public class InteractiveBrokersCsvAgent : IAgent
 
         amountStr = amountStr.Trim().Replace(",", string.Empty);
 
-        if (double.TryParse(amountStr, NumberStyles.Any, CultureInfo.InvariantCulture, out double result))
+        if (decimal.TryParse(amountStr, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal result))
         {
             return result;
         }

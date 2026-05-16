@@ -15,5 +15,5 @@ public interface ICurrencyRateService
     /// A task that represents the asynchronous operation. The task result contains a dictionary
     /// mapping currencies to their conversion rates.
     /// </returns>
-    Task<Dictionary<Currencies, double>> GetQuotes(DateTime date);
+    Task<Dictionary<Currencies, decimal>> GetQuotes(DateTime date);
 }

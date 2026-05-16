@@ -20,7 +20,7 @@ public class Conversion
     /// <summary>
     /// Gets the dictionary of target currencies and their conversion rates.
     /// </summary>
-    public Dictionary<Currencies, double> Quotes { get; }
+    public Dictionary<Currencies, decimal> Quotes { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Conversion"/> class.
@@ -29,11 +29,11 @@ public class Conversion
     /// <param name="source">The base currency.</param>
     /// <param name="quotes">Optional dictionary of conversion quotes.</param>
     /// <exception cref="ArgumentException">Thrown if the source currency is not EUR.</exception>
-    public Conversion(DateTime date, Currencies source, Dictionary<Currencies, double>? quotes = null)
+    public Conversion(DateTime date, Currencies source, Dictionary<Currencies, decimal>? quotes = null)
     {
         this.Date = date.Date;
         this.Source = source;
-        this.Quotes = quotes ?? new Dictionary<Currencies, double>();
+        this.Quotes = quotes ?? new Dictionary<Currencies, decimal>();
 
         this.Validate();
     }
@@ -58,7 +58,7 @@ public class Conversion
     /// <param name="target">The target currency.</param>
     /// <param name="rate">The conversion rate.</param>
     /// <exception cref="InvalidOperationException">Thrown if the target currency is the same as the source currency.</exception>
-    public void AddOrUpdateQuote(Currencies target, double rate)
+    public void AddOrUpdateQuote(Currencies target, decimal rate)
     {
         if (target == this.Source)
         {
@@ -74,7 +74,7 @@ public class Conversion
     /// <param name="target">The target currency.</param>
     /// <param name="rate">The conversion rate, if found.</param>
     /// <returns>True if the quote exists; otherwise, false.</returns>
-    public bool TryGetQuote(Currencies target, out double rate)
+    public bool TryGetQuote(Currencies target, out decimal rate)
     {
         return this.Quotes.TryGetValue(target, out rate);
     }

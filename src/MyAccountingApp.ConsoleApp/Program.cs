@@ -132,10 +132,10 @@ if (repo.GetByDate(targetDate) == null)
 {
     Console.WriteLine($"No hi havia conversió per {targetDate:yyyy-MM-dd}. Es farà la crida a l'API...");
 
-    Dictionary<string, double> rates = await api.FetchAllRatesAsync(source, targetDate);
+    Dictionary<string, decimal> rates = await api.FetchAllRatesAsync(source, targetDate);
     Conversion conversion = new Conversion(targetDate, source);
 
-    foreach (KeyValuePair<string, double> kv in rates)
+    foreach (KeyValuePair<string, decimal> kv in rates)
     {
         string targetCurrencyCode = kv.Key.Substring(3);
 
@@ -147,7 +147,7 @@ if (repo.GetByDate(targetDate) == null)
 
     repo.AddOrUpdate(conversion);
 
-    if (conversion.TryGetQuote(Currencies.USD, out double rate))
+    if (conversion.TryGetQuote(Currencies.USD, out decimal rate))
     {
         Console.WriteLine($"S'ha guardat la conversió per la data {targetDate:yyyy-MM-dd} amb EUR → USD = {rate}");
     }

@@ -26,7 +26,7 @@ public class ConversionTests
         Conversion conversion = new Conversion(DateTime.Today, Currencies.EUR);
 
         // Act
-        Action action = () => conversion.AddOrUpdateQuote(Currencies.EUR, 1.0);
+        Action action = () => conversion.AddOrUpdateQuote(Currencies.EUR, 1.0m);
 
         // Assert
         Assert.Throws<InvalidOperationException>(() => action());
@@ -37,14 +37,14 @@ public class ConversionTests
     {
         // Arrange
         Conversion conversion = new Conversion(DateTime.Today, Currencies.EUR);
-        conversion.AddOrUpdateQuote(Currencies.USD, 1.2);
+        conversion.AddOrUpdateQuote(Currencies.USD, 1.2m);
 
         // Act
-        bool exists = conversion.TryGetQuote(Currencies.USD, out double rate);
+        bool exists = conversion.TryGetQuote(Currencies.USD, out decimal rate);
 
         // Assert
         Assert.True(exists);
-        Assert.Equal(1.2, rate);
+        Assert.Equal(1.2m, rate);
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public class ConversionTests
         Conversion conversion = new Conversion(DateTime.Today, Currencies.EUR);
 
         // Act
-        bool exists = conversion.TryGetQuote(Currencies.USD, out double rate);
+        bool exists = conversion.TryGetQuote(Currencies.USD, out decimal rate);
 
         // Assert
         Assert.False(exists);
