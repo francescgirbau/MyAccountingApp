@@ -7,6 +7,8 @@ using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
 
+record ImportRequest(List<string> FolderPaths);
+
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 string currencyApiKey = builder.Configuration["CurrencyApi:ApiKey"]
@@ -32,6 +34,7 @@ builder.Services.AddSingleton<IAgent>(sp =>
     return new InteractiveBrokersCsvAgent(csvParser, logger);
 });
 builder.Services.AddSingleton<IMarketPriceService, YahooMarketPriceService>();
+builder.Services.AddSingleton<IImportService, ImportService>();
 
 WebApplication app = builder.Build();
 
@@ -53,6 +56,12 @@ app.MapGet("/asset-transactions/{symbol}", (string symbol, IPortfolioRepository 
 {
     IEnumerable<AssetTransaction> transactions = repo.GetAssetTransactions(symbol);
     return Results.Ok(transactions);
+});
+
+app.MapPost("/import", async (ImportRequest request, IImportService importService) =>
+{
+    ImportResult result = await importService.ImportFromFoldersAsync(request.FolderPaths);
+    return Results.Ok(result);
 });
 
 app.MapGet("/conversions", (IConversionRepository repo, DateTime? date) =>
