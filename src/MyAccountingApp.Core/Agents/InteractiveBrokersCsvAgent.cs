@@ -7,7 +7,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using MyAccountingApp.Core.Interfaces;
 using MyAccountingApp.Core.Models;
 using MyAccountingApp.Core.Services;
 using MyAccountingApp.Domain.Entities;
@@ -18,28 +17,14 @@ using MyAccountingApp.Domain.ValueObjects;
 public class InteractiveBrokersCsvAgent : IAgent
 {
     private readonly ICsvParser csvParser;
-    private readonly IOllamaClient ollamaClient;
-    private readonly string modelName;
-    private readonly int maxRetries;
-    private readonly int initialDelayMs;
     private readonly ILogger<InteractiveBrokersCsvAgent> logger;
 
     public InteractiveBrokersCsvAgent(
         ICsvParser csvParser,
-        IOllamaClient ollamaClient,
-        string modelName,
-        ILogger<InteractiveBrokersCsvAgent> logger,
-        int maxRetries = 3,
-        int initialDelayMs = 1000)
+        ILogger<InteractiveBrokersCsvAgent> logger)
     {
         this.csvParser = csvParser ?? throw new ArgumentNullException(nameof(csvParser));
-        this.ollamaClient = ollamaClient ?? throw new ArgumentNullException(nameof(ollamaClient));
-        this.modelName = string.IsNullOrWhiteSpace(modelName)
-            ? throw new ArgumentException("Model name must be provided.", nameof(modelName))
-            : modelName;
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        this.maxRetries = maxRetries;
-        this.initialDelayMs = initialDelayMs;
     }
 
     public async Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions)> ParseAllAsync(
