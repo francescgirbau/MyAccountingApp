@@ -13,10 +13,16 @@ public class UnitaryCostPropertyTests
     {
         currencyCode = currencyCode is { Length: 3 } ? currencyCode.ToUpperInvariant() : "EUR";
         amount = Math.Abs(amount);
-        if (amount == 0) { amount = 100; }
+        if (amount == 0)
+        {
+            amount = 100;
+        }
 
         quantity = Math.Abs(quantity);
-        if (quantity == 0) { quantity = 10; }
+        if (quantity == 0)
+        {
+            quantity = 10;
+        }
 
         Money money = new Money(amount, currencyCode);
         Transaction transaction = new Transaction(
@@ -34,10 +40,16 @@ public class UnitaryCostPropertyTests
     public bool UnitaryCost_IsAlwaysPositive(decimal amount, decimal quantity)
     {
         amount = Math.Abs(amount);
-        if (amount == 0) { amount = 100; }
+        if (amount == 0)
+        {
+            amount = 100;
+        }
 
         quantity = Math.Abs(quantity);
-        if (quantity == 0) { quantity = 10; }
+        if (quantity == 0)
+        {
+            quantity = 10;
+        }
 
         Money money = new Money(amount, "EUR");
         Transaction transaction = new Transaction(
@@ -52,7 +64,10 @@ public class UnitaryCostPropertyTests
     public bool UnitaryCost_WithQuantityOne_EqualsAmount(decimal amount)
     {
         amount = Math.Abs(amount);
-        if (amount == 0) { amount = 100; }
+        if (amount == 0)
+        {
+            amount = 100;
+        }
 
         Money money = new Money(amount, "EUR");
         Transaction transaction = new Transaction(
