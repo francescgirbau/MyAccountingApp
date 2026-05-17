@@ -100,7 +100,7 @@ public class PositionEngine : IPositionEngine
         public DateTime PurchaseDate { get; }
         public decimal TotalQuantity { get; }
         public decimal TotalCost { get; }
-        public decimal UnitaryCost => TotalCost / TotalQuantity;
+        public decimal UnitaryCost => this.TotalCost / this.TotalQuantity;
         public decimal RemainingQuantity { get; set; }
 
         public FifoLot(DateTime purchaseDate, decimal quantity, decimal totalCost)
