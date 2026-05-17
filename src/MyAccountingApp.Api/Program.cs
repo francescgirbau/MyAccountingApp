@@ -37,6 +37,7 @@ builder.Services.AddSingleton<IMarketPriceService, YahooMarketPriceService>();
 builder.Services.AddSingleton<IImportService, ImportService>();
 builder.Services.AddSingleton<ITransactionValidator, TransactionValidator>();
 builder.Services.AddSingleton<IPortfolioQuery, PortfolioQuery>();
+builder.Services.AddSingleton<IPositionEngine, PositionEngine>();
 builder.Services.AddSingleton<IValidationQuery, ValidationQuery>();
 
 WebApplication app = builder.Build();
@@ -70,9 +71,9 @@ app.MapPost("/import", async (ImportRequest request, IImportService importServic
     return Results.Ok(result.ToDto());
 });
 
-app.MapGet("/portfolio/{symbol}", (string symbol, IPortfolioQuery portfolioQuery) =>
+app.MapGet("/portfolio/{symbol}", async (string symbol, IPositionEngine positionEngine) =>
 {
-    PortfolioPositionDto? position = portfolioQuery.GetPosition(symbol);
+    PortfolioPositionDto? position = await positionEngine.GetPosition(symbol);
     return position is not null ? Results.Ok(position) : Results.NotFound(new { symbol, message = "No transactions found for this symbol" });
 });
 

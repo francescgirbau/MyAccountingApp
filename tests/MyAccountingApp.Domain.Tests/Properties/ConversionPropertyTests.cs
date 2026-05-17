@@ -10,7 +10,10 @@ public class ConversionPropertyTests
     public bool TryGetQuote_ReturnsStoredRate(decimal rate)
     {
         rate = Math.Abs(rate);
-        if (rate == 0) { rate = 1.0m; }
+        if (rate == 0)
+        {
+            rate = 1.0m;
+        }
 
         Conversion conversion = new Conversion(new DateTime(2024, 1, 1), Currencies.EUR);
         conversion.AddOrUpdateQuote(Currencies.USD, rate);
@@ -25,9 +28,15 @@ public class ConversionPropertyTests
     {
         firstRate = Math.Abs(firstRate);
         secondRate = Math.Abs(secondRate);
-        if (firstRate == 0) { firstRate = 1.0m; }
+        if (firstRate == 0)
+        {
+            firstRate = 1.0m;
+        }
 
-        if (secondRate == 0) { secondRate = 2.0m; }
+        if (secondRate == 0)
+        {
+            secondRate = 2.0m;
+        }
 
         Conversion conversion = new Conversion(new DateTime(2024, 1, 1), Currencies.EUR);
 
