@@ -11,12 +11,12 @@ public class PortfolioQuery : IPortfolioQuery
 
     public PortfolioQuery(IPortfolioRepository portfolioRepo)
     {
-        _portfolioRepo = portfolioRepo;
+        this._portfolioRepo = portfolioRepo;
     }
 
     public PortfolioPositionDto? GetPosition(string symbol)
     {
-        var transactions = _portfolioRepo.GetAssetTransactions(symbol).ToList();
+        var transactions = this._portfolioRepo.GetAssetTransactions(symbol).ToList();
 
         if (transactions.Count == 0)
         {

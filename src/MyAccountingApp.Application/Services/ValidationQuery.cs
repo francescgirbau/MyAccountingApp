@@ -15,9 +15,9 @@ public class ValidationQuery : IValidationQuery
         IPortfolioRepository pfRepo,
         ITransactionValidator validator)
     {
-        _txRepo = txRepo;
-        _pfRepo = pfRepo;
-        _validator = validator;
+        this._txRepo = txRepo;
+        this._pfRepo = pfRepo;
+        this._validator = validator;
     }
 
     public ValidationResult ValidateAll()
@@ -25,16 +25,16 @@ public class ValidationQuery : IValidationQuery
         List<ValidationError> allErrors = new();
         List<ValidationError> allWarnings = new();
 
-        foreach (Transaction tx in _txRepo.GetAll())
+        foreach (Transaction tx in this._txRepo.GetAll())
         {
-            ValidationResult vr = _validator.Validate(tx);
+            ValidationResult vr = this._validator.Validate(tx);
             allErrors.AddRange(vr.Errors);
             allWarnings.AddRange(vr.Warnings);
         }
 
-        foreach (AssetTransaction tx in _pfRepo.GetAllTransactions())
+        foreach (AssetTransaction tx in this._pfRepo.GetAllTransactions())
         {
-            ValidationResult vr = _validator.Validate(tx);
+            ValidationResult vr = this._validator.Validate(tx);
             allErrors.AddRange(vr.Errors);
             allWarnings.AddRange(vr.Warnings);
         }
