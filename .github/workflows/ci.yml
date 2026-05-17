@@ -48,10 +48,10 @@ jobs:
         ./reportgeneratortool/reportgenerator \
           -reports:"$REPORTS" \
           -targetdir:coveragereport \
-          -reporttypes:Html_XmlSummary
+          -reporttypes:"Html;Cobertura"
 
         # Extract combined coverage percentage
-        COMBINED_COVERAGE=$(grep -oP '<coverage .*line-rate="\K[0-9.]+' coveragereport/Summary.xml | head -n 1 | awk '{print $1*100}')
+        COMBINED_COVERAGE=$(grep -oP '<coverage .*line-rate="\K[0-9.]+' coveragereport/Cobertura.xml | head -n 1 | awk '{print $1*100}')
         echo "Combined line coverage: $COMBINED_COVERAGE%"
 
         if (( $(echo "$COMBINED_COVERAGE < 80" | bc -l) )); then
