@@ -48,7 +48,7 @@ jobs:
         ./reportgeneratortool/reportgenerator \
           -reports:"$REPORTS" \
           -targetdir:coveragereport \
-          -reporttypes:Html
+          -reporttypes:Html_XmlSummary
 
         # Extract combined coverage percentage
         COMBINED_COVERAGE=$(grep -oP '<coverage .*line-rate="\K[0-9.]+' coveragereport/Summary.xml | head -n 1 | awk '{print $1*100}')
