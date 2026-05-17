@@ -29,26 +29,11 @@ jobs:
     - name: Run StyleCop (linter)
       run: dotnet build --configuration Release -warnaserror
 
-    - name: Run Domain tests
-      run: dotnet test tests/MyAccountingApp.Domain.Tests --configuration Release --collect:"XPlat Code Coverage" || echo "DOMAIN_FAILED=true" >> $GITHUB_ENV
-
-    - name: Run Core tests
-      run: dotnet test tests/MyAccountingApp.Core.Tests --configuration Release --collect:"XPlat Code Coverage" || echo "CORE_FAILED=true" >> $GITHUB_ENV
-
-    - name: Run Application tests
-      run: dotnet test tests/MyAccountingApp.Application.Tests --configuration Release --collect:"XPlat Code Coverage" || echo "APP_FAILED=true" >> $GITHUB_ENV
-
-    - name: Report which tests failed
-      if: env.DOMAIN_FAILED == 'true' || env.CORE_FAILED == 'true' || env.APP_FAILED == 'true'
+    - name: Run tests with coverage (min 80%)
       run: |
-        echo "=== FAILURES ==="
-        echo "Domain: ${{ env.DOMAIN_FAILED }}"
-        echo "Core: ${{ env.CORE_FAILED }}"
-        echo "Application: ${{ env.APP_FAILED }}"
-        exit 1
+        # Run all tests with coverage
+        dotnet test --configuration Release --collect:"XPlat Code Coverage"
 
-    - name: Check coverage (min 80%)
-      run: |
         # Find all coverage files
         REPORTS=$(find . -type f -name 'coverage.cobertura.xml' | tr '\n' ';')
         echo "Coverage files found: $REPORTS"
@@ -69,8 +54,8 @@ jobs:
         COMBINED_COVERAGE=$(grep -oP '<coverage .*line-rate="\K[0-9.]+' coveragereport/Cobertura.xml | head -n 1 | awk '{print $1*100}')
         echo "Combined line coverage: $COMBINED_COVERAGE%"
 
-        if (( $(echo "$COMBINED_COVERAGE < 0" | bc -l) )); then
-          echo "Coverage below 0%"
+        if (( $(echo "$COMBINED_COVERAGE < 80" | bc -l) )); then
+          echo "Coverage below 80%"
           exit 1
         fi
 

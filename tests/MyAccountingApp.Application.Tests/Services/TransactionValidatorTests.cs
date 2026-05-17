@@ -76,19 +76,11 @@ public class TransactionValidatorTests
     }
 
     [Fact]
-    public void ValidateTransaction_InvalidCurrency_ReturnsError()
+    public void MoneyRejectsInvalidCurrency()
     {
-        Transaction tx = new(
-            Guid.NewGuid(),
-            new DateTime(2024, 6, 1),
-            "Test",
-            new Money(100, ""),
-            TransactionCategory.INCOME);
-
-        ValidationResult result = this._validator.Validate(tx);
-
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.Field == "Currency");
+        Assert.Throws<ArgumentException>(() => new Money(100, ""));
+        Assert.Throws<ArgumentException>(() => new Money(100, "XX"));
+        Assert.Throws<ArgumentException>(() => new Money(100, "XXXX"));
     }
 
     [Fact]
