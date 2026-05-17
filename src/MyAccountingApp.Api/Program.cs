@@ -71,9 +71,9 @@ app.MapPost("/import", async (ImportRequest request, IImportService importServic
     return Results.Ok(result.ToDto());
 });
 
-app.MapGet("/portfolio/{symbol}", (string symbol, IPositionEngine positionEngine) =>
+app.MapGet("/portfolio/{symbol}", async (string symbol, IPositionEngine positionEngine) =>
 {
-    PortfolioPositionDto? position = positionEngine.GetPosition(symbol);
+    PortfolioPositionDto? position = await positionEngine.GetPosition(symbol);
     return position is not null ? Results.Ok(position) : Results.NotFound(new { symbol, message = "No transactions found for this symbol" });
 });
 

@@ -51,6 +51,8 @@ public class PortfolioQuery : IPortfolioQuery
             currency,
             transactions.Count,
             0,
-            new List<TaxLotDto>());
+            new List<TaxLotDto>(),
+            null,
+            null);
     }
 }

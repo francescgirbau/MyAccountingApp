@@ -8,4 +8,6 @@ public record PortfolioPositionDto(
     string Currency,
     int TransactionCount,
     decimal RealizedGainLoss,
-    List<TaxLotDto> OpenLots);
+    List<TaxLotDto> OpenLots,
+    decimal? MarketPrice,
+    decimal? UnrealizedGainLoss);

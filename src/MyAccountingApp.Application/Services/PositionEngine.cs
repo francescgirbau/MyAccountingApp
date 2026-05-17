@@ -2,19 +2,22 @@ using MyAccountingApp.Application.DTOs;
 using MyAccountingApp.Application.Interfaces;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
+using MyAccountingApp.Domain.ValueObjects;
 
 namespace MyAccountingApp.Application.Services;
 
 public class PositionEngine : IPositionEngine
 {
     private readonly IPortfolioRepository _portfolioRepo;
+    private readonly IMarketPriceService _marketPriceService;
 
-    public PositionEngine(IPortfolioRepository portfolioRepo)
+    public PositionEngine(IPortfolioRepository portfolioRepo, IMarketPriceService marketPriceService)
     {
         this._portfolioRepo = portfolioRepo;
+        this._marketPriceService = marketPriceService;
     }
 
-    public PortfolioPositionDto? GetPosition(string symbol)
+    public async Task<PortfolioPositionDto?> GetPosition(string symbol)
     {
         var transactions = this._portfolioRepo.GetAssetTransactions(symbol)
             .OrderBy(t => t.Transaction.Date)
@@ -67,6 +70,12 @@ public class PositionEngine : IPositionEngine
 
         decimal avgCost = netQuantity > 0 ? Math.Round(totalCost / netQuantity, 4) : 0;
 
+        Money? marketPrice = netQuantity > 0 ? await this._marketPriceService.GetPriceAsync(symbol) : null;
+
+        decimal? unrealizedGainLoss = marketPrice is not null && netQuantity > 0
+            ? Math.Round((marketPrice.Amount - avgCost) * netQuantity, 2)
+            : null;
+
         return new PortfolioPositionDto(
             symbol,
             netQuantity,
@@ -81,7 +90,9 @@ public class PositionEngine : IPositionEngine
                     l.RemainingQuantity,
                     Math.Round(l.UnitaryCost, 4),
                     Math.Round(l.RemainingQuantity * l.UnitaryCost, 2)))
-                .ToList());
+                .ToList(),
+            marketPrice?.Amount,
+            unrealizedGainLoss);
     }
 
     private sealed class FifoLot
