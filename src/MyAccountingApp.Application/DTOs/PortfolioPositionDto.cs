@@ -6,4 +6,6 @@ public record PortfolioPositionDto(
     decimal AverageUnitaryCost,
     decimal TotalCostBasis,
     string Currency,
-    int TransactionCount);
+    int TransactionCount,
+    decimal RealizedGainLoss,
+    List<TaxLotDto> OpenLots);

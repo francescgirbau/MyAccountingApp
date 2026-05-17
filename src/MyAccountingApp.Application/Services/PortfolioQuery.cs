@@ -49,6 +49,8 @@ public class PortfolioQuery : IPortfolioQuery
             avgCost,
             Math.Round(totalCost, 2),
             currency,
-            transactions.Count);
+            transactions.Count,
+            0,
+            new List<TaxLotDto>());
     }
 }
