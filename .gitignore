@@ -376,6 +376,9 @@ appsettings.*.json
 
 csv/
 
+# Personal financial data (transactions, imports, etc.)
+/data/
+
 # Docker
 .env
 coveragereport/
