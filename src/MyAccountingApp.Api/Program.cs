@@ -1,9 +1,9 @@
+using MyAccountingApp.Application.DTOs;
 using MyAccountingApp.Application.Interfaces;
 using MyAccountingApp.Application.Services;
 using MyAccountingApp.Core.Agents;
 using MyAccountingApp.Core.Repositories;
 using MyAccountingApp.Core.Services;
-using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
 
@@ -36,6 +36,8 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<IMarketPriceService, YahooMarketPriceService>();
 builder.Services.AddSingleton<IImportService, ImportService>();
 builder.Services.AddSingleton<ITransactionValidator, TransactionValidator>();
+builder.Services.AddSingleton<IPortfolioQuery, PortfolioQuery>();
+builder.Services.AddSingleton<IValidationQuery, ValidationQuery>();
 
 WebApplication app = builder.Build();
 
@@ -46,95 +48,44 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = Dat
 
 app.MapGet("/transactions", (ITransactionRepository repo) =>
 {
-    IEnumerable<Transaction> transactions = repo.GetAll();
+    List<TransactionDto> transactions = repo.GetAll().Select(t => t.ToDto()).ToList();
     return Results.Ok(transactions);
 });
 
 app.MapGet("/asset-transactions", (IPortfolioRepository repo) =>
 {
-    IEnumerable<AssetTransaction> transactions = repo.GetAllTransactions();
+    List<AssetTransactionDto> transactions = repo.GetAllTransactions().Select(t => t.ToDto()).ToList();
     return Results.Ok(transactions);
 });
 
 app.MapGet("/asset-transactions/{symbol}", (string symbol, IPortfolioRepository repo) =>
 {
-    IEnumerable<AssetTransaction> transactions = repo.GetAssetTransactions(symbol);
+    List<AssetTransactionDto> transactions = repo.GetAssetTransactions(symbol).Select(t => t.ToDto()).ToList();
     return Results.Ok(transactions);
 });
 
 app.MapPost("/import", async (ImportRequest request, IImportService importService) =>
 {
     ImportResult result = await importService.ImportFromFoldersAsync(request.FolderPaths);
-    return Results.Ok(result);
+    return Results.Ok(result.ToDto());
 });
 
-app.MapGet("/portfolio/{symbol}", (string symbol, IPortfolioRepository repo) =>
+app.MapGet("/portfolio/{symbol}", (string symbol, IPortfolioQuery portfolioQuery) =>
 {
-    IEnumerable<AssetTransaction> transactions = repo.GetAssetTransactions(symbol);
-    List<AssetTransaction> list = transactions.ToList();
-
-    if (list.Count == 0)
-    {
-        return Results.NotFound(new { symbol, message = "No transactions found for this symbol" });
-    }
-
-    decimal netQuantity = 0;
-    decimal totalCost = 0;
-    string currency = list[0].Transaction.Money.Currency;
-
-    foreach (AssetTransaction tx in list)
-    {
-        if (tx.Type == AssetTransactionType.Buy)
-        {
-            netQuantity += tx.Quantity;
-            totalCost += tx.Transaction.Money.Amount;
-        }
-        else
-        {
-            netQuantity -= tx.Quantity;
-            totalCost -= tx.Transaction.Money.Amount;
-        }
-    }
-
-    decimal avgCost = netQuantity > 0 ? Math.Round(totalCost / netQuantity, 4) : 0;
-
-    return Results.Ok(new
-    {
-        symbol,
-        netQuantity,
-        averageUnitaryCost = avgCost,
-        totalCostBasis = Math.Round(totalCost, 2),
-        currency,
-        transactionCount = list.Count,
-    });
+    PortfolioPositionDto? position = portfolioQuery.GetPosition(symbol);
+    return position is not null ? Results.Ok(position) : Results.NotFound(new { symbol, message = "No transactions found for this symbol" });
 });
 
-app.MapGet("/validate", (ITransactionRepository txRepo, IPortfolioRepository pfRepo, ITransactionValidator validator) =>
+app.MapGet("/validate", (IValidationQuery validationQuery) =>
 {
-    List<ValidationError> allErrors = new();
-    List<ValidationError> allWarnings = new();
-
-    foreach (Transaction tx in txRepo.GetAll())
-    {
-        ValidationResult vr = validator.Validate(tx);
-        allErrors.AddRange(vr.Errors);
-        allWarnings.AddRange(vr.Warnings);
-    }
-
-    foreach (AssetTransaction tx in pfRepo.GetAllTransactions())
-    {
-        ValidationResult vr = validator.Validate(tx);
-        allErrors.AddRange(vr.Errors);
-        allWarnings.AddRange(vr.Warnings);
-    }
-
+    ValidationResult result = validationQuery.ValidateAll();
     return Results.Ok(new
     {
-        isValid = allErrors.Count == 0,
-        errorCount = allErrors.Count,
-        warningCount = allWarnings.Count,
-        errors = allErrors,
-        warnings = allWarnings,
+        isValid = result.IsValid,
+        errorCount = result.Errors.Count,
+        warningCount = result.Warnings.Count,
+        errors = result.Errors,
+        warnings = result.Warnings,
     });
 });
 
@@ -142,11 +93,11 @@ app.MapGet("/conversions", (IConversionRepository repo, DateTime? date) =>
 {
     if (date.HasValue)
     {
-        Conversion? conversion = repo.GetByDate(date.Value);
-        return conversion is not null ? Results.Ok(conversion) : Results.NotFound();
+        var conversion = repo.GetByDate(date.Value);
+        return conversion is not null ? Results.Ok(conversion.ToDto()) : Results.NotFound();
     }
 
-    IEnumerable<Conversion> conversions = repo.GetAll();
+    List<ConversionDto> conversions = repo.GetAll().Select(c => c.ToDto()).ToList();
     return Results.Ok(conversions);
 });
 
