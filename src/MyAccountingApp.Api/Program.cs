@@ -32,6 +32,7 @@ builder.Services.AddSingleton<InteractiveBrokersImportService>(sp =>
     return new InteractiveBrokersImportService(csvParser, logger);
 });
 builder.Services.AddSingleton<BankCsvImportService>();
+builder.Services.AddSingleton<AssetTransactionCsvImportService>();
 builder.Services.AddSingleton<IBrokerImportService, BrokerImportDispatcher>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

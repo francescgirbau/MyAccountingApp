@@ -145,6 +145,81 @@ public class ImportServiceTests
         Assert.Contains("Error processing", result.Errors[0]);
     }
 
+    [Fact]
+    public async Task ImportFromFoldersAsync_MatchesTransferPairs()
+    {
+        string dir = CreateTempDir();
+        string file = Path.Combine(dir, "tx.csv");
+        File.WriteAllText(file, "dummy");
+
+        Transaction expense = new(
+            Guid.NewGuid(),
+            new DateTime(2024, 3, 1),
+            "Transferencia a FRANCESC GIRBAU IBKR",
+            new Money(1000, "EUR"),
+            TransactionCategory.EXPENSE);
+
+        Transaction income = new(
+            Guid.NewGuid(),
+            new DateTime(2024, 3, 1),
+            "Transferencia de FRANCESC a IBKR",
+            new Money(1000, "EUR"),
+            TransactionCategory.INCOME);
+
+        FakeBroker broker = new();
+        broker.Transactions = new[] { expense, income };
+        broker.AssetTransactions = Array.Empty<AssetTransaction>();
+        FakeTxRepo txRepo = new();
+        FakePfRepo pfRepo = new();
+        TransactionValidator validator = new();
+        FakeLogger<ImportService> logger = new();
+        ImportService service = new(broker, txRepo, pfRepo, validator, logger);
+
+        ImportResult result = await service.ImportFromFoldersAsync(new[] { dir });
+
+        var allTxs = txRepo.GetAll().ToList();
+        Assert.Equal(2, allTxs.Count);
+        Assert.All(allTxs, tx => Assert.Equal(TransactionCategory.TRANSFER, tx.Category));
+    }
+
+    [Fact]
+    public async Task ImportFromFoldersAsync_DoesNotMatchNonMatchingTransfers()
+    {
+        string dir = CreateTempDir();
+        string file = Path.Combine(dir, "tx.csv");
+        File.WriteAllText(file, "dummy");
+
+        Transaction expense = new(
+            Guid.NewGuid(),
+            new DateTime(2024, 3, 1),
+            "Transferencia a FRANCESC",
+            new Money(1000, "EUR"),
+            TransactionCategory.EXPENSE);
+
+        Transaction income = new(
+            Guid.NewGuid(),
+            new DateTime(2024, 3, 2),
+            "Bonus",
+            new Money(500, "EUR"),
+            TransactionCategory.INCOME);
+
+        FakeBroker broker = new();
+        broker.Transactions = new[] { expense, income };
+        broker.AssetTransactions = Array.Empty<AssetTransaction>();
+        FakeTxRepo txRepo = new();
+        FakePfRepo pfRepo = new();
+        TransactionValidator validator = new();
+        FakeLogger<ImportService> logger = new();
+        ImportService service = new(broker, txRepo, pfRepo, validator, logger);
+
+        ImportResult result = await service.ImportFromFoldersAsync(new[] { dir });
+
+        var allTxs = txRepo.GetAll().ToList();
+        Assert.Equal(2, allTxs.Count);
+        Assert.Contains(allTxs, tx => tx.Category == TransactionCategory.EXPENSE);
+        Assert.Contains(allTxs, tx => tx.Category == TransactionCategory.INCOME);
+    }
+
     private static string CreateTempDir(string suffix = "")
     {
         string dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString(), suffix);
@@ -194,7 +269,11 @@ public class ImportServiceTests
     {
         private readonly List<Transaction> _transactions = new();
 
-        public void AddOrUpdate(Transaction tx) => this._transactions.Add(tx);
+        public void AddOrUpdate(Transaction tx)
+        {
+            this._transactions.RemoveAll(t => t.Id == tx.Id);
+            this._transactions.Add(tx);
+        }
         public void Initialize(IEnumerable<Transaction> transactions)
         {
             this._transactions.Clear();

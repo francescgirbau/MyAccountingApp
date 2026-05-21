@@ -11,10 +11,10 @@ public class BankCsvImportServiceTests
     [Fact]
     public async Task ParseAllAsync_ParsesSimpleTransactions()
     {
-        string csv = "Data,Descripcio,Import,Moneda,Source,Categoria\n" +
-                     "2015-01-01,Dormity,-142.67,EUR,CAIXA_ENGINYERS,EXPENSE\n" +
-                     "2015-01-01,Nomina,2500,EUR,CAIXA_ENGINYERS,INCOME\n" +
-                     "2015-01-02,Supermercat,-85.30,EUR,CAIXA_ENGINYERS,EXPENSE";
+        string csv = "Data,Descripcio,Import,Moneda,Source\n" +
+                     "2015-01-01,Dormity,-142.67,EUR,CAIXA_ENGINYERS\n" +
+                     "2015-01-01,Nomina,2500,EUR,CAIXA_ENGINYERS\n" +
+                     "2015-01-02,Supermercat,-85.30,EUR,CAIXA_ENGINYERS";
 
         string file = Path.GetTempFileName();
         try
@@ -36,8 +36,8 @@ public class BankCsvImportServiceTests
     [Fact]
     public async Task ParseAllAsync_MapsFieldsCorrectly()
     {
-        string csv = "Data,Descripcio,Import,Moneda,Source,Categoria\n" +
-                     "2019-06-15,Compra Amazon,-45.99,USD,REVOLUT,EXPENSE";
+        string csv = "Data,Descripcio,Import,Moneda,Source\n" +
+                     "2019-06-15,Compra Amazon,-45.99,USD,REVOLUT";
 
         string file = Path.GetTempFileName();
         try
@@ -63,8 +63,8 @@ public class BankCsvImportServiceTests
     [Fact]
     public async Task ParseAllAsync_HandlesCommasInQuotedFields()
     {
-        string csv = "Data,Descripcio,Import,Moneda,Source,Categoria\n" +
-                     "2019-01-14,\"R/ TELEFONICA DE ESPANA, S. A. U.\",-48.01,EUR,CAIXA_ENGINYERS,EXPENSE";
+        string csv = "Data,Descripcio,Import,Moneda,Source\n" +
+                     "2019-01-14,\"R/ TELEFONICA DE ESPANA, S. A. U.\",-48.01,EUR,CAIXA_ENGINYERS";
 
         string file = Path.GetTempFileName();
         try
@@ -86,9 +86,9 @@ public class BankCsvImportServiceTests
     [Fact]
     public async Task ParseAllAsync_UsesPositiveAmountAsIncome()
     {
-        string csv = "Data,Descripcio,Import,Moneda,Source,Categoria\n" +
-                     "2020-03-01,Nomina,3000,EUR,ABN_AMRO,INCOME\n" +
-                     "2020-03-05,Bonus,500,EUR,ABN_AMRO,INCOME";
+        string csv = "Data,Descripcio,Import,Moneda,Source\n" +
+                     "2020-03-01,Nomina,3000,EUR,ABN_AMRO\n" +
+                     "2020-03-05,Bonus,500,EUR,ABN_AMRO";
 
         string file = Path.GetTempFileName();
         try
@@ -107,10 +107,11 @@ public class BankCsvImportServiceTests
     }
 
     [Fact]
-    public async Task ParseAllAsync_UsesCategoryColumnOverSign()
+    public async Task ParseAllAsync_DetectsTransferByKeyword()
     {
-        string csv = "Data,Descripcio,Import,Moneda,Source,Categoria\n" +
-                     "2020-03-01,Transfer savings,-500,EUR,myInvestor,TRANSFER";
+        string csv = "Data,Descripcio,Import,Moneda,Source\n" +
+                     "2020-06-01,Transferencia a FRANCESC,-500,EUR,ABN_AMRO\n" +
+                     "2020-06-01,Nomina,3000,EUR,ABN_AMRO";
 
         string file = Path.GetTempFileName();
         try
@@ -120,8 +121,9 @@ public class BankCsvImportServiceTests
             BankCsvImportService service = new();
             var (transactions, _) = await service.ParseAllAsync(file);
 
-            var tx = Assert.Single(transactions);
-            Assert.Equal(Domain.Enums.TransactionCategory.TRANSFER, tx.Category);
+            var list = transactions.ToList();
+            Assert.Equal(Domain.Enums.TransactionCategory.TRANSFER, list[0].Category);
+            Assert.Equal(Domain.Enums.TransactionCategory.INCOME, list[1].Category);
         }
         finally
         {
@@ -132,7 +134,7 @@ public class BankCsvImportServiceTests
     [Fact]
     public async Task ParseAllAsync_ReturnsEmptyForHeaderOnly()
     {
-        string csv = "Data,Descripcio,Import,Moneda,Source,Categoria";
+        string csv = "Data,Descripcio,Import,Moneda,Source";
 
         string file = Path.GetTempFileName();
         try

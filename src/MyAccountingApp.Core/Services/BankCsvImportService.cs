@@ -15,6 +15,8 @@ using MyAccountingApp.Domain.ValueObjects;
 
 public class BankCsvImportService : IBrokerImportService
 {
+    private static readonly string[] TransferKeywords = { "FRANCESC", "F GIRBAU" };
+
     public async Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions)> ParseAllAsync(
         string filePath,
         CancellationToken cancellationToken = default)
@@ -34,7 +36,7 @@ public class BankCsvImportService : IBrokerImportService
             try
             {
                 List<string> fields = ParseCsvLine(line);
-                if (fields.Count < 6)
+                if (fields.Count < 5)
                 {
                     continue;
                 }
@@ -43,13 +45,12 @@ public class BankCsvImportService : IBrokerImportService
                 string description = fields[1];
                 decimal amount = decimal.Parse(fields[2], NumberStyles.Any, CultureInfo.InvariantCulture);
                 string currency = fields[3];
-                string categoryStr = fields[5];
 
-                TransactionCategory category = Enum.TryParse<TransactionCategory>(categoryStr, ignoreCase: true, out var parsed)
-                    ? parsed
-                    : amount >= 0
-                        ? TransactionCategory.INCOME
-                        : TransactionCategory.EXPENSE;
+                TransactionCategory category = amount >= 0
+                    ? TransactionCategory.INCOME
+                    : TransactionCategory.EXPENSE;
+
+                category = BankCsvImportService.DetectTransfer(description, category);
 
                 Money money = new Money(Math.Abs(amount), currency);
                 Transaction transaction = new Transaction(date, description, money, category);
@@ -68,6 +69,22 @@ public class BankCsvImportService : IBrokerImportService
         CancellationToken cancellationToken = default)
     {
         return Task.FromResult(Enumerable.Empty<AssetTransaction>());
+    }
+
+    public static bool IsTransfer(string description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            return false;
+        }
+
+        string upper = description.ToUpperInvariant();
+        return TransferKeywords.Any(k => upper.Contains(k));
+    }
+
+    internal static TransactionCategory DetectTransfer(string description, TransactionCategory baseCategory)
+    {
+        return IsTransfer(description) ? TransactionCategory.TRANSFER : baseCategory;
     }
 
     internal static List<string> ParseCsvLine(string line)

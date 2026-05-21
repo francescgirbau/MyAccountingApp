@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
 using MyAccountingApp.Application.Interfaces;
+using MyAccountingApp.Core.Services;
 using MyAccountingApp.Domain.Entities;
+using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
 
 namespace MyAccountingApp.Application.Services;
@@ -40,7 +42,7 @@ public class ImportService : IImportService
                 continue;
             }
 
-            string[] csvFiles = Directory.GetFiles(folderPath, "*.csv");
+            string[] csvFiles = Directory.GetFiles(folderPath, "*.csv", SearchOption.AllDirectories);
 
             foreach (string csvFile in csvFiles)
             {
@@ -50,9 +52,9 @@ public class ImportService : IImportService
 
                     if (folderPath.Contains("CORPORATE", StringComparison.OrdinalIgnoreCase))
                     {
-                        IEnumerable<AssetTransaction> corporateTransactions =
+                        IEnumerable<Domain.Entities.AssetTransaction> corporateTransactions =
                             await this._broker.ParseCorporateActionsAsync(csvFile);
-                        foreach (AssetTransaction tx in corporateTransactions)
+                        foreach (Domain.Entities.AssetTransaction tx in corporateTransactions)
                         {
                             ValidationResult vr = this._validator.Validate(tx);
                             result.ValidationErrors.AddRange(vr.Errors);
@@ -67,10 +69,10 @@ public class ImportService : IImportService
                     }
                     else
                     {
-                        (IEnumerable<Transaction> transactions, IEnumerable<AssetTransaction> assetTransactions) =
+                        (IEnumerable<Domain.Entities.Transaction> transactions, IEnumerable<Domain.Entities.AssetTransaction> assetTransactions) =
                             await this._broker.ParseAllAsync(csvFile);
 
-                        foreach (Transaction tx in transactions)
+                        foreach (Domain.Entities.Transaction tx in transactions)
                         {
                             ValidationResult vr = this._validator.Validate(tx);
                             result.ValidationErrors.AddRange(vr.Errors);
@@ -81,7 +83,7 @@ public class ImportService : IImportService
                             }
                         }
 
-                        foreach (AssetTransaction tx in assetTransactions)
+                        foreach (Domain.Entities.AssetTransaction tx in assetTransactions)
                         {
                             ValidationResult vr = this._validator.Validate(tx);
                             result.ValidationErrors.AddRange(vr.Errors);
@@ -106,13 +108,70 @@ public class ImportService : IImportService
             }
         }
 
+        int matchedPairs = this.MatchTransferPairs();
+
         this._logger.LogInformation(
-            "Import completed: {FilesProcessed} files, {Transactions} transactions, {AssetTransactions} asset transactions, {Errors} errors",
+            "Import completed: {FilesProcessed} files, {Transactions} transactions, {AssetTransactions} asset transactions, {Matches} transfer pairs matched, {Errors} errors",
             result.FilesProcessed,
             result.Transactions.Count,
             result.AssetTransactions.Count,
+            matchedPairs,
             result.Errors.Count);
 
         return result;
+    }
+
+    private int MatchTransferPairs()
+    {
+        List<Domain.Entities.Transaction> all = this._transactionRepo.GetAll().ToList();
+        List<Domain.Entities.Transaction> transfers = all
+            .Where(t => BankCsvImportService.IsTransfer(t.Description))
+            .ToList();
+
+        List<Domain.Entities.Transaction> expenses = transfers
+            .Where(t => t.Money.Amount > 0 && t.Category != Domain.Enums.TransactionCategory.TRANSFER)
+            .ToList();
+
+        List<Domain.Entities.Transaction> incomes = transfers
+            .Where(t => t.Money.Amount > 0 && t.Category != Domain.Enums.TransactionCategory.TRANSFER)
+            .ToList();
+
+        int matched = 0;
+
+        foreach (Domain.Entities.Transaction expense in expenses)
+        {
+            if (expense.Category != Domain.Enums.TransactionCategory.EXPENSE)
+            {
+                continue;
+            }
+
+            Domain.Entities.Transaction? match = incomes.FirstOrDefault(inc =>
+                inc.Category == Domain.Enums.TransactionCategory.INCOME &&
+                inc.Money.Amount == expense.Money.Amount &&
+                inc.Money.Currency == expense.Money.Currency &&
+                Math.Abs((inc.Date - expense.Date).TotalDays) <= 3 &&
+                inc.Id != expense.Id);
+
+            if (match != null)
+            {
+                this.UpdateCategory(expense, Domain.Enums.TransactionCategory.TRANSFER);
+                this.UpdateCategory(match, Domain.Enums.TransactionCategory.TRANSFER);
+                matched++;
+            }
+        }
+
+        return matched;
+    }
+
+    private void UpdateCategory(Domain.Entities.Transaction transaction, Domain.Enums.TransactionCategory newCategory)
+    {
+        Domain.Entities.Transaction updated = new Domain.Entities.Transaction(
+            transaction.Id,
+            transaction.Date,
+            transaction.Description,
+            transaction.Money,
+            newCategory);
+
+        this._transactionRepo.AddOrUpdate(updated);
     }
 }

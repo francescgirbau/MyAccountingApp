@@ -2,7 +2,6 @@ namespace MyAccountingApp.Core.Services;
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,17 +11,18 @@ using MyAccountingApp.Domain.Interfaces;
 
 public class BrokerImportDispatcher : IBrokerImportService
 {
-    private static readonly string BankHeader = "Data,Descripcio,Import,Moneda,Source,Categoria";
-
     private readonly InteractiveBrokersImportService ibkrService;
     private readonly BankCsvImportService bankService;
+    private readonly AssetTransactionCsvImportService assetService;
 
     public BrokerImportDispatcher(
         InteractiveBrokersImportService ibkrService,
-        BankCsvImportService bankService)
+        BankCsvImportService bankService,
+        AssetTransactionCsvImportService assetService)
     {
         this.ibkrService = ibkrService ?? throw new ArgumentNullException(nameof(ibkrService));
         this.bankService = bankService ?? throw new ArgumentNullException(nameof(bankService));
+        this.assetService = assetService ?? throw new ArgumentNullException(nameof(assetService));
     }
 
     public Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions)> ParseAllAsync(
@@ -44,9 +44,14 @@ public class BrokerImportDispatcher : IBrokerImportService
 
     private IBrokerImportService SelectService(string filePath)
     {
-        string? firstLine = File.ReadLines(filePath).FirstOrDefault();
+        string fileName = Path.GetFileName(filePath);
 
-        if (firstLine != null && firstLine.Trim().StartsWith(BankHeader, StringComparison.OrdinalIgnoreCase))
+        if (fileName.EndsWith("_asset_transactions.csv", StringComparison.OrdinalIgnoreCase))
+        {
+            return this.assetService;
+        }
+
+        if (fileName.EndsWith("_transactions.csv", StringComparison.OrdinalIgnoreCase))
         {
             return this.bankService;
         }

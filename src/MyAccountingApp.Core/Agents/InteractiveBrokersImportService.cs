@@ -167,7 +167,7 @@ public class InteractiveBrokersImportService : IBrokerImportService
         return "UNKNOWN";
     }
 
-    private async Task<(bool IsTrade, Transaction? Transaction, AssetTransaction? AssetTransaction)> ClassifyAndMapAsync(
+    private Task<(bool IsTrade, Transaction? Transaction, AssetTransaction? AssetTransaction)> ClassifyAndMapAsync(
         IBKRTransactionRecord record,
         CancellationToken cancellationToken)
     {
@@ -180,7 +180,7 @@ public class InteractiveBrokersImportService : IBrokerImportService
         if (isOption)
         {
             Transaction transaction = this.MapOptionToTransaction(record);
-            return (false, transaction, null);
+            return Task.FromResult<(bool, Transaction?, AssetTransaction?)>((false, transaction, null));
         }
 
         bool hasSymbol = !string.IsNullOrEmpty(symbol) && symbol != "-";
@@ -188,11 +188,11 @@ public class InteractiveBrokersImportService : IBrokerImportService
         if (hasSymbol)
         {
             AssetTransaction assetTransaction = this.MapToAssetTransaction(record);
-            return (true, null, assetTransaction);
+            return Task.FromResult<(bool, Transaction?, AssetTransaction?)>((true, null, assetTransaction));
         }
 
         Transaction transaction2 = this.MapToTransaction(record);
-        return (false, transaction2, null);
+        return Task.FromResult<(bool, Transaction?, AssetTransaction?)>((false, transaction2, null));
     }
 
     private Transaction MapOptionToTransaction(IBKRTransactionRecord record)
@@ -333,7 +333,7 @@ public class InteractiveBrokersImportService : IBrokerImportService
         return 0;
     }
 
-    private async Task<string> ExtractCorporateActionSymbolAsync(
+    private Task<string> ExtractCorporateActionSymbolAsync(
         IBKRTransactionRecord record,
         CancellationToken cancellationToken)
     {
@@ -342,10 +342,10 @@ public class InteractiveBrokersImportService : IBrokerImportService
         int dotIndex = symbol.IndexOf('.');
         if (dotIndex > 0)
         {
-            return symbol.Substring(0, dotIndex);
+            return Task.FromResult(symbol.Substring(0, dotIndex));
         }
 
-        return symbol;
+        return Task.FromResult(symbol);
     }
 
     private Transaction MapToTransaction(IBKRTransactionRecord record)
