@@ -33,7 +33,7 @@ public class ValidationQueryTests
         Transaction invalidTx = new(
             Guid.NewGuid(),
             DateTime.UtcNow.AddDays(10),
-            "",
+            string.Empty,
             new Money(100, "EUR"),
             TransactionCategory.INCOME);
         txRepo.AddOrUpdate(invalidTx);
@@ -41,7 +41,7 @@ public class ValidationQueryTests
         Transaction txForAsset = new(
             Guid.NewGuid(),
             DateTime.UtcNow.AddDays(10),
-            "",
+            string.Empty,
             new Money(100, "EUR"),
             TransactionCategory.INCOME);
         AssetTransaction assetTx = new(txForAsset, "AAPL", 5, AssetTransactionType.Buy);

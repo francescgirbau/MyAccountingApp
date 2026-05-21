@@ -65,7 +65,7 @@ public class TransactionValidatorTests
         Transaction tx = new(
             Guid.NewGuid(),
             new DateTime(2024, 6, 1),
-            "",
+            string.Empty,
             new Money(100, "EUR"),
             TransactionCategory.INCOME);
 
@@ -78,7 +78,7 @@ public class TransactionValidatorTests
     [Fact]
     public void MoneyRejectsInvalidCurrency()
     {
-        Assert.Throws<ArgumentException>(() => new Money(100, ""));
+        Assert.Throws<ArgumentException>(() => new Money(100, string.Empty));
         Assert.Throws<ArgumentException>(() => new Money(100, "XX"));
         Assert.Throws<ArgumentException>(() => new Money(100, "XXXX"));
     }
@@ -105,7 +105,7 @@ public class TransactionValidatorTests
         Transaction tx = new(
             Guid.NewGuid(),
             DateTime.UtcNow.AddDays(10),
-            "",
+            string.Empty,
             new Money(100, "USD"),
             TransactionCategory.INCOME);
         AssetTransaction assetTx = new(tx, "AAPL", 10, AssetTransactionType.Buy);

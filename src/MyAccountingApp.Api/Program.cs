@@ -42,6 +42,7 @@ builder.Services.AddSingleton<ITransactionValidator, TransactionValidator>();
 builder.Services.AddSingleton<IPortfolioQuery, PortfolioQuery>();
 builder.Services.AddSingleton<IPositionEngine, PositionEngine>();
 builder.Services.AddSingleton<IValidationQuery, ValidationQuery>();
+builder.Services.AddSingleton<IAnnualSummaryService, AnnualSummaryService>();
 
 WebApplication app = builder.Build();
 
@@ -103,6 +104,18 @@ app.MapGet("/conversions", (IConversionRepository repo, DateTime? date) =>
 
     List<ConversionDto> conversions = repo.GetAll().Select(c => c.ToDto()).ToList();
     return Results.Ok(conversions);
+});
+
+app.MapGet("/summary", (IAnnualSummaryService summaryService) =>
+{
+    List<AnnualSummaryDto> summaries = summaryService.GetAll();
+    return Results.Ok(summaries);
+});
+
+app.MapGet("/summary/{year:int}", (int year, IAnnualSummaryService summaryService) =>
+{
+    AnnualSummaryDto? summary = summaryService.GetByYear(year);
+    return summary is not null ? Results.Ok(summary) : Results.NotFound(new { year, message = "No data found for this year" });
 });
 
 app.Run();

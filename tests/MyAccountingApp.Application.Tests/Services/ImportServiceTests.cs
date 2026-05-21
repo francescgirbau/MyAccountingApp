@@ -103,7 +103,7 @@ public class ImportServiceTests
         Transaction invalidTx = new(
             Guid.NewGuid(),
             DateTime.UtcNow.AddDays(10),
-            "",
+            string.Empty,
             new Money(100, "EUR"),
             TransactionCategory.INCOME);
 
@@ -258,7 +258,8 @@ public class ImportServiceTests
 
     private sealed class FakeLogger<T> : ILogger<T>
     {
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
         public bool IsEnabled(LogLevel logLevel) => true;
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
@@ -274,6 +275,7 @@ public class ImportServiceTests
             this._transactions.RemoveAll(t => t.Id == tx.Id);
             this._transactions.Add(tx);
         }
+
         public void Initialize(IEnumerable<Transaction> transactions)
         {
             this._transactions.Clear();
