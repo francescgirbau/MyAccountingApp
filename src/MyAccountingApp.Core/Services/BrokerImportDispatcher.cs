@@ -2,6 +2,7 @@ namespace MyAccountingApp.Core.Services;
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,6 +12,8 @@ using MyAccountingApp.Domain.Interfaces;
 
 public class BrokerImportDispatcher : IBrokerImportService
 {
+    private const string BankCsvHeader = "Data,Descripcio,Import,Moneda,Source";
+
     private readonly InteractiveBrokersImportService ibkrService;
     private readonly BankCsvImportService bankService;
     private readonly AssetTransactionCsvImportService assetService;
@@ -42,6 +45,19 @@ public class BrokerImportDispatcher : IBrokerImportService
         return this.ibkrService.ParseCorporateActionsAsync(filePath, cancellationToken);
     }
 
+    private static string? ReadFirstLine(string filePath)
+    {
+        try
+        {
+            using StreamReader reader = new StreamReader(filePath);
+            return reader.ReadLine();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private IBrokerImportService SelectService(string filePath)
     {
         string fileName = Path.GetFileName(filePath);
@@ -54,6 +70,20 @@ public class BrokerImportDispatcher : IBrokerImportService
         if (fileName.EndsWith("_transactions.csv", StringComparison.OrdinalIgnoreCase))
         {
             return this.bankService;
+        }
+
+        string? header = ReadFirstLine(filePath);
+        if (header != null)
+        {
+            if (header.StartsWith(BankCsvHeader, StringComparison.OrdinalIgnoreCase))
+            {
+                return this.bankService;
+            }
+
+            if (header.Contains("Ticker", StringComparison.OrdinalIgnoreCase))
+            {
+                return this.assetService;
+            }
         }
 
         return this.ibkrService;

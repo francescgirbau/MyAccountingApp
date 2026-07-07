@@ -1,0 +1,55 @@
+<PageTitle>Home</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">MyAccountingApp</MudText>
+<MudText Typo="Typo.body1" Class="mb-6">Personal finance dashboard. Select a section from the menu.</MudText>
+
+<MudAlert Severity="Severity.Info" Class="mb-4">
+    Use the sidebar to navigate between Summary, Transactions, Asset Transactions, and Portfolio.
+</MudAlert>
+
+<MudGrid>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Class="pa-4" Outlined="true">
+            <MudCardContent>
+                <MudText Typo="Typo.h4"><MudIcon Icon="@Icons.Material.Filled.BarChart" /> Summary</MudText>
+                <MudText Typo="Typo.body2">Annual financial summaries with income, expenses, and investment breakdown.</MudText>
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="summary">Open</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Class="pa-4" Outlined="true">
+            <MudCardContent>
+                <MudText Typo="Typo.h4"><MudIcon Icon="@Icons.Material.Filled.Receipt" /> Transactions</MudText>
+                <MudText Typo="Typo.body2">View and filter bank transactions by year, category, and description.</MudText>
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="transactions">Open</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Class="pa-4" Outlined="true">
+            <MudCardContent>
+                <MudText Typo="Typo.h4"><MudIcon Icon="@Icons.Material.Filled.TrendingUp" /> Asset Transactions</MudText>
+                <MudText Typo="Typo.body2">Track buy/sell operations for stocks, ETFs, and funds.</MudText>
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="asset-transactions">Open</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Class="pa-4" Outlined="true">
+            <MudCardContent>
+                <MudText Typo="Typo.h4"><MudIcon Icon="@Icons.Material.Filled.AccountBalance" /> Portfolio</MudText>
+                <MudText Typo="Typo.body2">View positions, cost basis, and P&amp;L by symbol.</MudText>
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="portfolio">Open</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+</MudGrid>

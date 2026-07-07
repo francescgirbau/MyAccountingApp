@@ -17,6 +17,51 @@ public class BankCsvImportService : IBrokerImportService
 {
     private static readonly string[] TransferKeywords = { "FRANCESC", "F GIRBAU" };
 
+    public static bool IsTransfer(string description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            return false;
+        }
+
+        string upper = description.ToUpperInvariant();
+        return TransferKeywords.Any(k => upper.Contains(k));
+    }
+
+    internal static TransactionCategory DetectTransfer(string description, TransactionCategory baseCategory)
+    {
+        return IsTransfer(description) ? TransactionCategory.TRANSFER : baseCategory;
+    }
+
+    internal static List<string> ParseCsvLine(string line)
+    {
+        List<string> fields = new List<string>();
+        bool inQuotes = false;
+        StringBuilder current = new StringBuilder();
+
+        for (int i = 0; i < line.Length; i++)
+        {
+            char c = line[i];
+
+            if (c == '"')
+            {
+                inQuotes = !inQuotes;
+            }
+            else if (c == ',' && !inQuotes)
+            {
+                fields.Add(current.ToString().Trim());
+                current.Clear();
+            }
+            else
+            {
+                current.Append(c);
+            }
+        }
+
+        fields.Add(current.ToString().Trim());
+        return fields;
+    }
+
     public async Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions)> ParseAllAsync(
         string filePath,
         CancellationToken cancellationToken = default)
@@ -69,50 +114,5 @@ public class BankCsvImportService : IBrokerImportService
         CancellationToken cancellationToken = default)
     {
         return Task.FromResult(Enumerable.Empty<AssetTransaction>());
-    }
-
-    public static bool IsTransfer(string description)
-    {
-        if (string.IsNullOrWhiteSpace(description))
-        {
-            return false;
-        }
-
-        string upper = description.ToUpperInvariant();
-        return TransferKeywords.Any(k => upper.Contains(k));
-    }
-
-    internal static TransactionCategory DetectTransfer(string description, TransactionCategory baseCategory)
-    {
-        return IsTransfer(description) ? TransactionCategory.TRANSFER : baseCategory;
-    }
-
-    internal static List<string> ParseCsvLine(string line)
-    {
-        List<string> fields = new List<string>();
-        bool inQuotes = false;
-        StringBuilder current = new StringBuilder();
-
-        for (int i = 0; i < line.Length; i++)
-        {
-            char c = line[i];
-
-            if (c == '"')
-            {
-                inQuotes = !inQuotes;
-            }
-            else if (c == ',' && !inQuotes)
-            {
-                fields.Add(current.ToString().Trim());
-                current.Clear();
-            }
-            else
-            {
-                current.Append(c);
-            }
-        }
-
-        fields.Add(current.ToString().Trim());
-        return fields;
     }
 }

@@ -378,6 +378,7 @@ csv/
 
 # Personal financial data (transactions, imports, etc.)
 /data/
+/import/
 
 # Docker
 .env

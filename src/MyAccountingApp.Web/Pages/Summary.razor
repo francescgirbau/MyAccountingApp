@@ -1,0 +1,99 @@
+@page "/summary"
+@page "/summary/{Year:int}"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Summary</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Annual Summary</MudText>
+
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+}
+else if (Year.HasValue)
+{
+    <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowBack" Href="summary" Class="mb-4">Back to all years</MudButton>
+    <MudCard Class="pa-6" Outlined="true">
+        <MudCardContent>
+            <MudText Typo="Typo.h4" GutterBottom="true">@Year.Value</MudText>
+            <MudGrid>
+                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Income</MudText><MudText Typo="Typo.h5" Color="Color.Success">@_summary?.Income.ToString("N2") €</MudText></MudItem>
+                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Expenses</MudText><MudText Typo="Typo.h5" Color="Color.Error">@_summary?.Expenses.ToString("N2") €</MudText></MudItem>
+                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Net Cash Flow</MudText><MudText Typo="Typo.h5" Color="@NetCashFlowColor">@_summary?.NetCashFlow.ToString("N2") €</MudText></MudItem>
+                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Transactions</MudText><MudText Typo="Typo.h5">@_summary?.TransactionCount</MudText></MudItem>
+                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Investment Purchases</MudText><MudText Typo="Typo.h5">@_summary?.InvestmentPurchases.ToString("N2") €</MudText></MudItem>
+                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Investment Sales</MudText><MudText Typo="Typo.h5">@_summary?.InvestmentSales.ToString("N2") €</MudText></MudItem>
+                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Asset Transactions</MudText><MudText Typo="Typo.h5">@_summary?.AssetTransactionCount</MudText></MudItem>
+            </MudGrid>
+        </MudCardContent>
+    </MudCard>
+}
+else
+{
+    <MudText Typo="Typo.body1" Class="mb-6">Select a year to view details.</MudText>
+    <MudGrid>
+        @foreach (var s in _summaries)
+        {
+            <MudItem xs="12" sm="6" md="4" lg="3">
+                <MudCard Class="pa-4" Outlined="true" Style="cursor: pointer;" @onclick="() => NavigateToYear(s.Year)">
+                    <MudCardContent>
+                        <MudText Typo="Typo.h4" GutterBottom="true">@s.Year</MudText>
+                        <MudText Typo="Typo.subtitle2">Income</MudText>
+                        <MudText Typo="Typo.h6" Color="Color.Success">@s.Income.ToString("N2") €</MudText>
+                        <MudText Typo="Typo.subtitle2" Class="mt-2">Expenses</MudText>
+                        <MudText Typo="Typo.h6" Color="Color.Error">@s.Expenses.ToString("N2") €</MudText>
+                        <MudText Typo="Typo.subtitle2" Class="mt-2">Net Cash Flow</MudText>
+                        <MudText Typo="Typo.h6" Color="@GetNetColor(s.NetCashFlow)">@s.NetCashFlow.ToString("N2") €</MudText>
+                        <MudText Typo="Typo.subtitle2" Class="mt-2">Transactions</MudText>
+                        <MudText Typo="Typo.body2">@s.TransactionCount bank / @s.AssetTransactionCount asset</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@code {
+    [Parameter]
+    public int? Year { get; set; }
+
+    private List<AnnualSummaryDto> _summaries = new();
+    private AnnualSummaryDto? _summary;
+    private bool _loading = true;
+    private string? _error;
+
+    private Color NetCashFlowColor => (_summary?.NetCashFlow ?? 0) >= 0 ? Color.Success : Color.Error;
+    private Color GetNetColor(decimal net) => net >= 0 ? Color.Success : Color.Error;
+
+    private void NavigateToYear(int year) => Navigation.NavigateTo($"/summary/{year}");
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _summaries = await Http.GetFromJsonAsync<List<AnnualSummaryDto>>("/api/summary") ?? new();
+
+            if (Year.HasValue)
+            {
+                _summary = _summaries.FirstOrDefault(s => s.Year == Year.Value);
+                if (_summary == null)
+                {
+                    _error = $"No data found for year {Year.Value}.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

@@ -36,18 +36,18 @@ public class AnnualSummaryServiceTests
     [Fact]
     public void GetByYear_ReturnsCorrectSummary()
     {
-        var svc = CreateService(
-            new Transaction[]
-            {
-                Tx(2020, 1000, TransactionCategory.INCOME),
-                Tx(2020, 500, TransactionCategory.EXPENSE),
-                Tx(2021, 200, TransactionCategory.INCOME),
-            },
-            new AssetTransaction[]
-            {
-                AssetTx(2020, 300, AssetTransactionType.Buy),
-                AssetTx(2020, 150, AssetTransactionType.Sell),
-            });
+        Transaction[] txs = new Transaction[]
+        {
+            Tx(2020, 1000, TransactionCategory.INCOME),
+            Tx(2020, 500, TransactionCategory.EXPENSE),
+            Tx(2021, 200, TransactionCategory.INCOME),
+        };
+        AssetTransaction[] assets = new AssetTransaction[]
+        {
+            AssetTx(2020, 300, AssetTransactionType.Buy),
+            AssetTx(2020, 150, AssetTransactionType.Sell),
+        };
+        var svc = CreateService(txs, assets);
 
         AnnualSummaryDto? result = svc.GetByYear(2020);
 

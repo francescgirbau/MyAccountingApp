@@ -9,6 +9,19 @@ using MyAccountingApp.Domain.Interfaces;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
+bool isDev = builder.Environment.IsDevelopment();
+
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        if (isDev)
+        {
+            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+        }
+    });
+});
+
 string currencyApiKey = builder.Configuration["CurrencyApi:ApiKey"]
     ?? Environment.GetEnvironmentVariable("CURRENCY_API_KEY")
     ?? throw new InvalidOperationException(
@@ -46,42 +59,52 @@ builder.Services.AddSingleton<IAnnualSummaryService, AnnualSummaryService>();
 
 WebApplication app = builder.Build();
 
+app.UseCors();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+string webRootPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
+if (Directory.Exists(webRootPath))
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+}
 
-app.MapGet("/transactions", (ITransactionRepository repo) =>
+const string prefix = "/api";
+
+app.MapGet($"{prefix}/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+
+app.MapGet($"{prefix}/transactions", (ITransactionRepository repo) =>
 {
     List<TransactionDto> transactions = repo.GetAll().Select(t => t.ToDto()).ToList();
     return Results.Ok(transactions);
 });
 
-app.MapGet("/asset-transactions", (IPortfolioRepository repo) =>
+app.MapGet($"{prefix}/asset-transactions", (IPortfolioRepository repo) =>
 {
     List<AssetTransactionDto> transactions = repo.GetAllTransactions().Select(t => t.ToDto()).ToList();
     return Results.Ok(transactions);
 });
 
-app.MapGet("/asset-transactions/{symbol}", (string symbol, IPortfolioRepository repo) =>
+app.MapGet($"{prefix}/asset-transactions/{{symbol}}", (string symbol, IPortfolioRepository repo) =>
 {
     List<AssetTransactionDto> transactions = repo.GetAssetTransactions(symbol).Select(t => t.ToDto()).ToList();
     return Results.Ok(transactions);
 });
 
-app.MapPost("/import", async (ImportRequest request, IImportService importService) =>
+app.MapPost($"{prefix}/import", async (ImportRequest request, IImportService importService) =>
 {
     ImportResult result = await importService.ImportFromFoldersAsync(request.FolderPaths);
     return Results.Ok(result.ToDto());
 });
 
-app.MapGet("/portfolio/{symbol}", async (string symbol, IPositionEngine positionEngine) =>
+app.MapGet($"{prefix}/portfolio/{{symbol}}", async (string symbol, IPositionEngine positionEngine) =>
 {
     PortfolioPositionDto? position = await positionEngine.GetPosition(symbol);
     return position is not null ? Results.Ok(position) : Results.NotFound(new { symbol, message = "No transactions found for this symbol" });
 });
 
-app.MapGet("/validate", (IValidationQuery validationQuery) =>
+app.MapGet($"{prefix}/validate", (IValidationQuery validationQuery) =>
 {
     ValidationResult result = validationQuery.ValidateAll();
     return Results.Ok(new
@@ -94,7 +117,7 @@ app.MapGet("/validate", (IValidationQuery validationQuery) =>
     });
 });
 
-app.MapGet("/conversions", (IConversionRepository repo, DateTime? date) =>
+app.MapGet($"{prefix}/conversions", (IConversionRepository repo, DateTime? date) =>
 {
     if (date.HasValue)
     {
@@ -106,17 +129,19 @@ app.MapGet("/conversions", (IConversionRepository repo, DateTime? date) =>
     return Results.Ok(conversions);
 });
 
-app.MapGet("/summary", (IAnnualSummaryService summaryService) =>
+app.MapGet($"{prefix}/summary", (IAnnualSummaryService summaryService) =>
 {
     List<AnnualSummaryDto> summaries = summaryService.GetAll();
     return Results.Ok(summaries);
 });
 
-app.MapGet("/summary/{year:int}", (int year, IAnnualSummaryService summaryService) =>
+app.MapGet($"{prefix}/summary/{{year:int}}", (int year, IAnnualSummaryService summaryService) =>
 {
     AnnualSummaryDto? summary = summaryService.GetByYear(year);
     return summary is not null ? Results.Ok(summary) : Results.NotFound(new { year, message = "No data found for this year" });
 });
+
+app.MapFallbackToFile("index.html");
 
 app.Run();
 

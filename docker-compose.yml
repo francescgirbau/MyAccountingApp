@@ -9,5 +9,6 @@ services:
     volumes:
       - ./data:/app/data
       - ./csv:/app/csv
+      - ./import:/app/import
     environment:
       - CURRENCY_API_KEY=${CURRENCY_API_KEY}
