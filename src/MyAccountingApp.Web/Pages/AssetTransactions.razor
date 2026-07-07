@@ -1,9 +1,141 @@
 @page "/asset-transactions"
+@inject HttpClient Http
 
 <PageTitle>Asset Transactions</PageTitle>
 
 <MudText Typo="Typo.h3" GutterBottom="true">Asset Transactions</MudText>
 
-<MudAlert Severity="Severity.Info" Class="mb-4">
-    Asset transactions list coming in a future PR.
-</MudAlert>
+<MudPaper Class="pa-4 mb-4" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12" sm="4">
+            <MudSelect @bind-Value="_selectedYear" @bind-Value:after="ApplyFilters" Label="Year" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+                @foreach (var year in _availableYears)
+                {
+                    <MudSelectItem Value="year">@year</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect @bind-Value="_selectedSymbol" @bind-Value:after="ApplyFilters" Label="Symbol" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+                @foreach (var symbol in _availableSymbols)
+                {
+                    <MudSelectItem Value="symbol">@symbol</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect @bind-Value="_selectedType" @bind-Value:after="ApplyFilters" Label="Type" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+                @foreach (var type in _types)
+                {
+                    <MudSelectItem Value="type">@type</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudTable Items="@_filteredTransactions" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true" SortLabel="Sort by">
+        <ToolBarContent>
+            <MudText Typo="Typo.subtitle1">@_filteredTransactions.Count transactions</MudText>
+            <MudSpacer />
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@LoadDataAsync" Size="Size.Small" />
+        </ToolBarContent>
+        <ColGroup>
+            <col style="width: 120px" />
+            <col style="width: 80px" />
+            <col />
+            <col style="width: 80px" />
+            <col style="width: 100px" />
+            <col style="width: 80px" />
+            <col style="width: 80px" />
+        </ColGroup>
+        <HeaderContent>
+            <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Transaction.Date)">Date</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Symbol)">Symbol</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Transaction.Description)">Description</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Quantity)">Qty</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Transaction.Money.Amount)">Amount</MudTableSortLabel></MudTh>
+            <MudTh>Curr.</MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Type)">Type</MudTableSortLabel></MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Date">@context.Transaction.Date.ToString("yyyy-MM-dd")</MudTd>
+            <MudTd DataLabel="Symbol">
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary">@context.Symbol</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Description">@context.Transaction.Description</MudTd>
+            <MudTd DataLabel="Qty">@context.Quantity.ToString("G")</MudTd>
+            <MudTd DataLabel="Amount">@context.Transaction.Money.Amount.ToString("N2")</MudTd>
+            <MudTd DataLabel="Curr.">@context.Transaction.Money.Currency</MudTd>
+            <MudTd DataLabel="Type">@context.Type</MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="@(new int[]{25, 50, 100})" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<AssetTransactionDto> _allTransactions = new();
+    private List<AssetTransactionDto> _filteredTransactions = new();
+    private List<int> _availableYears = new();
+    private List<string> _availableSymbols = new();
+    private bool _loading = true;
+
+    private int? _selectedYear { get; set; }
+    private string? _selectedSymbol { get; set; }
+    private string? _selectedType { get; set; }
+
+    private static readonly string[] _types = { "Buy", "Sell", "CorporateAction" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            _allTransactions = await Http.GetFromJsonAsync<List<AssetTransactionDto>>("/api/asset-transactions") ?? new();
+            _availableYears = _allTransactions
+                .Select(t => t.Transaction.Date.Year)
+                .Distinct()
+                .OrderByDescending(y => y)
+                .ToList();
+            _availableSymbols = _allTransactions
+                .Select(t => t.Symbol)
+                .Distinct()
+                .OrderBy(s => s)
+                .ToList();
+            ApplyFilters();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        var query = _allTransactions.AsEnumerable();
+
+        if (_selectedYear.HasValue)
+            query = query.Where(t => t.Transaction.Date.Year == _selectedYear.Value);
+
+        if (!string.IsNullOrWhiteSpace(_selectedSymbol))
+            query = query.Where(t => t.Symbol == _selectedSymbol);
+
+        if (!string.IsNullOrWhiteSpace(_selectedType))
+            query = query.Where(t => t.Type == _selectedType);
+
+        _filteredTransactions = query.ToList();
+    }
+}

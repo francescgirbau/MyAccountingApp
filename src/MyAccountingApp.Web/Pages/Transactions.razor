@@ -1,9 +1,133 @@
 @page "/transactions"
+@inject HttpClient Http
 
 <PageTitle>Transactions</PageTitle>
 
 <MudText Typo="Typo.h3" GutterBottom="true">Transactions</MudText>
 
-<MudAlert Severity="Severity.Info" Class="mb-4">
-    Transactions list coming in the next PR.
-</MudAlert>
+<MudPaper Class="pa-4 mb-4" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12" sm="4">
+            <MudSelect @bind-Value="_selectedYear" @bind-Value:after="ApplyFilters" Label="Year" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+                @foreach (var year in _availableYears)
+                {
+                    <MudSelectItem Value="year">@year</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect @bind-Value="_selectedCategory" @bind-Value:after="ApplyFilters" Label="Category" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+                @foreach (var cat in _categories)
+                {
+                    <MudSelectItem Value="cat">@cat</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudTextField @bind-Value="_searchText" @bind-Value:after="ApplyFilters" Label="Search description" Variant="Variant.Outlined" FullWidth="true" Immediate="true" Placeholder="Type to search..." />
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudTable Items="@_filteredTransactions" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true" SortLabel="Sort by">
+        <ToolBarContent>
+            <MudText Typo="Typo.subtitle1">@_filteredTransactions.Count transactions</MudText>
+            <MudSpacer />
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@LoadDataAsync" Size="Size.Small" />
+        </ToolBarContent>
+        <ColGroup>
+            <col style="width: 120px" />
+            <col />
+            <col style="width: 100px" />
+            <col style="width: 80px" />
+            <col style="width: 100px" />
+        </ColGroup>
+        <HeaderContent>
+            <MudTh><MudTableSortLabel SortBy="new Func<TransactionDto, object>(t => t.Date)">Date</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<TransactionDto, object>(t => t.Description)">Description</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<TransactionDto, object>(t => t.Money.Amount)">Amount</MudTableSortLabel></MudTh>
+            <MudTh>Curr.</MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<TransactionDto, object>(t => t.Category)">Category</MudTableSortLabel></MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Date">@context.Date.ToString("yyyy-MM-dd")</MudTd>
+            <MudTd DataLabel="Description">@context.Description</MudTd>
+            <MudTd DataLabel="Amount"><span class="@(context.Category == "EXPENSE" || context.Category == "TRANSFER" ? "red--text" : "green--text")">@context.Money.Amount.ToString("N2")</span></MudTd>
+            <MudTd DataLabel="Curr.">@context.Money.Currency</MudTd>
+            <MudTd DataLabel="Category">
+                <MudChip T="string" Size="Size.Small" Color="@GetCategoryColor(context.Category)">@context.Category</MudChip>
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="@(new int[]{25, 50, 100})" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<TransactionDto> _allTransactions = new();
+    private List<TransactionDto> _filteredTransactions = new();
+    private List<int> _availableYears = new();
+    private bool _loading = true;
+
+    private int? _selectedYear { get; set; }
+    private string? _selectedCategory { get; set; }
+    private string? _searchText { get; set; }
+
+    private static readonly string[] _categories = { "INCOME", "EXPENSE", "TRANSFER", "DEPOSIT" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            _allTransactions = await Http.GetFromJsonAsync<List<TransactionDto>>("/api/transactions") ?? new();
+            _availableYears = _allTransactions
+                .Select(t => t.Date.Year)
+                .Distinct()
+                .OrderByDescending(y => y)
+                .ToList();
+            ApplyFilters();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        var query = _allTransactions.AsEnumerable();
+
+        if (_selectedYear.HasValue)
+            query = query.Where(t => t.Date.Year == _selectedYear.Value);
+
+        if (!string.IsNullOrWhiteSpace(_selectedCategory))
+            query = query.Where(t => t.Category == _selectedCategory);
+
+        if (!string.IsNullOrWhiteSpace(_searchText))
+            query = query.Where(t => t.Description.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
+
+        _filteredTransactions = query.ToList();
+    }
+
+    private static Color GetCategoryColor(string category) => category switch
+    {
+        "INCOME" => Color.Success,
+        "EXPENSE" => Color.Error,
+        "TRANSFER" => Color.Warning,
+        "DEPOSIT" => Color.Info,
+        _ => Color.Default,
+    };
+}
