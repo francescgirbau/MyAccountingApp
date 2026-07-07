@@ -8,10 +8,10 @@
 <MudPaper Class="pa-4 mb-4" Outlined="true">
     <MudGrid>
         <MudItem xs="12" sm="4">
-            <MudSelect @bind-Value="_selectedYear" @bind-Value:after="ApplyFilters" Label="Year" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+            <MudSelect T="int?" @bind-Value="_selectedYear" @bind-Value:after="ApplyFilters" Label="Year" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
                 @foreach (var year in _availableYears)
                 {
-                    <MudSelectItem Value="year">@year</MudSelectItem>
+                    <MudSelectItem T="int?" Value="@((int?)year)">@year</MudSelectItem>
                 }
             </MudSelect>
         </MudItem>
