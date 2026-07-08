@@ -1,5 +1,6 @@
 @page "/asset-transactions"
 @inject HttpClient Http
+@inject ISnackbar Snackbar
 
 <PageTitle>Asset Transactions</PageTitle>
 
@@ -283,36 +284,45 @@ else
 
     private async Task SaveAsync()
     {
-        var payload = new
+        try
         {
-            Date = _formDate ?? DateTime.Today,
-            Description = _formDescription,
-            Amount = _formAmount,
-            Currency = _formCurrency,
-            Category = _formCategory,
-            Symbol = _formSymbol,
-            Quantity = _formQuantity,
-            Type = _formType,
-        };
+            var payload = new
+            {
+                Date = _formDate ?? DateTime.Today,
+                Description = _formDescription,
+                Amount = _formAmount,
+                Currency = _formCurrency,
+                Category = _formCategory,
+                Symbol = _formSymbol,
+                Quantity = _formQuantity,
+                Type = _formType,
+            };
 
-        HttpResponseMessage response;
-        if (_editingId is null)
-        {
-            response = await Http.PostAsJsonAsync("/api/asset-transactions", payload);
-        }
-        else
-        {
-            response = await Http.PutAsJsonAsync($"/api/asset-transactions/{_editingId}", payload);
-        }
+            HttpResponseMessage response;
+            if (_editingId is null)
+            {
+                response = await Http.PostAsJsonAsync("/api/asset-transactions", payload);
+            }
+            else
+            {
+                response = await Http.PutAsJsonAsync($"/api/asset-transactions/{_editingId}", payload);
+            }
 
-        if (response.IsSuccessStatusCode)
-        {
-            _showFormDialog = false;
-            await LoadDataAsync();
+            if (response.IsSuccessStatusCode)
+            {
+                _showFormDialog = false;
+                Snackbar.Add(_editingId is null ? "Asset transaction created" : "Asset transaction updated", Severity.Success);
+                await LoadDataAsync();
+            }
+            else
+            {
+                string error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Failed to save: {error}", Severity.Error);
+            }
         }
-        else
+        catch (Exception ex)
         {
-            _showFormDialog = false;
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
         }
     }
 
@@ -332,13 +342,26 @@ else
     {
         if (_deletingTx is null) return;
 
-        HttpResponseMessage response = await Http.DeleteAsync($"/api/asset-transactions/{_deletingTx.Transaction.Id}");
-        _showDeleteDialog = false;
-        _deletingTx = null;
-
-        if (response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NoContent)
+        try
         {
-            await LoadDataAsync();
+            HttpResponseMessage response = await Http.DeleteAsync($"/api/asset-transactions/{_deletingTx.Transaction.Id}");
+            _showDeleteDialog = false;
+            _deletingTx = null;
+
+            if (response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NoContent)
+            {
+                Snackbar.Add("Asset transaction deleted", Severity.Success);
+                await LoadDataAsync();
+            }
+            else
+            {
+                string error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Failed to delete: {error}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
         }
     }
 }
