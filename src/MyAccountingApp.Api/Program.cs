@@ -9,8 +9,18 @@ using Microsoft.AspNetCore.Diagnostics;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
 using MyAccountingApp.Domain.ValueObjects;
+using Serilog;
 
-WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.File("logs/myaccountingapp-.log", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 7)
+    .WriteTo.Console()
+    .CreateLogger();
+
+try
+{
+    Log.Information("Starting MyAccountingApp API");
+
+    WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 bool isDev = builder.Environment.IsDevelopment();
 
@@ -60,8 +70,11 @@ builder.Services.AddSingleton<IPositionEngine, PositionEngine>();
 builder.Services.AddSingleton<IValidationQuery, ValidationQuery>();
 builder.Services.AddSingleton<IAnnualSummaryService, AnnualSummaryService>();
 
+builder.Host.UseSerilog();
+
 WebApplication app = builder.Build();
 
+app.UseSerilogRequestLogging();
 app.UseExceptionHandler(exceptionHandlerApp =>
 {
     exceptionHandlerApp.Run(async context =>
@@ -299,6 +312,16 @@ app.MapGet($"{prefix}/summary/{{year:int}}", (int year, IAnnualSummaryService su
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
 
 record ImportRequest(List<string> FolderPaths);
 record CreateTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category);
