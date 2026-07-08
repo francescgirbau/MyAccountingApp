@@ -5,6 +5,7 @@ using MyAccountingApp.Core.Agents;
 using MyAccountingApp.Core.Repositories;
 using MyAccountingApp.Core.Services;
 using MyAccountingApp.Domain.Entities;
+using Microsoft.AspNetCore.Diagnostics;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
 using MyAccountingApp.Domain.ValueObjects;
@@ -106,7 +107,9 @@ app.MapPost($"{prefix}/transactions", (CreateTransactionRequest request, ITransa
 
     ValidationResult validation = validator.Validate(transaction);
     if (!validation.IsValid)
+    {
         return Results.BadRequest(validation.Errors);
+    }
 
     repo.AddOrUpdate(transaction);
     return Results.Created($"/api/transactions/{transaction.Id}", transaction.ToDto());
@@ -116,7 +119,9 @@ app.MapPut($"{prefix}/transactions/{{id:guid}}", (Guid id, CreateTransactionRequ
 {
     Transaction? existing = repo.GetAll().FirstOrDefault(t => t.Id == id);
     if (existing is null)
+    {
         return Results.NotFound(new { id, message = "Transaction not found" });
+    }
 
     Money money = new(request.Amount, request.Currency);
     TransactionCategory category = Enum.Parse<TransactionCategory>(request.Category);
@@ -124,7 +129,9 @@ app.MapPut($"{prefix}/transactions/{{id:guid}}", (Guid id, CreateTransactionRequ
 
     ValidationResult validation = validator.Validate(transaction);
     if (!validation.IsValid)
+    {
         return Results.BadRequest(validation.Errors);
+    }
 
     repo.AddOrUpdate(transaction);
     return Results.Ok(transaction.ToDto());
@@ -134,7 +141,9 @@ app.MapDelete($"{prefix}/transactions/{{id:guid}}", (Guid id, ITransactionReposi
 {
     Transaction? existing = repo.GetAll().FirstOrDefault(t => t.Id == id);
     if (existing is null)
+    {
         return Results.NotFound(new { id, message = "Transaction not found" });
+    }
 
     repo.Delete(existing);
     return Results.NoContent();
@@ -160,7 +169,9 @@ app.MapPost($"{prefix}/asset-transactions", (CreateAssetTransactionRequest reque
 
     ValidationResult validation = validator.Validate(transaction);
     if (!validation.IsValid)
+    {
         return Results.BadRequest(validation.Errors);
+    }
 
     AssetTransactionType type = Enum.Parse<AssetTransactionType>(request.Type);
     AssetTransaction assetTx = new(transaction, request.Symbol, request.Quantity, type);
@@ -172,7 +183,9 @@ app.MapPut($"{prefix}/asset-transactions/{{id:guid}}", (Guid id, CreateAssetTran
 {
     AssetTransaction? existing = repo.GetAllTransactions().FirstOrDefault(t => t.Transaction.Id == id);
     if (existing is null)
+    {
         return Results.NotFound(new { id, message = "Asset transaction not found" });
+    }
 
     Money money = new(request.Amount, request.Currency);
     TransactionCategory category = Enum.Parse<TransactionCategory>(request.Category);
@@ -180,7 +193,9 @@ app.MapPut($"{prefix}/asset-transactions/{{id:guid}}", (Guid id, CreateAssetTran
 
     ValidationResult validation = validator.Validate(transaction);
     if (!validation.IsValid)
+    {
         return Results.BadRequest(validation.Errors);
+    }
 
     AssetTransactionType type = Enum.Parse<AssetTransactionType>(request.Type);
     AssetTransaction assetTx = new(transaction, request.Symbol, request.Quantity, type);
@@ -192,7 +207,9 @@ app.MapDelete($"{prefix}/asset-transactions/{{id:guid}}", (Guid id, IPortfolioRe
 {
     AssetTransaction? existing = repo.GetAllTransactions().FirstOrDefault(t => t.Transaction.Id == id);
     if (existing is null)
+    {
         return Results.NotFound(new { id, message = "Asset transaction not found" });
+    }
 
     repo.Delete(id);
     return Results.NoContent();
