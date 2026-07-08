@@ -52,4 +52,24 @@ public class JsonPortfolioRepositoryTests : IDisposable
 
         Assert.Equal(2, all.Count);
     }
+
+    [Fact]
+    public void Delete_ShouldRemoveFromJson()
+    {
+        // Arrange
+        JsonPortfolioRepository repo = new JsonPortfolioRepository(this._tempFile);
+        AssetTransaction tx = AssetTransactionObjectMother.CreateBuy();
+        repo.AddOrUpdate(tx);
+
+        // Act
+        bool result = repo.Delete(tx.Transaction.Id);
+
+        // Assert
+        Assert.True(result);
+        Assert.Empty(repo.GetAllTransactions());
+
+        // Verify persisted
+        JsonPortfolioRepository repo2 = new JsonPortfolioRepository(this._tempFile);
+        Assert.Empty(repo2.GetAllTransactions());
+    }
 }

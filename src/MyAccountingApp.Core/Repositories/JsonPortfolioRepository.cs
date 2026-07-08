@@ -22,6 +22,18 @@ namespace MyAccountingApp.Core.Repositories
             this.Initialize(transactions);
         }
 
+        public bool Delete(Guid transactionId)
+        {
+            List<AssetTransaction> transactions = this.GetAllTransactions().ToList();
+            int removed = transactions.RemoveAll(t => t.Transaction.Id == transactionId);
+            if (removed > 0)
+            {
+                this.Initialize(transactions);
+            }
+
+            return removed > 0;
+        }
+
         public IEnumerable<AssetTransaction> GetAssetTransactions(string symbol)
         {
             return this.GetAllTransactions()

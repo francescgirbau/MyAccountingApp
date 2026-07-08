@@ -23,6 +23,12 @@ namespace MyAccountingApp.Core.Repositories
             this._jsonRepo.AddOrUpdate(assetTransaction);
         }
 
+        public bool Delete(Guid transactionId)
+        {
+            this._jsonRepo.Delete(transactionId);
+            return this._memoryRepo.Delete(transactionId);
+        }
+
         public IEnumerable<AssetTransaction> GetAssetTransactions(string symbol)
         {
             return this._memoryRepo.GetAssetTransactions(symbol);

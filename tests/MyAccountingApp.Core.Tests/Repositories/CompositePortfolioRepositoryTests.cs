@@ -33,4 +33,24 @@ public class CompositePortfolioRepositoryTests : IDisposable
         // Assert
         Assert.Single(all);
     }
+
+    [Fact]
+    public void Delete_ShouldRemoveFromBothRepositories()
+    {
+        // Arrange
+        CompositePortfolioRepository repo = new CompositePortfolioRepository(this._tempFile);
+        AssetTransaction tx = AssetTransactionObjectMother.CreateBuy();
+        repo.AddOrUpdate(tx);
+
+        // Act
+        bool result = repo.Delete(tx.Transaction.Id);
+
+        // Assert
+        Assert.True(result);
+        Assert.Empty(repo.GetAllTransactions());
+
+        // Verify persisted in JSON
+        JsonPortfolioRepository jsonRepo = new JsonPortfolioRepository(this._tempFile);
+        Assert.Empty(jsonRepo.GetAllTransactions());
+    }
 }

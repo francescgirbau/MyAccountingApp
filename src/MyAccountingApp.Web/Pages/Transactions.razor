@@ -39,6 +39,10 @@ else
         <ToolBarContent>
             <MudText Typo="Typo.subtitle1">@_filteredTransactions.Count transactions</MudText>
             <MudSpacer />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       OnClick="@OpenCreateDialog" StartIcon="@Icons.Material.Filled.Add">
+                New
+            </MudButton>
             <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@LoadDataAsync" Size="Size.Small" />
         </ToolBarContent>
         <ColGroup>
@@ -47,6 +51,7 @@ else
             <col style="width: 100px" />
             <col style="width: 80px" />
             <col style="width: 100px" />
+            <col style="width: 80px" />
         </ColGroup>
         <HeaderContent>
             <MudTh><MudTableSortLabel SortBy="new Func<TransactionDto, object>(t => t.Date)">Date</MudTableSortLabel></MudTh>
@@ -54,6 +59,7 @@ else
             <MudTh><MudTableSortLabel SortBy="new Func<TransactionDto, object>(t => t.Money.Amount)">Amount</MudTableSortLabel></MudTh>
             <MudTh>Curr.</MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<TransactionDto, object>(t => t.Category)">Category</MudTableSortLabel></MudTh>
+            <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Date">@context.Date.ToString("yyyy-MM-dd")</MudTd>
@@ -63,11 +69,79 @@ else
             <MudTd DataLabel="Category">
                 <MudChip T="string" Size="Size.Small" Color="@GetCategoryColor(context.Category)">@context.Category</MudChip>
             </MudTd>
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => OpenEditDialog(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => OpenDeleteDialog(context))" />
+            </MudTd>
         </RowTemplate>
         <PagerContent>
             <MudTablePager PageSizeOptions="@(new int[]{25, 50, 100})" />
         </PagerContent>
     </MudTable>
+}
+
+@if (_showFormDialog)
+{
+    <MudDialog @bind-Visible="_showFormDialog">
+        <TitleContent>
+            <MudText Typo="Typo.h6">@(_editingId is null ? "New Transaction" : "Edit Transaction")</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudDatePicker @bind-Date="_formDate" Label="Date" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_formDescription" Label="Description" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal" @bind-Value="_formAmount" Label="Amount" Variant="Variant.Outlined" Min="@(0.01m)" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect @bind-Value="_formCurrency" Label="Currency" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@("EUR")">EUR</MudSelectItem>
+                        <MudSelectItem Value="@("USD")">USD</MudSelectItem>
+                        <MudSelectItem Value="@("GBP")">GBP</MudSelectItem>
+                        <MudSelectItem Value="@("CHF")">CHF</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSelect @bind-Value="_formCategory" Label="Category" Variant="Variant.Outlined">
+                        @foreach (var cat in _categories)
+                        {
+                            <MudSelectItem Value="cat">@cat</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="@CloseFormDialog">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@SaveAsync" Disabled="@IsFormInvalid()">
+                Save
+            </MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+
+@if (_showDeleteDialog)
+{
+    <MudDialog @bind-Visible="_showDeleteDialog">
+        <TitleContent>
+            <MudText Typo="Typo.h6">Delete Transaction</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudText>Are you sure you want to delete this transaction?</MudText>
+            @if (_deletingTx is not null)
+            {
+                <MudText Typo="Typo.body2" Class="mt-2">@_deletingTx.Date.ToString("yyyy-MM-dd") — @_deletingTx.Description (@_deletingTx.Money.Amount.ToString("N2") @_deletingTx.Money.Currency)</MudText>
+            }
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="@CloseDeleteDialog">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@ConfirmDeleteAsync">Delete</MudButton>
+        </DialogActions>
+    </MudDialog>
 }
 
 @code {
@@ -81,6 +155,17 @@ else
     private string? _searchText { get; set; }
 
     private static readonly string[] _categories = { "INCOME", "EXPENSE", "TRANSFER", "DEPOSIT" };
+
+    private bool _showFormDialog;
+    private bool _showDeleteDialog;
+    private Guid? _editingId;
+    private TransactionDto? _deletingTx;
+
+    private DateTime? _formDate;
+    private string _formDescription = "";
+    private decimal _formAmount;
+    private string _formCurrency = "EUR";
+    private string _formCategory = "EXPENSE";
 
     protected override async Task OnInitializedAsync()
     {
@@ -122,6 +207,8 @@ else
         _filteredTransactions = query.ToList();
     }
 
+    private bool IsFormInvalid() => string.IsNullOrWhiteSpace(_formDescription) || _formAmount <= 0;
+
     private static Color GetCategoryColor(string category) => category switch
     {
         "INCOME" => Color.Success,
@@ -130,4 +217,90 @@ else
         "DEPOSIT" => Color.Info,
         _ => Color.Default,
     };
+
+    private void OpenCreateDialog()
+    {
+        _editingId = null;
+        _formDate = DateTime.Today;
+        _formDescription = "";
+        _formAmount = 0;
+        _formCurrency = "EUR";
+        _formCategory = "EXPENSE";
+        _showFormDialog = true;
+    }
+
+    private void OpenEditDialog(TransactionDto tx)
+    {
+        _editingId = tx.Id;
+        _formDate = tx.Date;
+        _formDescription = tx.Description;
+        _formAmount = tx.Money.Amount;
+        _formCurrency = tx.Money.Currency;
+        _formCategory = tx.Category;
+        _showFormDialog = true;
+    }
+
+    private void CloseFormDialog()
+    {
+        _showFormDialog = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        var payload = new
+        {
+            Date = _formDate ?? DateTime.Today,
+            Description = _formDescription,
+            Amount = _formAmount,
+            Currency = _formCurrency,
+            Category = _formCategory,
+        };
+
+        HttpResponseMessage response;
+        if (_editingId is null)
+        {
+            response = await Http.PostAsJsonAsync("/api/transactions", payload);
+        }
+        else
+        {
+            response = await Http.PutAsJsonAsync($"/api/transactions/{_editingId}", payload);
+        }
+
+        if (response.IsSuccessStatusCode)
+        {
+            _showFormDialog = false;
+            await LoadDataAsync();
+        }
+        else
+        {
+            string error = await response.Content.ReadAsStringAsync();
+            _showFormDialog = false;
+        }
+    }
+
+    private void OpenDeleteDialog(TransactionDto tx)
+    {
+        _deletingTx = tx;
+        _showDeleteDialog = true;
+    }
+
+    private void CloseDeleteDialog()
+    {
+        _showDeleteDialog = false;
+        _deletingTx = null;
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (_deletingTx is null) return;
+
+        HttpResponseMessage response = await Http.DeleteAsync($"/api/transactions/{_deletingTx.Id}");
+        _showDeleteDialog = false;
+        _deletingTx = null;
+
+        if (response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NoContent)
+        {
+            await LoadDataAsync();
+        }
+    }
 }

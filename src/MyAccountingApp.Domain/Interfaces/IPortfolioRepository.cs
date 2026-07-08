@@ -24,6 +24,13 @@ namespace MyAccountingApp.Domain.Interfaces
         public IEnumerable<AssetTransaction> GetAllTransactions();
 
         /// <summary>
+        /// Deletes an asset transaction by its transaction ID.
+        /// </summary>
+        /// <param name="transactionId">The transaction ID of the asset transaction to delete.</param>
+        /// <returns>True if the transaction was found and removed; otherwise, false.</returns>
+        public bool Delete(Guid transactionId);
+
+        /// <summary>
         /// Initializes the repository with a collection of asset transactions.
         /// </summary>
         /// <param name="transactions">A collection of asset transactions to initialize the repository.</param>
