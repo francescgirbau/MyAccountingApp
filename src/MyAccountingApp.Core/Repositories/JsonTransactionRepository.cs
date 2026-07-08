@@ -5,39 +5,23 @@ using MyAccountingApp.Domain.Interfaces;
 
 namespace MyAccountingApp.Core.Repositories;
 
-/// <summary>
-/// Repository for storing and retrieving transactions using a JSON file.
-/// </summary>
 public class JsonTransactionRepository : ITransactionRepository
 {
     private readonly string _filePath;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="JsonTransactionRepository"/> class.
-    /// </summary>
-    /// <param name="filePath">The path to the JSON file.</param>
     public JsonTransactionRepository(string filePath)
     {
         this._filePath = filePath;
     }
 
-    /// <summary>
-    /// Adds a new transaction to the repository.
-    /// </summary>
-    /// <param name="transaction">The transaction to add.</param>
     public void AddOrUpdate(Transaction transaction)
     {
         List<Transaction> transactions = this.GetAll().ToList();
         _ = this.Delete(transaction);
         transactions.Add(transaction);
-        this.Initialize(transactions);
+        this.WriteAll(transactions);
     }
 
-    /// <summary>
-    /// Deletes a transaction from the repository by its unique identifier.
-    /// </summary>
-    /// <param name="transaction">The transaction to delete.</param>
-    /// <returns>True if the transaction was found and removed; otherwise, false.</returns>
     public bool Delete(Transaction transaction)
     {
         List<Transaction> transactions = this.GetAll().ToList();
@@ -48,47 +32,62 @@ public class JsonTransactionRepository : ITransactionRepository
         }
 
         transactions.RemoveAll(tx => tx.Id == transaction.Id);
-        this.Initialize(transactions);
+        this.WriteAll(transactions);
 
         return true;
     }
 
-    /// <summary>
-    /// Gets all transactions stored in the repository.
-    /// </summary>
-    /// <returns>An enumerable of all transactions.</returns>
     public IEnumerable<Transaction> GetAll()
     {
-        if (File.Exists(this._filePath) && new FileInfo(this._filePath).Length > 0)
+        if (!File.Exists(this._filePath) || new FileInfo(this._filePath).Length == 0)
         {
-            string json = File.ReadAllText(this._filePath);
-
-            JsonSerializerOptions options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                Converters = { new JsonStringEnumConverter() },
-            };
-
-            List<Transaction>? transactions = JsonSerializer.Deserialize<List<Transaction>>(json, options);
-
-            if (transactions is not null)
-            {
-                return transactions;
-            }
+            return new List<Transaction>();
         }
 
-        return new List<Transaction>();
+        string json = File.ReadAllText(this._filePath);
+
+        JsonSerializerOptions options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() },
+        };
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<Transaction>>(json, options) ?? new List<Transaction>();
+        }
+        catch (JsonException)
+        {
+            int lastBrace = json.LastIndexOf('}');
+            if (lastBrace > 0)
+            {
+                string repaired = json[.. (lastBrace + 1)] + "]";
+                try
+                {
+                    List<Transaction>? recovered = JsonSerializer.Deserialize<List<Transaction>>(repaired, options);
+                    if (recovered is not null)
+                    {
+                        this.WriteAll(recovered);
+                        return recovered;
+                    }
+                }
+                catch
+                {
+                }
+            }
+
+            return new List<Transaction>();
+        }
     }
 
-    /// <summary>
-    /// Saves the transactions to the JSON file.
-    /// </summary>
-    /// <param name="transactions">The transactions to save.</param>
-    public void Initialize(IEnumerable<Transaction> transactions)
-    {
-        JsonSerializerOptions options = new() { WriteIndented = true, Converters = { new JsonStringEnumConverter() }, };
+    public void Initialize(IEnumerable<Transaction> transactions) => this.WriteAll(transactions);
 
+    private void WriteAll(IEnumerable<Transaction> transactions)
+    {
+        JsonSerializerOptions options = new() { WriteIndented = true, Converters = { new JsonStringEnumConverter() } };
         string json = JsonSerializer.Serialize(transactions, options);
-        File.WriteAllText(this._filePath, json);
+        string tempPath = this._filePath + ".tmp";
+        File.WriteAllText(tempPath, json);
+        File.Move(tempPath, this._filePath, overwrite: true);
     }
 }
