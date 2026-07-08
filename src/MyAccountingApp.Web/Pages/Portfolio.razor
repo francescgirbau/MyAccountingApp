@@ -1,9 +1,151 @@
 @page "/portfolio"
+@inject HttpClient Http
 
 <PageTitle>Portfolio</PageTitle>
 
 <MudText Typo="Typo.h3" GutterBottom="true">Portfolio</MudText>
 
-<MudAlert Severity="Severity.Info" Class="mb-4">
-    Portfolio view coming in a future PR.
-</MudAlert>
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (_positions.Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4">No positions found.</MudAlert>
+}
+else
+{
+    <MudTable Items="@_positions" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true" SortLabel="Sort by">
+        <ToolBarContent>
+            <MudText Typo="Typo.subtitle1">@_positions.Count positions</MudText>
+            <MudSpacer />
+            <MudText Typo="Typo.body2" Class="ml-2">
+                Total invested: <strong>@_totalCostBasis.ToString("N2")</strong>
+                &nbsp;|&nbsp; Total unrealized P&L:
+                <strong class="@(_totalUnrealized >= 0 ? "green--text" : "red--text")">@(_totalUnrealized >= 0 ? "+" : "")@_totalUnrealized.ToString("N2")</strong>
+            </MudText>
+        </ToolBarContent>
+        <ColGroup>
+            <col style="width: 90px" />
+            <col style="width: 90px" />
+            <col style="width: 100px" />
+            <col style="width: 110px" />
+            <col style="width: 60px" />
+            <col style="width: 100px" />
+            <col style="width: 120px" />
+            <col style="width: 120px" />
+            <col style="width: 30px" />
+        </ColGroup>
+        <HeaderContent>
+            <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.Symbol)">Symbol</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.NetQuantity)">Net Qty</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.AverageUnitaryCost)">Avg Cost</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.TotalCostBasis)">Total Cost</MudTableSortLabel></MudTh>
+            <MudTh>Curr.</MudTh>
+            <MudTh>Mkt Price</MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.UnrealizedGainLoss ?? 0)">Unrealized P&amp;L</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.RealizedGainLoss)">Realized P&amp;L</MudTableSortLabel></MudTh>
+            <MudTh></MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Symbol">
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary">@context.Symbol</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Net Qty">@context.NetQuantity.ToString("G")</MudTd>
+            <MudTd DataLabel="Avg Cost">@context.AverageUnitaryCost.ToString("N4")</MudTd>
+            <MudTd DataLabel="Total Cost">@context.TotalCostBasis.ToString("N2")</MudTd>
+            <MudTd DataLabel="Curr.">@context.Currency</MudTd>
+            <MudTd DataLabel="Mkt Price">@(context.MarketPrice?.ToString("N4") ?? "—")</MudTd>
+            <MudTd DataLabel="Unrealized P&amp;L">
+                <span class="@(context.UnrealizedGainLoss >= 0 ? "green--text" : "red--text")">
+                    @(context.UnrealizedGainLoss >= 0 ? "+" : "")@context.UnrealizedGainLoss?.ToString("N2")
+                </span>
+            </MudTd>
+            <MudTd DataLabel="Realized P&amp;L">
+                <span class="@(context.RealizedGainLoss >= 0 ? "green--text" : "red--text")">
+                    @(context.RealizedGainLoss >= 0 ? "+" : "")@context.RealizedGainLoss.ToString("N2")
+                </span>
+            </MudTd>
+            <MudTd>
+                <MudIconButton Icon="@(GetExpanded(context) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                               OnClick="@(() => ToggleExpanded(context))"
+                               Size="Size.Small" />
+            </MudTd>
+        </RowTemplate>
+        <ChildRowContent>
+            @if (GetExpanded(context))
+            {
+                <MudTd colspan="9">
+                    <MudPaper Class="pa-4 mb-2 mt-2" Outlined="true">
+                        <MudText Typo="Typo.subtitle2" GutterBottom="true">Open Lots (@context.OpenLots.Count)</MudText>
+                        @if (context.OpenLots.Count == 0)
+                        {
+                            <MudText Typo="Typo.body2">No open lots.</MudText>
+                        }
+                        else
+                        {
+                            <MudSimpleTable>
+                                <thead>
+                                    <tr>
+                                        <th>Purchase Date</th>
+                                        <th>Quantity</th>
+                                        <th>Unitary Cost</th>
+                                        <th>Total Cost</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var lot in context.OpenLots)
+                                    {
+                                        <tr>
+                                            <td>@lot.PurchaseDate.ToString("yyyy-MM-dd")</td>
+                                            <td>@lot.Quantity.ToString("G")</td>
+                                            <td>@lot.UnitaryCost.ToString("N4")</td>
+                                            <td>@lot.TotalCost.ToString("N2")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </MudSimpleTable>
+                        }
+                    </MudPaper>
+                </MudTd>
+            }
+        </ChildRowContent>
+    </MudTable>
+}
+
+@code {
+    private List<PortfolioPositionDto> _positions = new();
+    private bool _loading = true;
+    private readonly HashSet<string> _expanded = new();
+
+    private decimal _totalCostBasis;
+    private decimal _totalUnrealized;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            _positions = await Http.GetFromJsonAsync<List<PortfolioPositionDto>>("/api/portfolio") ?? new();
+            _totalCostBasis = _positions.Sum(p => p.TotalCostBasis);
+            _totalUnrealized = _positions.Sum(p => p.UnrealizedGainLoss ?? 0);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private bool GetExpanded(PortfolioPositionDto pos) => _expanded.Contains(pos.Symbol);
+
+    private void ToggleExpanded(PortfolioPositionDto pos)
+    {
+        if (!_expanded.Remove(pos.Symbol))
+            _expanded.Add(pos.Symbol);
+    }
+}

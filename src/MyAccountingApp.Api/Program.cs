@@ -98,6 +98,13 @@ app.MapPost($"{prefix}/import", async (ImportRequest request, IImportService imp
     return Results.Ok(result.ToDto());
 });
 
+app.MapGet($"{prefix}/portfolio", async (IPortfolioRepository repo, IPositionEngine positionEngine) =>
+{
+    string[] symbols = repo.GetAllTransactions().Select(t => t.Symbol).Distinct().ToArray();
+    PortfolioPositionDto?[] positions = await Task.WhenAll(symbols.Select(s => positionEngine.GetPosition(s)));
+    return Results.Ok(positions.Where(p => p is not null).ToList());
+});
+
 app.MapGet($"{prefix}/portfolio/{{symbol}}", async (string symbol, IPositionEngine positionEngine) =>
 {
     PortfolioPositionDto? position = await positionEngine.GetPosition(symbol);
