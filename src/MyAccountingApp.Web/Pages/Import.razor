@@ -1,0 +1,101 @@
+@page "/import"
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<PageTitle>Import</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Import Data</MudText>
+
+<MudPaper Class="pa-6 mb-4" Outlined="true">
+    <MudText Typo="Typo.body1" GutterBottom="true">
+        Run the import process to load CSV files from the configured folders.
+    </MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large"
+               OnClick="@RunImportAsync" Disabled="@_loading"
+               StartIcon="@Icons.Material.Filled.FileUpload">
+        @(_loading ? "Importing..." : "Run Import")
+    </MudButton>
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Class="mt-4" />
+    }
+</MudPaper>
+
+@if (_result is not null)
+{
+    <MudAlert Severity="@(_result.Errors.Count == 0 ? Severity.Success : Severity.Warning)" Class="mb-4">
+        <MudText>Import completed: <strong>@_result.FilesProcessed</strong> files processed,
+            <strong>@_result.Transactions.Count</strong> transactions,
+            <strong>@_result.AssetTransactions.Count</strong> asset transactions.
+            @if (_result.Errors.Count > 0) { <span><strong>@_result.Errors.Count</strong> errors.</span> }
+        </MudText>
+    </MudAlert>
+
+    @if (_result.Errors.Count > 0)
+    {
+        <MudText Typo="Typo.subtitle1" GutterBottom="true">Errors</MudText>
+        <MudAlert Severity="Severity.Error" Class="mb-4">
+            @foreach (var error in _result.Errors)
+            {
+                <MudText Typo="Typo.body2">@error</MudText>
+            }
+        </MudAlert>
+    }
+
+    @if (_result.ValidationErrors.Count > 0)
+    {
+        <MudText Typo="Typo.subtitle1" GutterBottom="true">Validation Errors</MudText>
+        <MudSimpleTable Class="mb-4" Outlined="true">
+            <thead>
+                <tr><th>Field</th><th>Message</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var ve in _result.ValidationErrors)
+                {
+                    <tr><td>@ve.Field</td><td>@ve.Message</td></tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    }
+
+    @if (_result.ValidationWarnings.Count > 0)
+    {
+        <MudText Typo="Typo.subtitle1" GutterBottom="true">Validation Warnings</MudText>
+        <MudSimpleTable Outlined="true">
+            <thead>
+                <tr><th>Field</th><th>Message</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var ve in _result.ValidationWarnings)
+                {
+                    <tr><td>@ve.Field</td><td>@ve.Message</td></tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    }
+}
+
+@code {
+    private ImportResultDto? _result;
+    private bool _loading;
+
+    private async Task RunImportAsync()
+    {
+        _loading = true;
+        _result = null;
+        try
+        {
+            var response = await Http.PostAsJsonAsync("/api/import", new { folderPaths = new[] { "import/historical" } });
+            _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
+            Snackbar.Add("Import completed successfully.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Import failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

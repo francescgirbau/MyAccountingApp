@@ -45,3 +45,20 @@ public class TaxLotDto
     public decimal UnitaryCost { get; set; }
     public decimal TotalCost { get; set; }
 }
+
+public class ImportResultDto
+{
+    public List<TransactionDto> Transactions { get; set; } = new();
+    public List<AssetTransactionDto> AssetTransactions { get; set; } = new();
+    public List<string> Errors { get; set; } = new();
+    public List<ValidationError> ValidationErrors { get; set; } = new();
+    public List<ValidationError> ValidationWarnings { get; set; } = new();
+    public int FilesProcessed { get; set; }
+}
+
+public class ValidationError
+{
+    public string Field { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public string Severity { get; set; } = string.Empty;
+}
