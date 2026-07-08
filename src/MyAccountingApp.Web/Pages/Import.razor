@@ -7,19 +7,45 @@
 <MudText Typo="Typo.h3" GutterBottom="true">Import Data</MudText>
 
 <MudPaper Class="pa-6 mb-4" Outlined="true">
-    <MudText Typo="Typo.body1" GutterBottom="true">
-        Run the import process to load CSV files from the configured folders.
+    <MudText Typo="Typo.h6" GutterBottom="true">Import from folder</MudText>
+    <MudText Typo="Typo.body2" Class="mb-4">
+        Load all CSV files from the configured folders (<code>import/historical</code>).
     </MudText>
     <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large"
                OnClick="@RunImportAsync" Disabled="@_loading"
-               StartIcon="@Icons.Material.Filled.FileUpload">
+               StartIcon="@Icons.Material.Filled.FolderOpen">
         @(_loading ? "Importing..." : "Run Import")
     </MudButton>
-    @if (_loading)
+</MudPaper>
+
+<MudPaper Class="pa-6 mb-4" Outlined="true">
+    <MudText Typo="Typo.h6" GutterBottom="true">Upload a CSV file</MudText>
+    <MudText Typo="Typo.body2" Class="mb-4">
+        Select a CSV file from your computer to import. Supported formats are detected automatically.
+    </MudText>
+    <MudGrid>
+        <MudItem xs="12" sm="8">
+            <InputFile OnChange="@OnFileSelected" accept=".csv" class="mud-input-outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="4" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" Size="Size.Large"
+                       OnClick="@UploadAndImportAsync" Disabled="@(_selectedFile is null || _loading)"
+                       StartIcon="@Icons.Material.Filled.FileUpload"
+                       FullWidth="true">
+                Upload &amp; Import
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+    @if (_selectedFile is not null)
     {
-        <MudProgressLinear Indeterminate="true" Class="mt-4" />
+        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">Selected: @_selectedFile.Name</MudText>
     }
 </MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
 
 @if (_result is not null)
 {
@@ -78,6 +104,13 @@
 @code {
     private ImportResultDto? _result;
     private bool _loading;
+    private IBrowserFile? _selectedFile;
+
+    private void OnFileSelected(InputFileChangeEventArgs args)
+    {
+        _selectedFile = args.File;
+        _result = null;
+    }
 
     private async Task RunImportAsync()
     {
@@ -87,11 +120,38 @@
         {
             var response = await Http.PostAsJsonAsync("/api/import", new { folderPaths = new[] { "import/historical" } });
             _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
-            Snackbar.Add("Import completed successfully.", Severity.Success);
+            Snackbar.Add("Import completed.", Severity.Success);
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Import failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task UploadAndImportAsync()
+    {
+        if (_selectedFile is null) return;
+
+        _loading = true;
+        _result = null;
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            content.Add(new StreamContent(stream), "file", _selectedFile.Name);
+
+            var response = await Http.PostAsync("/api/import/upload", content);
+            _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
+            Snackbar.Add("Upload import completed.", Severity.Success);
+            _selectedFile = null;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Upload failed: {ex.Message}", Severity.Error);
         }
         finally
         {

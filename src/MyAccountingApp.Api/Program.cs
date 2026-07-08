@@ -98,6 +98,31 @@ app.MapPost($"{prefix}/import", async (ImportRequest request, IImportService imp
     return Results.Ok(result.ToDto());
 });
 
+app.MapPost($"{prefix}/import/upload", async (HttpContext http, IImportService importService) =>
+{
+    IFormFile? file = http.Request.Form.Files.FirstOrDefault();
+    if (file is null || file.Length == 0)
+        return Results.BadRequest(new { error = "No file provided" });
+
+    string tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+    Directory.CreateDirectory(tempDir);
+    string filePath = Path.Combine(tempDir, file.FileName);
+    await using (var stream = new FileStream(filePath, FileMode.Create))
+    {
+        await file.CopyToAsync(stream);
+    }
+
+    try
+    {
+        ImportResult result = await importService.ImportFromFoldersAsync(new[] { tempDir });
+        return Results.Ok(result.ToDto());
+    }
+    finally
+    {
+        Directory.Delete(tempDir, recursive: true);
+    }
+});
+
 app.MapGet($"{prefix}/portfolio", async (IPortfolioRepository repo, IPositionEngine positionEngine) =>
 {
     string[] symbols = repo.GetAllTransactions().Select(t => t.Symbol).Distinct().ToArray();
