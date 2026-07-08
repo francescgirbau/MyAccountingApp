@@ -10,5 +10,6 @@ services:
       - ./data:/app/data
       - ./csv:/app/csv
       - ./import:/app/import
+      - ./logs:/app/logs
     environment:
       - CURRENCY_API_KEY=${CURRENCY_API_KEY}
