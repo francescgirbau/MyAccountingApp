@@ -61,6 +61,22 @@ builder.Services.AddSingleton<IAnnualSummaryService, AnnualSummaryService>();
 
 WebApplication app = builder.Build();
 
+app.UseExceptionHandler(exceptionHandlerApp =>
+{
+    exceptionHandlerApp.Run(async context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/json";
+        var exceptionHandlerPathFeature = context.Features.Get<IExceptionHandlerPathFeature>();
+        var error = exceptionHandlerPathFeature?.Error;
+        await context.Response.WriteAsJsonAsync(new
+        {
+            error = error?.Message ?? "An unexpected error occurred",
+            type = error?.GetType().Name,
+        });
+    });
+});
+
 app.UseCors();
 app.UseSwagger();
 app.UseSwaggerUI();
