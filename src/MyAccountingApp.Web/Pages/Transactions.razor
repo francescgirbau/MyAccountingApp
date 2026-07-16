@@ -8,15 +8,25 @@
 
 <MudPaper Class="pa-4 mb-4" Outlined="true">
     <MudGrid>
-        <MudItem xs="12" sm="4">
-            <MudSelect T="int?" @bind-Value="_selectedYear" @bind-Value:after="ApplyFilters" Label="Year" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+        <MudItem xs="12" sm="6" md="3">
+            <MudSelect T="int?" @bind-Value="_selectedYear" @bind-Value:after="OnYearChanged" Label="Year" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
                 @foreach (var year in _availableYears)
                 {
                     <MudSelectItem T="int?" Value="@((int?)year)">@year</MudSelectItem>
                 }
             </MudSelect>
         </MudItem>
-        <MudItem xs="12" sm="4">
+        <MudItem xs="12" sm="6" md="3">
+            <MudSelect T="int?" @bind-Value="_selectedMonth" @bind-Value:after="ApplyFilters" Label="Month" Variant="Variant.Outlined" FullWidth="true" Clearable="true"
+                       Disabled="@(!_selectedYear.HasValue)">
+                @for (int m = 1; m <= 12; m++)
+                {
+                    var month = m;
+                    <MudSelectItem T="int?" Value="@((int?)month)">@_monthNames[month - 1]</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
             <MudSelect @bind-Value="_selectedCategory" @bind-Value:after="ApplyFilters" Label="Category" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
                 @foreach (var cat in _categories)
                 {
@@ -24,7 +34,7 @@
                 }
             </MudSelect>
         </MudItem>
-        <MudItem xs="12" sm="4">
+        <MudItem xs="12" sm="6" md="3">
             <MudTextField @bind-Value="_searchText" @bind-Value:after="ApplyFilters" Label="Search description" Variant="Variant.Outlined" FullWidth="true" Immediate="true" Placeholder="Type to search..." />
         </MudItem>
     </MudGrid>
@@ -146,10 +156,16 @@ else
     private bool _loading = true;
 
     private int? _selectedYear { get; set; }
+    private int? _selectedMonth { get; set; }
     private string? _selectedCategory { get; set; }
     private string? _searchText { get; set; }
 
     private static readonly string[] _categories = { "INCOME", "EXPENSE", "TRANSFER", "DEPOSIT" };
+    private static readonly string[] _monthNames =
+    {
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+    };
 
     private bool _showFormDialog;
     private bool _showDeleteDialog;
@@ -186,6 +202,14 @@ else
         }
     }
 
+    private void OnYearChanged()
+    {
+        if (!_selectedYear.HasValue)
+            _selectedMonth = null;
+
+        ApplyFilters();
+    }
+
     private void ApplyFilters()
     {
         var query = _allTransactions.AsEnumerable();
@@ -193,13 +217,17 @@ else
         if (_selectedYear.HasValue)
             query = query.Where(t => t.Date.Year == _selectedYear.Value);
 
+        // Month only applies together with a year (no "all years for this month").
+        if (_selectedYear.HasValue && _selectedMonth.HasValue)
+            query = query.Where(t => t.Date.Month == _selectedMonth.Value);
+
         if (!string.IsNullOrWhiteSpace(_selectedCategory))
             query = query.Where(t => t.Category == _selectedCategory);
 
         if (!string.IsNullOrWhiteSpace(_searchText))
             query = query.Where(t => t.Description.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
 
-        _filteredTransactions = query.ToList();
+        _filteredTransactions = query.OrderByDescending(t => t.Date).ToList();
     }
 
     private bool IsFormInvalid() => string.IsNullOrWhiteSpace(_formDescription) || _formAmount <= 0;
