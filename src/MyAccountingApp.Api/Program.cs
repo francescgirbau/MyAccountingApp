@@ -259,6 +259,28 @@ app.MapPost($"{prefix}/import/upload", async (HttpContext http, IImportService i
     }
 });
 
+// Clears cash transactions and portfolio (asset) data. Does not touch currency conversions.
+app.MapPost($"{prefix}/data/reset", (ITransactionRepository transactionRepo, IPortfolioRepository portfolioRepo, ILogger<Program> logger) =>
+{
+    int transactionCount = transactionRepo.GetAll().Count();
+    int assetTransactionCount = portfolioRepo.GetAllTransactions().Count();
+
+    transactionRepo.Initialize(Array.Empty<Transaction>());
+    portfolioRepo.Initialize(Array.Empty<AssetTransaction>());
+
+    logger.LogWarning(
+        "Data reset: cleared {TransactionCount} transactions and {AssetTransactionCount} asset transactions",
+        transactionCount,
+        assetTransactionCount);
+
+    return Results.Ok(new
+    {
+        message = "Database reset completed",
+        clearedTransactions = transactionCount,
+        clearedAssetTransactions = assetTransactionCount,
+    });
+});
+
 app.MapGet($"{prefix}/portfolio", async (IPortfolioRepository repo, IPositionEngine positionEngine) =>
 {
     string[] symbols = repo.GetAllTransactions().Select(t => t.Symbol).Distinct().ToArray();
