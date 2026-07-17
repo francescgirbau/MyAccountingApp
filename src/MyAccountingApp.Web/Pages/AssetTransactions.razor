@@ -240,7 +240,7 @@ else
         if (!string.IsNullOrWhiteSpace(_selectedType))
             query = query.Where(t => t.Type == _selectedType);
 
-        _filteredTransactions = query.ToList();
+        _filteredTransactions = query.OrderByDescending(t => t.Transaction.Date).ToList();
     }
 
     private void OpenCreateDialog()
