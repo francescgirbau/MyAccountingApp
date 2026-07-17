@@ -331,6 +331,35 @@ app.MapGet($"{prefix}/summary/{{year:int}}", (int year, IAnnualSummaryService su
     return summary is not null ? Results.Ok(summary) : Results.NotFound(new { year, message = "No data found for this year" });
 });
 
+app.MapGet($"{prefix}/backup", async (ITransactionRepository txRepo, IPortfolioRepository pfRepo) =>
+{
+    List<Transaction> transactions = txRepo.GetAll().ToList();
+    string json = JsonSerializer.Serialize(new { transactions }, new JsonSerializerOptions { WriteIndented = true });
+    byte[] bytes = Encoding.UTF8.GetBytes(json);
+    return Results.File(bytes, "application/json", $"myaccounting-backup-{DateTime.Now:yyyyMMdd}.json");
+});
+
+app.MapPost($"{prefix}/backup", async (HttpRequest request, ITransactionRepository txRepo, IPortfolioRepository pfRepo, ILogger<Program> logger) =>
+{
+    using StreamReader reader = new(request.Body);
+    string body = await reader.ReadToEndAsync();
+
+    try
+    {
+        var backup = JsonSerializer.Deserialize<BackupData>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (backup?.Transactions is null)
+            return Results.BadRequest(new { error = "Invalid backup file format: 'transactions' array is required" });
+
+        txRepo.Initialize(backup.Transactions);
+        logger.LogInformation("Backup restored: {Count} transactions", backup.Transactions.Count);
+        return Results.Ok(new { message = $"Restored {backup.Transactions.Count} transactions" });
+    }
+    catch (JsonException ex)
+    {
+        return Results.BadRequest(new { error = $"Invalid JSON: {ex.Message}" });
+    }
+});
+
 app.MapFallbackToFile("index.html");
 
 app.Run();
@@ -348,3 +377,4 @@ finally
 record ImportRequest(List<string> FolderPaths);
 record CreateTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category);
 record CreateAssetTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, decimal Quantity, string Type);
+record BackupData(List<Transaction> Transactions);
