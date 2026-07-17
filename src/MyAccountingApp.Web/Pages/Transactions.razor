@@ -1,8 +1,6 @@
 @page "/transactions"
 @inject HttpClient Http
 @inject ISnackbar Snackbar
-@inject NavigationManager Navigation
-@inject IJSRuntime JS
 
 <PageTitle>Transactions</PageTitle>
 
@@ -57,14 +55,6 @@ else
                 New
             </MudButton>
             <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@LoadDataAsync" Size="Size.Small" Title="Refresh" />
-            <MudIconButton Icon="@Icons.Material.Filled.Download" OnClick="@DownloadBackup" Size="Size.Small" Title="Download backup" />
-            <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Default"
-                       OnClick="@TriggerRestore" StartIcon="@Icons.Material.Filled.Upload">
-                Restore
-            </MudButton>
-            <div id="restore-upload" style="display:none">
-                <InputFile OnChange="@UploadBackup" />
-            </div>
         </ToolBarContent>
         <ColGroup>
             <col style="width: 120px" />
@@ -350,49 +340,6 @@ else
             {
                 string error = await response.Content.ReadAsStringAsync();
                 Snackbar.Add($"Failed to delete: {error}", Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private void DownloadBackup()
-    {
-        Navigation.NavigateTo("/api/backup", forceLoad: true);
-    }
-
-    private async Task TriggerRestore()
-    {
-        await JS.InvokeVoidAsync("eval", "document.querySelector('#restore-upload input').click()");
-    }
-
-    private async Task UploadBackup(InputFileChangeEventArgs e)
-    {
-        try
-        {
-            var file = e.File;
-            if (file is null) return;
-
-            using Stream content = file.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
-            using MemoryStream ms = new();
-            await content.CopyToAsync(ms);
-            byte[] bytes = ms.ToArray();
-
-            HttpContent httpContent = new ByteArrayContent(bytes);
-            httpContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
-            HttpResponseMessage response = await Http.PostAsync("/api/backup", httpContent);
-
-            if (response.IsSuccessStatusCode)
-            {
-                Snackbar.Add("Backup restored successfully", Severity.Success);
-                await LoadDataAsync();
-            }
-            else
-            {
-                string error = await response.Content.ReadAsStringAsync();
-                Snackbar.Add($"Restore failed: {error}", Severity.Error);
             }
         }
         catch (Exception ex)

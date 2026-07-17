@@ -333,10 +333,11 @@ app.MapGet($"{prefix}/summary/{{year:int}}", (int year, IAnnualSummaryService su
     return summary is not null ? Results.Ok(summary) : Results.NotFound(new { year, message = "No data found for this year" });
 });
 
-app.MapGet($"{prefix}/backup", async (ITransactionRepository txRepo, IPortfolioRepository pfRepo) =>
+app.MapGet($"{prefix}/backup", (ITransactionRepository txRepo, IPortfolioRepository pfRepo) =>
 {
     List<Transaction> transactions = txRepo.GetAll().ToList();
-    string json = JsonSerializer.Serialize(new { transactions }, new JsonSerializerOptions { WriteIndented = true });
+    List<AssetTransaction> assetTransactions = pfRepo.GetAllTransactions().ToList();
+    string json = JsonSerializer.Serialize(new { transactions, assetTransactions }, new JsonSerializerOptions { WriteIndented = true });
     byte[] bytes = Encoding.UTF8.GetBytes(json);
     return Results.File(bytes, "application/json", $"myaccounting-backup-{DateTime.Now:yyyyMMdd}.json");
 });
@@ -353,8 +354,12 @@ app.MapPost($"{prefix}/backup", async (HttpRequest request, ITransactionReposito
             return Results.BadRequest(new { error = "Invalid backup file format: 'transactions' array is required" });
 
         txRepo.Initialize(backup.Transactions);
-        logger.LogInformation("Backup restored: {Count} transactions", backup.Transactions.Count);
-        return Results.Ok(new { message = $"Restored {backup.Transactions.Count} transactions" });
+        if (backup.AssetTransactions is not null)
+            pfRepo.Initialize(backup.AssetTransactions);
+
+        logger.LogInformation("Backup restored: {Count} transactions, {Count2} asset transactions",
+            backup.Transactions.Count, backup.AssetTransactions?.Count ?? 0);
+        return Results.Ok(new { message = $"Restored {backup.Transactions.Count} transactions and {backup.AssetTransactions?.Count ?? 0} asset transactions" });
     }
     catch (JsonException ex)
     {
@@ -379,4 +384,4 @@ finally
 record ImportRequest(List<string> FolderPaths);
 record CreateTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category);
 record CreateAssetTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, decimal Quantity, string Type);
-record BackupData(List<Transaction> Transactions);
+record BackupData(List<Transaction> Transactions, List<AssetTransaction>? AssetTransactions);
