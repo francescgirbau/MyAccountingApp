@@ -25,6 +25,7 @@ dotnet_diagnostic.SA1309.severity = none   # Field names must not begin with an 
 dotnet_diagnostic.SA1310.severity = none   # Field names must not contain Hungarian notation
 dotnet_diagnostic.SA1602.severity = none   # Enumeration items must be documented
 dotnet_diagnostic.SA1011.severity = none   # Closing square bracket spacing (conflicts with nullable syntax)
+dotnet_diagnostic.SA1137.severity = none   # Elements should have the same indentation (conflicts with try-wrapped top-level statements)
 dotnet_diagnostic.SA1313.severity = none   # Parameter names must begin with lower-case letter (conflicts with record primary constructors)
 
 #### Example of keeping some useful rules active ####
