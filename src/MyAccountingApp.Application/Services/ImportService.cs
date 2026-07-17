@@ -33,6 +33,11 @@ public class ImportService : IImportService
     {
         ImportResult result = new ImportResult();
 
+        // Batch in memory, then persist once. Per-row AddOrUpdate rewrites the full JSON file
+        // each time and times out HttpClient (~100s) on ~2k-row imports.
+        List<Domain.Entities.Transaction> pendingTransactions = new List<Domain.Entities.Transaction>();
+        List<Domain.Entities.AssetTransaction> pendingAssets = new List<Domain.Entities.AssetTransaction>();
+
         foreach (string folderPath in folderPaths)
         {
             if (!Directory.Exists(folderPath))
@@ -61,7 +66,7 @@ public class ImportService : IImportService
                             result.ValidationWarnings.AddRange(vr.Warnings);
                             if (vr.IsValid)
                             {
-                                this._portfolioRepo.AddOrUpdate(tx);
+                                pendingAssets.Add(tx);
                             }
                         }
 
@@ -79,7 +84,7 @@ public class ImportService : IImportService
                             result.ValidationWarnings.AddRange(vr.Warnings);
                             if (vr.IsValid)
                             {
-                                this._transactionRepo.AddOrUpdate(tx);
+                                pendingTransactions.Add(tx);
                             }
                         }
 
@@ -90,7 +95,7 @@ public class ImportService : IImportService
                             result.ValidationWarnings.AddRange(vr.Warnings);
                             if (vr.IsValid)
                             {
-                                this._portfolioRepo.AddOrUpdate(tx);
+                                pendingAssets.Add(tx);
                             }
                         }
 
@@ -106,6 +111,57 @@ public class ImportService : IImportService
                     this._logger.LogError(ex, "Failed to process {CsvFile}", csvFile);
                 }
             }
+        }
+
+        if (pendingTransactions.Count > 0)
+        {
+            List<Domain.Entities.Transaction> merged = this._transactionRepo.GetAll().ToList();
+            Dictionary<Guid, int> indexById = new Dictionary<Guid, int>(merged.Count);
+            for (int i = 0; i < merged.Count; i++)
+            {
+                indexById[merged[i].Id] = i;
+            }
+
+            foreach (Domain.Entities.Transaction tx in pendingTransactions)
+            {
+                if (indexById.TryGetValue(tx.Id, out int index))
+                {
+                    merged[index] = tx;
+                }
+                else
+                {
+                    indexById[tx.Id] = merged.Count;
+                    merged.Add(tx);
+                }
+            }
+
+            this._transactionRepo.Initialize(merged);
+        }
+
+        if (pendingAssets.Count > 0)
+        {
+            List<Domain.Entities.AssetTransaction> mergedAssets = this._portfolioRepo.GetAllTransactions().ToList();
+            Dictionary<Guid, int> assetIndexById = new Dictionary<Guid, int>(mergedAssets.Count);
+            for (int i = 0; i < mergedAssets.Count; i++)
+            {
+                assetIndexById[mergedAssets[i].Transaction.Id] = i;
+            }
+
+            foreach (Domain.Entities.AssetTransaction tx in pendingAssets)
+            {
+                Guid id = tx.Transaction.Id;
+                if (assetIndexById.TryGetValue(id, out int index))
+                {
+                    mergedAssets[index] = tx;
+                }
+                else
+                {
+                    assetIndexById[id] = mergedAssets.Count;
+                    mergedAssets.Add(tx);
+                }
+            }
+
+            this._portfolioRepo.Initialize(mergedAssets);
         }
 
         int matchedPairs = this.MatchTransferPairs();
@@ -137,6 +193,7 @@ public class ImportService : IImportService
             .ToList();
 
         int matched = 0;
+        bool changed = false;
 
         foreach (Domain.Entities.Transaction expense in expenses)
         {
@@ -154,16 +211,25 @@ public class ImportService : IImportService
 
             if (match != null)
             {
-                this.UpdateCategory(expense, Domain.Enums.TransactionCategory.TRANSFER);
-                this.UpdateCategory(match, Domain.Enums.TransactionCategory.TRANSFER);
+                this.ReplaceCategoryInList(all, expense, Domain.Enums.TransactionCategory.TRANSFER);
+                this.ReplaceCategoryInList(all, match, Domain.Enums.TransactionCategory.TRANSFER);
                 matched++;
+                changed = true;
             }
+        }
+
+        if (changed)
+        {
+            this._transactionRepo.Initialize(all);
         }
 
         return matched;
     }
 
-    private void UpdateCategory(Domain.Entities.Transaction transaction, Domain.Enums.TransactionCategory newCategory)
+    private void ReplaceCategoryInList(
+        List<Domain.Entities.Transaction> all,
+        Domain.Entities.Transaction transaction,
+        Domain.Enums.TransactionCategory newCategory)
     {
         Domain.Entities.Transaction updated = new Domain.Entities.Transaction(
             transaction.Id,
@@ -172,6 +238,10 @@ public class ImportService : IImportService
             transaction.Money,
             newCategory);
 
-        this._transactionRepo.AddOrUpdate(updated);
+        int index = all.FindIndex(t => t.Id == transaction.Id);
+        if (index >= 0)
+        {
+            all[index] = updated;
+        }
     }
 }

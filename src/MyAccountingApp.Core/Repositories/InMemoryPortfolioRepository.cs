@@ -13,6 +13,11 @@ namespace MyAccountingApp.Core.Repositories
             this._assetTransactions.Add(assetTransaction);
         }
 
+        public bool Delete(Guid transactionId)
+        {
+            return this._assetTransactions.RemoveAll(t => t.Transaction.Id == transactionId) > 0;
+        }
+
         public IEnumerable<AssetTransaction> GetAssetTransactions(string symbol)
         {
             return this._assetTransactions.Where(t => t.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase));

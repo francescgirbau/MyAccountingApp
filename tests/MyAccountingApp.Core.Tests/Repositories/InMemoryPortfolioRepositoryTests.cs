@@ -55,4 +55,33 @@ public class InMemoryPortfolioRepositoryTests
         Assert.Single(aaplTransactions);
         Assert.Equal("AAPL", aaplTransactions.First().Symbol);
     }
+
+    [Fact]
+    public void Delete_ShouldRemoveTransaction()
+    {
+        // Arrange
+        InMemoryPortfolioRepository repo = new();
+        AssetTransaction tx = AssetTransactionObjectMother.CreateBuy();
+        repo.AddOrUpdate(tx);
+
+        // Act
+        bool result = repo.Delete(tx.Transaction.Id);
+
+        // Assert
+        Assert.True(result);
+        Assert.Empty(repo.GetAllTransactions());
+    }
+
+    [Fact]
+    public void Delete_NonExistent_ShouldReturnFalse()
+    {
+        // Arrange
+        InMemoryPortfolioRepository repo = new();
+
+        // Act
+        bool result = repo.Delete(Guid.NewGuid());
+
+        // Assert
+        Assert.False(result);
+    }
 }

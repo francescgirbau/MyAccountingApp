@@ -19,7 +19,19 @@ namespace MyAccountingApp.Core.Repositories
             List<AssetTransaction> transactions = this.GetAllTransactions().ToList();
             transactions.RemoveAll(t => t.Transaction.Id == assetTransaction.Transaction.Id);
             transactions.Add(assetTransaction);
-            this.Initialize(transactions);
+            this.WriteAll(transactions);
+        }
+
+        public bool Delete(Guid transactionId)
+        {
+            List<AssetTransaction> transactions = this.GetAllTransactions().ToList();
+            int removed = transactions.RemoveAll(t => t.Transaction.Id == transactionId);
+            if (removed > 0)
+            {
+                this.WriteAll(transactions);
+            }
+
+            return removed > 0;
         }
 
         public IEnumerable<AssetTransaction> GetAssetTransactions(string symbol)
@@ -30,26 +42,49 @@ namespace MyAccountingApp.Core.Repositories
 
         public IEnumerable<AssetTransaction> GetAllTransactions()
         {
-            if (File.Exists(this._filePath) && new FileInfo(this._filePath).Length > 0)
+            if (!File.Exists(this._filePath) || new FileInfo(this._filePath).Length == 0)
             {
-                string json = File.ReadAllText(this._filePath);
-                JsonSerializerOptions options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                    Converters = { new JsonStringEnumConverter() },
-                };
-
-                List<AssetTransaction>? transactions = JsonSerializer.Deserialize<List<AssetTransaction>>(json, options);
-                if (transactions != null)
-                {
-                    return transactions;
-                }
+                return new List<AssetTransaction>();
             }
 
-            return new List<AssetTransaction>();
+            string json = File.ReadAllText(this._filePath);
+            JsonSerializerOptions options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters = { new JsonStringEnumConverter() },
+            };
+
+            try
+            {
+                return JsonSerializer.Deserialize<List<AssetTransaction>>(json, options) ?? new List<AssetTransaction>();
+            }
+            catch (JsonException)
+            {
+                int lastBrace = json.LastIndexOf('}');
+                if (lastBrace > 0)
+                {
+                    string repaired = json[.. (lastBrace + 1)] + "]";
+                    try
+                    {
+                        List<AssetTransaction>? recovered = JsonSerializer.Deserialize<List<AssetTransaction>>(repaired, options);
+                        if (recovered is not null)
+                        {
+                            this.WriteAll(recovered);
+                            return recovered;
+                        }
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                return new List<AssetTransaction>();
+            }
         }
 
-        public void Initialize(IEnumerable<AssetTransaction> transactions)
+        public void Initialize(IEnumerable<AssetTransaction> transactions) => this.WriteAll(transactions);
+
+        private void WriteAll(IEnumerable<AssetTransaction> transactions)
         {
             JsonSerializerOptions options = new JsonSerializerOptions
             {
@@ -57,8 +92,9 @@ namespace MyAccountingApp.Core.Repositories
                 Converters = { new JsonStringEnumConverter() },
             };
             string json = JsonSerializer.Serialize(transactions, options);
-
-            File.WriteAllText(this._filePath, json);
+            string tempPath = this._filePath + ".tmp";
+            File.WriteAllText(tempPath, json);
+            File.Move(tempPath, this._filePath, overwrite: true);
         }
     }
 }

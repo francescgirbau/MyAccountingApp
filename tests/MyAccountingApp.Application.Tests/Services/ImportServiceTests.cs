@@ -299,5 +299,7 @@ public class ImportServiceTests
             this._transactions.Clear();
             this._transactions.AddRange(transactions);
         }
+
+        public bool Delete(Guid transactionId) => true;
     }
 }

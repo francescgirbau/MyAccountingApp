@@ -7,18 +7,6 @@
 <MudText Typo="Typo.h3" GutterBottom="true">Import Data</MudText>
 
 <MudPaper Class="pa-6 mb-4" Outlined="true">
-    <MudText Typo="Typo.h6" GutterBottom="true">Import from folder</MudText>
-    <MudText Typo="Typo.body2" Class="mb-4">
-        Load all CSV files from the configured folders (<code>import/historical</code>).
-    </MudText>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large"
-               OnClick="@RunImportAsync" Disabled="@_loading"
-               StartIcon="@Icons.Material.Filled.FolderOpen">
-        @(_loading ? "Importing..." : "Run Import")
-    </MudButton>
-</MudPaper>
-
-<MudPaper Class="pa-6 mb-4" Outlined="true">
     <MudText Typo="Typo.h6" GutterBottom="true">Upload a CSV file</MudText>
     <MudText Typo="Typo.body2" Class="mb-4">
         Select a CSV file from your computer to import. Supported formats are detected automatically.
@@ -41,6 +29,8 @@
         <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">Selected: @_selectedFile.Name</MudText>
     }
 </MudPaper>
+
+
 
 @if (_loading)
 {
@@ -112,26 +102,6 @@
         _result = null;
     }
 
-    private async Task RunImportAsync()
-    {
-        _loading = true;
-        _result = null;
-        try
-        {
-            var response = await Http.PostAsJsonAsync("/api/import", new { folderPaths = new[] { "import/historical" } });
-            _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
-            Snackbar.Add("Import completed.", Severity.Success);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Import failed: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _loading = false;
-        }
-    }
-
     private async Task UploadAndImportAsync()
     {
         if (_selectedFile is null) return;
@@ -158,4 +128,5 @@
             _loading = false;
         }
     }
+
 }

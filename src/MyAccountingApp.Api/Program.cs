@@ -4,10 +4,25 @@ using MyAccountingApp.Application.Services;
 using MyAccountingApp.Core.Agents;
 using MyAccountingApp.Core.Repositories;
 using MyAccountingApp.Core.Services;
+using MyAccountingApp.Domain.Entities;
+using System.Text;
+using System.Text.Json;
+using Microsoft.AspNetCore.Diagnostics;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
+using MyAccountingApp.Domain.ValueObjects;
+using Serilog;
 
-WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.File("logs/myaccountingapp-.log", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 7)
+    .WriteTo.Console()
+    .CreateLogger();
+
+try
+{
+    Log.Information("Starting MyAccountingApp API");
+
+    WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 bool isDev = builder.Environment.IsDevelopment();
 
@@ -57,7 +72,26 @@ builder.Services.AddSingleton<IPositionEngine, PositionEngine>();
 builder.Services.AddSingleton<IValidationQuery, ValidationQuery>();
 builder.Services.AddSingleton<IAnnualSummaryService, AnnualSummaryService>();
 
+builder.Host.UseSerilog();
+
 WebApplication app = builder.Build();
+
+app.UseSerilogRequestLogging();
+app.UseExceptionHandler(exceptionHandlerApp =>
+{
+    exceptionHandlerApp.Run(async context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/json";
+        var exceptionHandlerPathFeature = context.Features.Get<IExceptionHandlerPathFeature>();
+        var error = exceptionHandlerPathFeature?.Error;
+        await context.Response.WriteAsJsonAsync(new
+        {
+            error = error?.Message ?? "An unexpected error occurred",
+            type = error?.GetType().Name,
+        });
+    });
+});
 
 app.UseCors();
 app.UseSwagger();
@@ -80,6 +114,56 @@ app.MapGet($"{prefix}/transactions", (ITransactionRepository repo) =>
     return Results.Ok(transactions);
 });
 
+app.MapPost($"{prefix}/transactions", (CreateTransactionRequest request, ITransactionRepository repo, ITransactionValidator validator) =>
+{
+    Money money = new(request.Amount, request.Currency);
+    TransactionCategory category = Enum.Parse<TransactionCategory>(request.Category);
+    Transaction transaction = new(request.Date, request.Description, money, category);
+
+    ValidationResult validation = validator.Validate(transaction);
+    if (!validation.IsValid)
+    {
+        return Results.BadRequest(validation.Errors);
+    }
+
+    repo.AddOrUpdate(transaction);
+    return Results.Created($"/api/transactions/{transaction.Id}", transaction.ToDto());
+});
+
+app.MapPut($"{prefix}/transactions/{{id:guid}}", (Guid id, CreateTransactionRequest request, ITransactionRepository repo, ITransactionValidator validator) =>
+{
+    Transaction? existing = repo.GetAll().FirstOrDefault(t => t.Id == id);
+    if (existing is null)
+    {
+        return Results.NotFound(new { id, message = "Transaction not found" });
+    }
+
+    Money money = new(request.Amount, request.Currency);
+    TransactionCategory category = Enum.Parse<TransactionCategory>(request.Category);
+    Transaction transaction = new(id, request.Date, request.Description, money, category);
+
+    ValidationResult validation = validator.Validate(transaction);
+    if (!validation.IsValid)
+    {
+        return Results.BadRequest(validation.Errors);
+    }
+
+    repo.AddOrUpdate(transaction);
+    return Results.Ok(transaction.ToDto());
+});
+
+app.MapDelete($"{prefix}/transactions/{{id:guid}}", (Guid id, ITransactionRepository repo) =>
+{
+    Transaction? existing = repo.GetAll().FirstOrDefault(t => t.Id == id);
+    if (existing is null)
+    {
+        return Results.NotFound(new { id, message = "Transaction not found" });
+    }
+
+    repo.Delete(existing);
+    return Results.NoContent();
+});
+
 app.MapGet($"{prefix}/asset-transactions", (IPortfolioRepository repo) =>
 {
     List<AssetTransactionDto> transactions = repo.GetAllTransactions().Select(t => t.ToDto()).ToList();
@@ -90,6 +174,60 @@ app.MapGet($"{prefix}/asset-transactions/{{symbol}}", (string symbol, IPortfolio
 {
     List<AssetTransactionDto> transactions = repo.GetAssetTransactions(symbol).Select(t => t.ToDto()).ToList();
     return Results.Ok(transactions);
+});
+
+app.MapPost($"{prefix}/asset-transactions", (CreateAssetTransactionRequest request, IPortfolioRepository repo, ITransactionValidator validator) =>
+{
+    Money money = new(request.Amount, request.Currency);
+    TransactionCategory category = Enum.Parse<TransactionCategory>(request.Category);
+    Transaction transaction = new(request.Date, request.Description, money, category);
+
+    ValidationResult validation = validator.Validate(transaction);
+    if (!validation.IsValid)
+    {
+        return Results.BadRequest(validation.Errors);
+    }
+
+    AssetTransactionType type = Enum.Parse<AssetTransactionType>(request.Type);
+    AssetTransaction assetTx = new(transaction, request.Symbol, request.Quantity, type);
+    repo.AddOrUpdate(assetTx);
+    return Results.Created($"/api/asset-transactions/{transaction.Id}", assetTx.ToDto());
+});
+
+app.MapPut($"{prefix}/asset-transactions/{{id:guid}}", (Guid id, CreateAssetTransactionRequest request, IPortfolioRepository repo, ITransactionValidator validator) =>
+{
+    AssetTransaction? existing = repo.GetAllTransactions().FirstOrDefault(t => t.Transaction.Id == id);
+    if (existing is null)
+    {
+        return Results.NotFound(new { id, message = "Asset transaction not found" });
+    }
+
+    Money money = new(request.Amount, request.Currency);
+    TransactionCategory category = Enum.Parse<TransactionCategory>(request.Category);
+    Transaction transaction = new(id, request.Date, request.Description, money, category);
+
+    ValidationResult validation = validator.Validate(transaction);
+    if (!validation.IsValid)
+    {
+        return Results.BadRequest(validation.Errors);
+    }
+
+    AssetTransactionType type = Enum.Parse<AssetTransactionType>(request.Type);
+    AssetTransaction assetTx = new(transaction, request.Symbol, request.Quantity, type);
+    repo.AddOrUpdate(assetTx);
+    return Results.Ok(assetTx.ToDto());
+});
+
+app.MapDelete($"{prefix}/asset-transactions/{{id:guid}}", (Guid id, IPortfolioRepository repo) =>
+{
+    AssetTransaction? existing = repo.GetAllTransactions().FirstOrDefault(t => t.Transaction.Id == id);
+    if (existing is null)
+    {
+        return Results.NotFound(new { id, message = "Asset transaction not found" });
+    }
+
+    repo.Delete(id);
+    return Results.NoContent();
 });
 
 app.MapPost($"{prefix}/import", async (ImportRequest request, IImportService importService) =>
@@ -121,6 +259,28 @@ app.MapPost($"{prefix}/import/upload", async (HttpContext http, IImportService i
     {
         Directory.Delete(tempDir, recursive: true);
     }
+});
+
+// Clears cash transactions and portfolio (asset) data. Does not touch currency conversions.
+app.MapPost($"{prefix}/data/reset", (ITransactionRepository transactionRepo, IPortfolioRepository portfolioRepo, ILogger<Program> logger) =>
+{
+    int transactionCount = transactionRepo.GetAll().Count();
+    int assetTransactionCount = portfolioRepo.GetAllTransactions().Count();
+
+    transactionRepo.Initialize(Array.Empty<Transaction>());
+    portfolioRepo.Initialize(Array.Empty<AssetTransaction>());
+
+    logger.LogWarning(
+        "Data reset: cleared {TransactionCount} transactions and {AssetTransactionCount} asset transactions",
+        transactionCount,
+        assetTransactionCount);
+
+    return Results.Ok(new
+    {
+        message = "Database reset completed",
+        clearedTransactions = transactionCount,
+        clearedAssetTransactions = assetTransactionCount,
+    });
 });
 
 app.MapGet($"{prefix}/portfolio", async (IPortfolioRepository repo, IPositionEngine positionEngine) =>
@@ -173,8 +333,55 @@ app.MapGet($"{prefix}/summary/{{year:int}}", (int year, IAnnualSummaryService su
     return summary is not null ? Results.Ok(summary) : Results.NotFound(new { year, message = "No data found for this year" });
 });
 
+app.MapGet($"{prefix}/backup", (ITransactionRepository txRepo, IPortfolioRepository pfRepo) =>
+{
+    List<Transaction> transactions = txRepo.GetAll().ToList();
+    List<AssetTransaction> assetTransactions = pfRepo.GetAllTransactions().ToList();
+    string json = JsonSerializer.Serialize(new { transactions, assetTransactions }, new JsonSerializerOptions { WriteIndented = true });
+    byte[] bytes = Encoding.UTF8.GetBytes(json);
+    return Results.File(bytes, "application/json", $"myaccounting-backup-{DateTime.Now:yyyyMMdd}.json");
+});
+
+app.MapPost($"{prefix}/backup", async (HttpRequest request, ITransactionRepository txRepo, IPortfolioRepository pfRepo, ILogger<Program> logger) =>
+{
+    using StreamReader reader = new(request.Body);
+    string body = await reader.ReadToEndAsync();
+
+    try
+    {
+        var backup = JsonSerializer.Deserialize<BackupData>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (backup?.Transactions is null)
+            return Results.BadRequest(new { error = "Invalid backup file format: 'transactions' array is required" });
+
+        txRepo.Initialize(backup.Transactions);
+        if (backup.AssetTransactions is not null)
+            pfRepo.Initialize(backup.AssetTransactions);
+
+        logger.LogInformation("Backup restored: {Count} transactions, {Count2} asset transactions",
+            backup.Transactions.Count, backup.AssetTransactions?.Count ?? 0);
+        return Results.Ok(new { message = $"Restored {backup.Transactions.Count} transactions and {backup.AssetTransactions?.Count ?? 0} asset transactions" });
+    }
+    catch (JsonException ex)
+    {
+        return Results.BadRequest(new { error = $"Invalid JSON: {ex.Message}" });
+    }
+});
+
 app.MapFallbackToFile("index.html");
 
 app.Run();
 
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
+
 record ImportRequest(List<string> FolderPaths);
+record CreateTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category);
+record CreateAssetTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, decimal Quantity, string Type);
+record BackupData(List<Transaction> Transactions, List<AssetTransaction>? AssetTransactions);
