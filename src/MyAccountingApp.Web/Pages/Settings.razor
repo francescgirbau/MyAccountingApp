@@ -33,6 +33,26 @@
     </div>
 </MudPaper>
 
+<MudPaper Class="pa-4 mb-4" Outlined="true" Style="border-color: var(--mud-palette-error);">
+    <MudText Typo="Typo.h6" GutterBottom="true" Color="Color.Error">Danger Zone</MudText>
+    <MudText Typo="Typo.body2" Class="mb-4">
+        Reset the database: deletes <strong>all cash transactions</strong> and <strong>all portfolio / asset transactions</strong>.
+        Currency conversions are kept. This cannot be undone — make a backup first if needed.
+    </MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Error" Size="Size.Large"
+               OnClick="@OpenResetDialog" Disabled="@_isResetting"
+               StartIcon="@Icons.Material.Filled.DeleteForever">
+        Reset database
+    </MudButton>
+    @if (_resetResult is not null)
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-4">
+            Cleared <strong>@_resetResult.ClearedTransactions</strong> transactions and
+            <strong>@_resetResult.ClearedAssetTransactions</strong> asset transactions.
+        </MudAlert>
+    }
+</MudPaper>
+
 @if (_lastRestoreMessage is not null)
 {
     <MudAlert Severity="@_restoreSeverity" Class="mb-4" Dismissible="true">
@@ -40,10 +60,34 @@
     </MudAlert>
 }
 
+<MudDialog @bind-Visible="_showResetDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Reset database?</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>
+            This will permanently delete all cash transactions and all portfolio / asset transactions.
+            Currency conversions will not be deleted.
+        </MudText>
+        <MudText Class="mt-2" Typo="Typo.body2">
+            Prefer a backup of <code>data/transactions.json</code> and <code>data/portfolio.json</code> before continuing.
+        </MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@CloseResetDialog" Disabled="@_isResetting">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@ConfirmResetAsync" Disabled="@_isResetting">
+            Yes, reset database
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
     private bool _isRestoring;
+    private bool _isResetting;
     private string? _lastRestoreMessage;
     private Severity _restoreSeverity = Severity.Normal;
+    private bool _showResetDialog;
+    private ResetResultDto? _resetResult;
 
     private void DownloadBackup()
     {
@@ -96,5 +140,50 @@
         {
             _isRestoring = false;
         }
+    }
+
+    private void OpenResetDialog()
+    {
+        _showResetDialog = true;
+    }
+
+    private void CloseResetDialog()
+    {
+        _showResetDialog = false;
+    }
+
+    private async Task ConfirmResetAsync()
+    {
+        _isResetting = true;
+        _resetResult = null;
+        try
+        {
+            var response = await Http.PostAsync("/api/data/reset", null);
+            if (!response.IsSuccessStatusCode)
+            {
+                string body = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Reset failed: {(int)response.StatusCode} {body}", Severity.Error);
+                return;
+            }
+
+            _resetResult = await response.Content.ReadFromJsonAsync<ResetResultDto>();
+            _showResetDialog = false;
+            Snackbar.Add("Database reset completed.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Reset failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isResetting = false;
+        }
+    }
+
+    private sealed class ResetResultDto
+    {
+        public string? Message { get; set; }
+        public int ClearedTransactions { get; set; }
+        public int ClearedAssetTransactions { get; set; }
     }
 }
