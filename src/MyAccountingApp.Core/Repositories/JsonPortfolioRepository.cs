@@ -84,6 +84,18 @@ namespace MyAccountingApp.Core.Repositories
 
         public void Initialize(IEnumerable<AssetTransaction> transactions) => this.WriteAll(transactions);
 
+        public int DeleteByYear(int year)
+        {
+            List<AssetTransaction> all = this.GetAllTransactions().ToList();
+            int removed = all.RemoveAll(a => a.Transaction.Date.Year == year);
+            if (removed > 0)
+            {
+                this.WriteAll(all);
+            }
+
+            return removed;
+        }
+
         private void WriteAll(IEnumerable<AssetTransaction> transactions)
         {
             JsonSerializerOptions options = new JsonSerializerOptions

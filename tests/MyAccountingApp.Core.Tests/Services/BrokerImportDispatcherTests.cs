@@ -1,0 +1,159 @@
+namespace MyAccountingApp.Core.Tests.Services;
+
+using System;
+using System.IO;
+using System.Threading.Tasks;
+using MyAccountingApp.Core.Agents;
+using MyAccountingApp.Core.Services;
+using Xunit;
+
+public class BrokerImportDispatcherTests
+{
+    private static readonly InteractiveBrokersCsvParser Parser = new();
+
+    [Fact]
+    public async Task ParseAllAsync_AssetTransactionSuffix_UsesAssetService()
+    {
+        string csv = "Data,Descripcio,Ticker,Import,Moneda,Source\n2023-01-15,Compra,ES0123456789,-10000,EUR,SRC";
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            BrokerImportDispatcher dispatcher = CreateDispatcher();
+
+            var (txs, assets) = await dispatcher.ParseAllAsync(file);
+
+            Assert.Empty(txs);
+            Assert.NotEmpty(assets);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_BankTransactionSuffix_UsesBankService()
+    {
+        string csv = "Data,Descripcio,Import,Moneda,Source\n2023-01-15,Nomina,2500,EUR,SRC";
+        string file = Path.GetTempFileName() + "_transactions.csv";
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            BrokerImportDispatcher dispatcher = CreateDispatcher();
+
+            var (txs, assets) = await dispatcher.ParseAllAsync(file);
+
+            Assert.NotEmpty(txs);
+            Assert.Empty(assets);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_BankCsvHeader_UsesBankService()
+    {
+        string csv = "Data,Descripcio,Import,Moneda,Source\n2023-01-15,Nomina,2500,EUR,SRC";
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            BrokerImportDispatcher dispatcher = CreateDispatcher();
+
+            var (txs, assets) = await dispatcher.ParseAllAsync(file);
+
+            Assert.NotEmpty(txs);
+            Assert.Empty(assets);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_HeaderWithTicker_UsesAssetService()
+    {
+        string csv = "Data,Ticker,Descripcio,Import,Moneda,Source\n2023-01-15,ES0123456789,Compra,-10000,EUR,SRC";
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            BrokerImportDispatcher dispatcher = CreateDispatcher();
+
+            var (txs, assets) = await dispatcher.ParseAllAsync(file);
+
+            Assert.Empty(txs);
+            Assert.NotEmpty(assets);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_FallbackToIbkr_WhenNoMatch()
+    {
+        string csv = "Unknown,Header,Format\n1,2,3";
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            BrokerImportDispatcher dispatcher = CreateDispatcher();
+
+            var (txs, assets) = await dispatcher.ParseAllAsync(file);
+
+            Assert.Empty(txs);
+            Assert.Empty(assets);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_ThrowsOnNullPath()
+    {
+        BrokerImportDispatcher dispatcher = CreateDispatcher();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => dispatcher.ParseAllAsync(string.Empty));
+    }
+
+    [Fact]
+    public async Task ParseCorporateActionsAsync_DelegatesToIbkr()
+    {
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, "Fake data\n1,2,3");
+            BrokerImportDispatcher dispatcher = CreateDispatcher();
+            var result = await dispatcher.ParseCorporateActionsAsync(file);
+
+            Assert.Empty(result);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    private static BrokerImportDispatcher CreateDispatcher()
+    {
+        InteractiveBrokersImportService ibkr = new(Parser, new FakeLogger<InteractiveBrokersImportService>());
+        return new BrokerImportDispatcher(ibkr, new BankCsvImportService(), new AssetTransactionCsvImportService());
+    }
+}
+
+internal class FakeLogger<T> : Microsoft.Extensions.Logging.ILogger<T>
+{
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+    public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => true;
+    public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+    {
+    }
+}

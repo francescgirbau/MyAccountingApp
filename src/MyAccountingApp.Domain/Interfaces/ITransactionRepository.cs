@@ -31,4 +31,11 @@ public interface ITransactionRepository
     /// <param name="transaction">The transaction to delete.</param>
     /// <returns>True if the transaction was found and removed; otherwise, false.</returns>
     public bool Delete(Transaction transaction);
+
+    /// <summary>
+    /// Deletes all transactions for the specified year.
+    /// </summary>
+    /// <param name="year">The year to delete transactions for.</param>
+    /// <returns>The number of transactions deleted.</returns>
+    public int DeleteByYear(int year);
 }

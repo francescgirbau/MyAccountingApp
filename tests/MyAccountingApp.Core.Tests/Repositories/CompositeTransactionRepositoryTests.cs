@@ -1,5 +1,7 @@
 ﻿using MyAccountingApp.Core.Repositories;
 using MyAccountingApp.Domain.Entities;
+using MyAccountingApp.Domain.Enums;
+using MyAccountingApp.Domain.ValueObjects;
 using MyAccountingApp.TestUtilities.ObjectMothers;
 namespace MyAccountingApp.Core.Tests.Repositories;
 
@@ -77,5 +79,24 @@ public class CompositeTransactionRepositoryTests : IDisposable
         Assert.True(deleted);
         Assert.Empty(all);
         Assert.DoesNotContain(transactionExpense.Id.ToString(), jsonContent);
+    }
+
+    [Fact]
+    public void DeleteByYear_ShouldRemoveFromBothRepos()
+    {
+        CompositeTransactionRepository repo = new CompositeTransactionRepository(this._tempFile);
+        Transaction tx2023 = new Transaction(new DateTime(2023, 6, 15), "2023", new Money(100, "EUR"), TransactionCategory.INCOME);
+        Transaction tx2024 = new Transaction(new DateTime(2024, 3, 10), "2024", new Money(200, "EUR"), TransactionCategory.INCOME);
+        repo.Initialize(new[] { tx2023, tx2024 });
+
+        int removed = repo.DeleteByYear(2024);
+
+        Assert.Equal(1, removed);
+        List<Transaction> all = repo.GetAll().ToList();
+        Assert.Single(all);
+        Assert.Equal(tx2023.Id, all[0].Id);
+        string jsonContent = File.ReadAllText(this._tempFile);
+        Assert.DoesNotContain(tx2024.Id.ToString(), jsonContent);
+        Assert.Contains(tx2023.Id.ToString(), jsonContent);
     }
 }

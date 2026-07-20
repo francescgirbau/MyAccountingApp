@@ -51,6 +51,37 @@
             <strong>@_resetResult.ClearedAssetTransactions</strong> asset transactions.
         </MudAlert>
     }
+
+    <MudDivider Class="my-4" />
+
+    <MudText Typo="Typo.subtitle1" GutterBottom="true">Delete transactions by year</MudText>
+    <MudText Typo="Typo.body2" Class="mb-4">
+        Delete all cash and asset transactions for a specific year.
+    </MudText>
+    <MudGrid>
+        <MudItem xs="6" sm="3">
+            <MudSelect @bind-Value="_deleteYear" Label="Year" Variant="Variant.Outlined"
+                       Disabled="@_isDeletingYear">
+                @foreach (int y in Enumerable.Range(2000, 50))
+                {
+                    <MudSelectItem Value="y">@y</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="6" sm="3" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Warning"
+                       OnClick="@DeleteYearAsync" Disabled="@(_deleteYear is null || _isDeletingYear)">
+                Delete year
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+    @if (_deleteYearResult is not null)
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-2">
+            Deleted <strong>@_deleteYearResult.deletedTransactions</strong> transactions and
+            <strong>@_deleteYearResult.deletedAssets</strong> asset transactions for year @_deleteYear.
+        </MudAlert>
+    }
 </MudPaper>
 
 @if (_lastRestoreMessage is not null)
@@ -88,6 +119,9 @@
     private Severity _restoreSeverity = Severity.Normal;
     private bool _showResetDialog;
     private ResetResultDto? _resetResult;
+    private int? _deleteYear;
+    private DeleteYearResultDto? _deleteYearResult;
+    private bool _isDeletingYear;
 
     private void DownloadBackup()
     {
@@ -180,10 +214,46 @@
         }
     }
 
+    private async Task DeleteYearAsync()
+    {
+        if (_deleteYear is null) return;
+
+        _isDeletingYear = true;
+        _deleteYearResult = null;
+        try
+        {
+            var response = await Http.DeleteAsync($"/api/transactions/year/{_deleteYear}");
+            if (!response.IsSuccessStatusCode)
+            {
+                string body = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Delete failed: {(int)response.StatusCode} {body}", Severity.Error);
+                return;
+            }
+
+            _deleteYearResult = await response.Content.ReadFromJsonAsync<DeleteYearResultDto>();
+            Snackbar.Add($"Deleted {_deleteYearResult?.deletedTransactions} transactions and {_deleteYearResult?.deletedAssets} assets for {_deleteYear}.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Delete failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isDeletingYear = false;
+        }
+    }
+
     private sealed class ResetResultDto
     {
         public string? Message { get; set; }
         public int ClearedTransactions { get; set; }
         public int ClearedAssetTransactions { get; set; }
+    }
+
+    private sealed class DeleteYearResultDto
+    {
+        public int year { get; set; }
+        public int deletedTransactions { get; set; }
+        public int deletedAssets { get; set; }
     }
 }

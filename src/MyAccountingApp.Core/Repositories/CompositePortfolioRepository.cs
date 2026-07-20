@@ -44,5 +44,12 @@ namespace MyAccountingApp.Core.Repositories
             this._memoryRepo.Initialize(transactions);
             this._jsonRepo.Initialize(transactions);
         }
+
+        public int DeleteByYear(int year)
+        {
+            int jsonRemoved = this._jsonRepo.DeleteByYear(year);
+            int memoryRemoved = this._memoryRepo.DeleteByYear(year);
+            return Math.Max(jsonRemoved, memoryRemoved);
+        }
     }
 }

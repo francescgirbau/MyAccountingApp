@@ -60,6 +60,13 @@ public class CompositeTransactionRepository : ITransactionRepository
     /// transactions. Ensure that the provided collection contains all necessary transactions before calling this
     /// method.</remarks>
     /// <param name="transactions">A collection of <see cref="Transaction"/> objects to be used for initialization. Cannot be null.</param>
+    public int DeleteByYear(int year)
+    {
+        int jsonRemoved = this._jsonRepo.DeleteByYear(year);
+        int memoryRemoved = this._memoryRepo.DeleteByYear(year);
+        return Math.Max(jsonRemoved, memoryRemoved);
+    }
+
     public void Initialize(IEnumerable<Transaction> transactions)
     {
         this._memoryRepo.Initialize(transactions);

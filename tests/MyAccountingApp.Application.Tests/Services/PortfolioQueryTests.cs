@@ -81,5 +81,6 @@ public class PortfolioQueryTests
         }
 
         public bool Delete(Guid transactionId) => true;
+        public int DeleteByYear(int year) => this._transactions.RemoveAll(t => t.Transaction.Date.Year == year);
     }
 }

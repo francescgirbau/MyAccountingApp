@@ -116,4 +116,28 @@ public class TransactionValidatorTests
         Assert.Contains(result.Errors, e => e.Field == "Date");
         Assert.Contains(result.Errors, e => e.Field == "Description");
     }
+
+    [Fact]
+    public void ValidationResult_Valid_ReturnsIsValid()
+    {
+        ValidationResult result = ValidationResult.Valid();
+
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+        Assert.Empty(result.Warnings);
+    }
+
+    [Fact]
+    public void ValidationResult_FromErrors_SetsErrors()
+    {
+        List<ValidationError> errors = new()
+        {
+            new ValidationError("Field1", "Error1", "error"),
+        };
+
+        ValidationResult result = ValidationResult.FromErrors(errors);
+
+        Assert.False(result.IsValid);
+        Assert.Single(result.Errors);
+    }
 }
