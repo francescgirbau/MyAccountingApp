@@ -39,7 +39,11 @@ public class AssetTransactionCsvImportService : IBrokerImportService
                     continue;
                 }
 
-                DateTime date = DateTime.Parse(fields[0], CultureInfo.InvariantCulture);
+                DateTime date;
+                if (!DateTime.TryParse(fields[0], CultureInfo.CreateSpecificCulture("ca-ES"), DateTimeStyles.None, out date))
+                {
+                    date = DateTime.Parse(fields[0], CultureInfo.InvariantCulture);
+                }
                 string description = fields[1];
                 string ticker = fields[2];
                 decimal import = decimal.Parse(fields[3], NumberStyles.Any, CultureInfo.InvariantCulture);

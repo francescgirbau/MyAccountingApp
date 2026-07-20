@@ -2,6 +2,7 @@
 @page "/summary/{Year:int}"
 @inject HttpClient Http
 @inject NavigationManager Navigation
+@using System.Globalization
 
 <PageTitle>Summary</PageTitle>
 
@@ -32,6 +33,49 @@ else if (Year.HasValue)
             </MudGrid>
         </MudCardContent>
     </MudCard>
+
+    @if (_summary?.Months is { Count: > 0 })
+    {
+        <MudText Typo="Typo.h5" GutterBottom="true" Class="mt-8">Monthly Breakdown</MudText>
+        <MudTable Items="@_summary.Months" Dense="true" Hover="true" Striped="true" Class="mt-4">
+            <ColGroup>
+                <col style="width: 12%" />
+                <col style="width: 16%" />
+                <col style="width: 16%" />
+                <col style="width: 16%" />
+                <col style="width: 16%" />
+                <col style="width: 12%" />
+                <col style="width: 12%" />
+            </ColGroup>
+            <HeaderContent>
+                <MudTh>Month</MudTh>
+                <MudTh><MudText Color="Color.Success">Income</MudText></MudTh>
+                <MudTh><MudText Color="Color.Error">Expenses</MudText></MudTh>
+                <MudTh>Net Cash Flow</MudTh>
+                <MudTh>Purchases</MudTh>
+                <MudTh>Sales</MudTh>
+                <MudTh>Tx</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Month">@GetMonthName(context.Month)</MudTd>
+                <MudTd DataLabel="Income"><MudText Color="Color.Success">@context.Income.ToString("N2") €</MudText></MudTd>
+                <MudTd DataLabel="Expenses"><MudText Color="Color.Error">@context.Expenses.ToString("N2") €</MudText></MudTd>
+                <MudTd DataLabel="Net Cash Flow"><MudText Color="@NetColor(context.NetCashFlow)">@context.NetCashFlow.ToString("N2") €</MudText></MudTd>
+                <MudTd DataLabel="Purchases">@context.InvestmentPurchases.ToString("N2") €</MudTd>
+                <MudTd DataLabel="Sales">@context.InvestmentSales.ToString("N2") €</MudTd>
+                <MudTd DataLabel="Tx">@context.TransactionCount / @context.AssetTransactionCount</MudTd>
+            </RowTemplate>
+            <FooterContent>
+                <MudTd><MudText Typo="Typo.subtitle2">Total</MudText></MudTd>
+                <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Success">@_summary?.Income.ToString("N2") €</MudText></MudTd>
+                <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Error">@_summary?.Expenses.ToString("N2") €</MudText></MudTd>
+                <MudTd><MudText Typo="Typo.subtitle2" Color="@NetCashFlowColor">@_summary?.NetCashFlow.ToString("N2") €</MudText></MudTd>
+                <MudTd><MudText Typo="Typo.subtitle2">@_summary?.InvestmentPurchases.ToString("N2") €</MudText></MudTd>
+                <MudTd><MudText Typo="Typo.subtitle2">@_summary?.InvestmentSales.ToString("N2") €</MudText></MudTd>
+                <MudTd><MudText Typo="Typo.subtitle2">@_summary?.TransactionCount / @_summary?.AssetTransactionCount</MudText></MudTd>
+            </FooterContent>
+        </MudTable>
+    }
 }
 else
 {
@@ -69,8 +113,11 @@ else
 
     private Color NetCashFlowColor => (_summary?.NetCashFlow ?? 0) >= 0 ? Color.Success : Color.Error;
     private Color GetNetColor(decimal net) => net >= 0 ? Color.Success : Color.Error;
+    private static Color NetColor(decimal net) => net >= 0 ? Color.Success : Color.Error;
 
     private void NavigateToYear(int year) => Navigation.NavigateTo($"/summary/{year}");
+
+    private static string GetMonthName(int month) => CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month);
 
     protected override async Task OnInitializedAsync()
     {
