@@ -239,6 +239,12 @@ app.MapDelete($"{prefix}/asset-transactions/{{id:guid}}", (Guid id, IPortfolioRe
     return Results.NoContent();
 });
 
+app.MapDelete($"{prefix}/asset-transactions/year/{{year:int}}", (int year, IPortfolioRepository portfolioRepo) =>
+{
+    int removed = portfolioRepo.DeleteByYear(year);
+    return Results.Ok(new { year, deletedAssets = removed });
+});
+
 app.MapPost($"{prefix}/import", async (ImportRequest request, IImportService importService) =>
 {
     ImportResult result = await importService.ImportFromFoldersAsync(request.FolderPaths);
