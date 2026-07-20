@@ -86,7 +86,11 @@ public class BankCsvImportService : IBrokerImportService
                     continue;
                 }
 
-                DateTime date = DateTime.Parse(fields[0], CultureInfo.InvariantCulture);
+                DateTime date;
+                if (!DateTime.TryParse(fields[0], CultureInfo.CreateSpecificCulture("ca-ES"), DateTimeStyles.None, out date))
+                {
+                    date = DateTime.Parse(fields[0], CultureInfo.InvariantCulture);
+                }
                 string description = fields[1];
                 decimal amount = decimal.Parse(fields[2], NumberStyles.Any, CultureInfo.InvariantCulture);
                 string currency = fields[3];

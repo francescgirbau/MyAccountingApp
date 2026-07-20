@@ -87,6 +87,8 @@ public class AnnualSummaryService : IAnnualSummaryService
 
         decimal netCashFlow = income + investmentSales - expenses - investmentPurchases;
 
+        List<MonthlySummaryDto> months = this.BuildMonthlySummaries(year, yearTxs, yearAssetTxs);
+
         return new AnnualSummaryDto(
             year,
             Math.Round(expenses, 2),
@@ -95,6 +97,61 @@ public class AnnualSummaryService : IAnnualSummaryService
             Math.Round(investmentSales, 2),
             Math.Round(netCashFlow, 2),
             yearTxs.Count,
-            yearAssetTxs.Count);
+            yearAssetTxs.Count,
+            months);
+    }
+
+    private List<MonthlySummaryDto> BuildMonthlySummaries(
+        int year,
+        List<Domain.Entities.Transaction> yearTxs,
+        List<Domain.Entities.AssetTransaction> yearAssetTxs)
+    {
+        List<MonthlySummaryDto> result = new List<MonthlySummaryDto>(12);
+
+        for (int month = 1; month <= 12; month++)
+        {
+            List<Domain.Entities.Transaction> monthTxs = yearTxs
+                .Where(t => t.Date.Month == month)
+                .ToList();
+
+            List<Domain.Entities.AssetTransaction> monthAssetTxs = yearAssetTxs
+                .Where(a => a.Transaction.Date.Month == month)
+                .ToList();
+
+            if (monthTxs.Count == 0 && monthAssetTxs.Count == 0)
+            {
+                continue;
+            }
+
+            decimal expenses = monthTxs
+                .Where(t => t.Category == TransactionCategory.EXPENSE)
+                .Sum(t => t.Money.Amount);
+
+            decimal income = monthTxs
+                .Where(t => t.Category == TransactionCategory.INCOME)
+                .Sum(t => t.Money.Amount);
+
+            decimal investmentPurchases = monthAssetTxs
+                .Where(a => a.Type == AssetTransactionType.Buy)
+                .Sum(a => a.Transaction.Money.Amount);
+
+            decimal investmentSales = monthAssetTxs
+                .Where(a => a.Type == AssetTransactionType.Sell)
+                .Sum(a => a.Transaction.Money.Amount);
+
+            decimal netCashFlow = income + investmentSales - expenses - investmentPurchases;
+
+            result.Add(new MonthlySummaryDto(
+                month,
+                Math.Round(expenses, 2),
+                Math.Round(income, 2),
+                Math.Round(investmentPurchases, 2),
+                Math.Round(investmentSales, 2),
+                Math.Round(netCashFlow, 2),
+                monthTxs.Count,
+                monthAssetTxs.Count));
+        }
+
+        return result;
     }
 }

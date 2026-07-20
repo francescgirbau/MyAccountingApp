@@ -60,6 +60,14 @@ public class AnnualSummaryServiceTests
         Assert.Equal(350m, result.NetCashFlow);
         Assert.Equal(2, result.TransactionCount);
         Assert.Equal(2, result.AssetTransactionCount);
+        Assert.NotEmpty(result.Months);
+        MonthlySummaryDto month = Assert.Single(result.Months);
+        Assert.Equal(6, month.Month);
+        Assert.Equal(500m, month.Expenses);
+        Assert.Equal(1000m, month.Income);
+        Assert.Equal(300m, month.InvestmentPurchases);
+        Assert.Equal(150m, month.InvestmentSales);
+        Assert.Equal(350m, month.NetCashFlow);
     }
 
     [Fact]
@@ -83,6 +91,28 @@ public class AnnualSummaryServiceTests
     }
 
     [Fact]
+    public void GetByYear_ReturnsMultipleMonths()
+    {
+        Transaction[] txs = new Transaction[]
+        {
+            Tx(2024, 3000, TransactionCategory.INCOME, 1),
+            Tx(2024, 1000, TransactionCategory.EXPENSE, 1),
+            Tx(2024, 2000, TransactionCategory.INCOME, 3),
+            Tx(2024, 500, TransactionCategory.EXPENSE, 3),
+        };
+        var svc = CreateService(txs, Array.Empty<AssetTransaction>());
+
+        AnnualSummaryDto? result = svc.GetByYear(2024);
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Months.Count);
+        Assert.Equal(1, result.Months[0].Month);
+        Assert.Equal(2000m, result.Months[0].NetCashFlow);
+        Assert.Equal(3, result.Months[1].Month);
+        Assert.Equal(1500m, result.Months[1].NetCashFlow);
+    }
+
+    [Fact]
     public void NetCashFlow_IsCorrect()
     {
         Transaction[] txs = new Transaction[]
@@ -103,11 +133,11 @@ public class AnnualSummaryServiceTests
         Assert.Equal(2800m, result.NetCashFlow);
     }
 
-    private static Transaction Tx(int year, decimal amount, TransactionCategory category = TransactionCategory.INCOME)
+    private static Transaction Tx(int year, decimal amount, TransactionCategory category = TransactionCategory.INCOME, int month = 6)
     {
         return new Transaction(
             Guid.NewGuid(),
-            new DateTime(year, 6, 1),
+            new DateTime(year, month, 1),
             "Test",
             new Money(amount, "EUR"),
             category);
