@@ -44,6 +44,7 @@ public class AssetTransactionCsvImportService : IBrokerImportService
                 {
                     date = DateTime.Parse(fields[0], CultureInfo.InvariantCulture);
                 }
+
                 string description = fields[1];
                 string ticker = fields[2];
                 decimal import = decimal.Parse(fields[3], NumberStyles.Any, CultureInfo.InvariantCulture);

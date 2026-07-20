@@ -30,7 +30,32 @@
     }
 </MudPaper>
 
-
+<MudPaper Class="pa-6 mb-4" Outlined="true">
+    <MudText Typo="Typo.h6" GutterBottom="true">Import Raw CSV</MudText>
+    <MudText Typo="Typo.body2" Class="mb-4">
+        Upload a CSV with your own format. No transformations applied.
+    </MudText>
+    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+        <strong>Format:</strong> Date,Description,Amount,Currency (Currency optional, defaults to EUR)
+    </MudAlert>
+    <MudGrid>
+        <MudItem xs="12" sm="8">
+            <InputFile OnChange="@OnRawFileSelected" accept=".csv" class="mud-input-outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="4" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large"
+                       OnClick="@UploadRawCsvAsync" Disabled="@(_rawFile is null || _loading)"
+                       StartIcon="@Icons.Material.Filled.FileUpload"
+                       FullWidth="true">
+                Import Raw CSV
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+    @if (_rawFile is not null)
+    {
+        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">Selected: @_rawFile.Name</MudText>
+    }
+</MudPaper>
 
 @if (_loading)
 {
@@ -95,10 +120,17 @@
     private ImportResultDto? _result;
     private bool _loading;
     private IBrowserFile? _selectedFile;
+    private IBrowserFile? _rawFile;
 
     private void OnFileSelected(InputFileChangeEventArgs args)
     {
         _selectedFile = args.File;
+        _result = null;
+    }
+
+    private void OnRawFileSelected(InputFileChangeEventArgs args)
+    {
+        _rawFile = args.File;
         _result = null;
     }
 
@@ -122,6 +154,43 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Upload failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task UploadRawCsvAsync()
+    {
+        if (_rawFile is null) return;
+
+        _loading = true;
+        _result = null;
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            using var stream = _rawFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            content.Add(new StreamContent(stream), "file", _rawFile.Name);
+
+            var response = await Http.PostAsync("/api/import/raw-csv", content);
+            var raw = await response.Content.ReadFromJsonAsync<RawCsvResultDto>();
+            if (raw is not null)
+            {
+                Snackbar.Add($"Raw CSV import: {raw.Imported} imported, {raw.Skipped} skipped.", Severity.Success);
+                if (raw.Errors?.Count > 0)
+                {
+                    foreach (var e in raw.Errors)
+                    {
+                        Snackbar.Add(e, Severity.Warning);
+                    }
+                }
+            }
+            _rawFile = null;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Raw CSV import failed: {ex.Message}", Severity.Error);
         }
         finally
         {

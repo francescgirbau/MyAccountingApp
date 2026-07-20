@@ -46,6 +46,49 @@
 }
 else
 {
+    <MudPaper Class="pa-4 mb-4" Outlined="true">
+        <MudText Typo="Typo.subtitle1" GutterBottom="true">
+            Filtered totals — @_filteredTransactions.Count transactions
+        </MudText>
+        @if (_filterSummaries.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">No transactions match the current filters.</MudText>
+        }
+        else
+        {
+            <MudSimpleTable Dense="true" Hover="false" Bordered="false" Style="background: transparent;">
+                <thead>
+                    <tr>
+                        <th>Currency</th>
+                        <th style="text-align:right">Income</th>
+                        <th style="text-align:right">Expense</th>
+                        <th style="text-align:right">Transfer</th>
+                        <th style="text-align:right">Deposit</th>
+                        <th style="text-align:right">Net (excl. transfers)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in _filterSummaries)
+                    {
+                        <tr>
+                            <td><strong>@s.Currency</strong> <span class="mud-text-secondary">(@s.Count)</span></td>
+                            <td style="text-align:right" class="green--text">@s.Income.ToString("N2")</td>
+                            <td style="text-align:right" class="red--text">@s.Expense.ToString("N2")</td>
+                            <td style="text-align:right">@s.Transfer.ToString("N2")</td>
+                            <td style="text-align:right" class="green--text">@s.Deposit.ToString("N2")</td>
+                            <td style="text-align:right">
+                                <strong class="@(s.Net >= 0 ? "green--text" : "red--text")">@s.Net.ToString("N2")</strong>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+            <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
+                Net = Income + Deposit − Expense. Transfers are listed separately (not in net) to help reconcile bank moves.
+            </MudText>
+        }
+    </MudPaper>
+
     <MudTable Items="@_filteredTransactions" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true" SortLabel="Sort by">
         <ToolBarContent>
             <MudText Typo="Typo.subtitle1">@_filteredTransactions.Count transactions</MudText>
@@ -152,6 +195,7 @@ else
 @code {
     private List<TransactionDto> _allTransactions = new();
     private List<TransactionDto> _filteredTransactions = new();
+    private List<FilterCurrencySummary> _filterSummaries = new();
     private List<int> _availableYears = new();
     private bool _loading = true;
 
@@ -228,9 +272,46 @@ else
             query = query.Where(t => t.Description.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
 
         _filteredTransactions = query.OrderByDescending(t => t.Date).ToList();
+        RebuildFilterSummaries();
+    }
+
+    private void RebuildFilterSummaries()
+    {
+        _filterSummaries = _filteredTransactions
+            .GroupBy(t => string.IsNullOrWhiteSpace(t.Money.Currency) ? "?" : t.Money.Currency)
+            .OrderBy(g => g.Key)
+            .Select(g =>
+            {
+                decimal income = g.Where(t => t.Category == "INCOME").Sum(t => t.Money.Amount);
+                decimal expense = g.Where(t => t.Category == "EXPENSE").Sum(t => t.Money.Amount);
+                decimal transfer = g.Where(t => t.Category == "TRANSFER").Sum(t => t.Money.Amount);
+                decimal deposit = g.Where(t => t.Category == "DEPOSIT").Sum(t => t.Money.Amount);
+                return new FilterCurrencySummary
+                {
+                    Currency = g.Key,
+                    Count = g.Count(),
+                    Income = income,
+                    Expense = expense,
+                    Transfer = transfer,
+                    Deposit = deposit,
+                    Net = income + deposit - expense,
+                };
+            })
+            .ToList();
     }
 
     private bool IsFormInvalid() => string.IsNullOrWhiteSpace(_formDescription) || _formAmount <= 0;
+
+    private sealed class FilterCurrencySummary
+    {
+        public string Currency { get; set; } = string.Empty;
+        public int Count { get; set; }
+        public decimal Income { get; set; }
+        public decimal Expense { get; set; }
+        public decimal Transfer { get; set; }
+        public decimal Deposit { get; set; }
+        public decimal Net { get; set; }
+    }
 
     private static Color GetCategoryColor(string category) => category switch
     {

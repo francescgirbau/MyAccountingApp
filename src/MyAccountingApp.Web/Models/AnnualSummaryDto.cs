@@ -1,5 +1,12 @@
 namespace MyAccountingApp.Web.Models;
 
+public class RawCsvResultDto
+{
+    public int Imported { get; set; }
+    public int Skipped { get; set; }
+    public List<string>? Errors { get; set; }
+}
+
 public class MonthlySummaryDto
 {
     public int Month { get; set; }
