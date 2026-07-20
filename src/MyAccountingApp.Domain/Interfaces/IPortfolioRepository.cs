@@ -35,5 +35,12 @@ namespace MyAccountingApp.Domain.Interfaces
         /// </summary>
         /// <param name="transactions">A collection of asset transactions to initialize the repository.</param>
         public void Initialize(IEnumerable<AssetTransaction> transactions);
+
+        /// <summary>
+        /// Deletes all asset transactions for the specified year.
+        /// </summary>
+        /// <param name="year">The year to delete transactions for.</param>
+        /// <returns>The number of asset transactions deleted.</returns>
+        public int DeleteByYear(int year);
     }
 }

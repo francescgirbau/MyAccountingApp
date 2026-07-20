@@ -56,12 +56,17 @@
 
     <MudText Typo="Typo.subtitle1" GutterBottom="true">Delete transactions by year</MudText>
     <MudText Typo="Typo.body2" Class="mb-4">
-        Delete all cash transactions for a specific year. Asset transactions are not affected.
+        Delete all cash and asset transactions for a specific year.
     </MudText>
     <MudGrid>
         <MudItem xs="6" sm="3">
-            <MudNumericField @bind-Value="_deleteYear" Label="Year" Min="2000" Max="2030"
-                             Variant="Variant.Outlined" Immediate="true" />
+            <MudSelect @bind-Value="_deleteYear" Label="Year" Variant="Variant.Outlined"
+                       Disabled="@_isDeletingYear">
+                @foreach (int y in Enumerable.Range(2000, 50))
+                {
+                    <MudSelectItem Value="y">@y</MudSelectItem>
+                }
+            </MudSelect>
         </MudItem>
         <MudItem xs="6" sm="3" Class="d-flex align-center">
             <MudButton Variant="Variant.Filled" Color="Color.Warning"
@@ -73,7 +78,8 @@
     @if (_deleteYearResult is not null)
     {
         <MudAlert Severity="Severity.Info" Class="mt-2">
-            Deleted <strong>@_deleteYearResult.deleted</strong> transactions for year @_deleteYear.
+            Deleted <strong>@_deleteYearResult.deletedTransactions</strong> transactions and
+            <strong>@_deleteYearResult.deletedAssets</strong> asset transactions for year @_deleteYear.
         </MudAlert>
     }
 </MudPaper>
@@ -225,7 +231,7 @@
             }
 
             _deleteYearResult = await response.Content.ReadFromJsonAsync<DeleteYearResultDto>();
-            Snackbar.Add($"Deleted {_deleteYearResult?.deleted} transactions for {_deleteYear}.", Severity.Success);
+            Snackbar.Add($"Deleted {_deleteYearResult?.deletedTransactions} transactions and {_deleteYearResult?.deletedAssets} assets for {_deleteYear}.", Severity.Success);
         }
         catch (Exception ex)
         {
@@ -247,6 +253,7 @@
     private sealed class DeleteYearResultDto
     {
         public int year { get; set; }
-        public int deleted { get; set; }
+        public int deletedTransactions { get; set; }
+        public int deletedAssets { get; set; }
     }
 }

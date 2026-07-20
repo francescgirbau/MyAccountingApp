@@ -30,5 +30,10 @@ namespace MyAccountingApp.Core.Repositories
             this._assetTransactions.Clear();
             this._assetTransactions.AddRange(transactions);
         }
+
+        public int DeleteByYear(int year)
+        {
+            return this._assetTransactions.RemoveAll(a => a.Transaction.Date.Year == year);
+        }
     }
 }
