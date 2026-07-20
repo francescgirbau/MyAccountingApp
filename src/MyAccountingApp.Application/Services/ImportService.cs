@@ -1,3 +1,4 @@
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using MyAccountingApp.Application.Interfaces;
 using MyAccountingApp.Core.Services;
@@ -115,24 +116,32 @@ public class ImportService : IImportService
 
         if (pendingTransactions.Count > 0)
         {
-            List<Domain.Entities.Transaction> merged = this._transactionRepo.GetAll().ToList();
-            Dictionary<Guid, int> indexById = new Dictionary<Guid, int>(merged.Count);
-            for (int i = 0; i < merged.Count; i++)
+            int dupsSkipped = DeduplicateByFingerprint(pendingTransactions, out List<Domain.Entities.Transaction> deduped);
+
+            if (dupsSkipped > 0)
             {
-                indexById[merged[i].Id] = i;
+                this._logger.LogInformation("Skipped {Count} duplicate transactions by content fingerprint", dupsSkipped);
             }
 
-            foreach (Domain.Entities.Transaction tx in pendingTransactions)
+            List<Domain.Entities.Transaction> merged = this._transactionRepo.GetAll().ToList();
+            HashSet<TransactionFingerprint> existingFingerprints = new HashSet<TransactionFingerprint>(
+                merged.Select(t => t.GetFingerprint()));
+
+            int skippedAgainstExisting = 0;
+            foreach (Domain.Entities.Transaction tx in deduped)
             {
-                if (indexById.TryGetValue(tx.Id, out int index))
+                if (!existingFingerprints.Add(tx.GetFingerprint()))
                 {
-                    merged[index] = tx;
+                    skippedAgainstExisting++;
+                    continue;
                 }
-                else
-                {
-                    indexById[tx.Id] = merged.Count;
-                    merged.Add(tx);
-                }
+
+                merged.Add(tx);
+            }
+
+            if (skippedAgainstExisting > 0)
+            {
+                this._logger.LogInformation("Skipped {Count} transactions already present in store", skippedAgainstExisting);
             }
 
             this._transactionRepo.Initialize(merged);
@@ -175,6 +184,29 @@ public class ImportService : IImportService
             result.Errors.Count);
 
         return result;
+    }
+
+    private static int DeduplicateByFingerprint(
+        List<Domain.Entities.Transaction> candidates,
+        out List<Domain.Entities.Transaction> deduped)
+    {
+        HashSet<TransactionFingerprint> seen = new HashSet<TransactionFingerprint>();
+        deduped = new List<Domain.Entities.Transaction>(candidates.Count);
+        int skipped = 0;
+
+        foreach (Domain.Entities.Transaction tx in candidates)
+        {
+            if (seen.Add(tx.GetFingerprint()))
+            {
+                deduped.Add(tx);
+            }
+            else
+            {
+                skipped++;
+            }
+        }
+
+        return skipped;
     }
 
     private int MatchTransferPairs()

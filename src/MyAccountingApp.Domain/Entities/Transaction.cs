@@ -92,4 +92,16 @@ public class Transaction
             throw new ArgumentException(message, parentType);
         }
     }
+
+    public TransactionFingerprint GetFingerprint() => new TransactionFingerprint(
+        this.Date.Date,
+        Math.Abs(this.Money.Amount),
+        this.Money.Currency,
+        this.Description.Trim().ToUpperInvariant());
 }
+
+public record TransactionFingerprint(
+    DateTime Date,
+    decimal Amount,
+    string Currency,
+    string Description);

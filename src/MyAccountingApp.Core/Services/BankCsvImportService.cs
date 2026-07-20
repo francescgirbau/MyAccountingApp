@@ -33,7 +33,7 @@ public class BankCsvImportService : IBrokerImportService
         return IsTransfer(description) ? TransactionCategory.TRANSFER : baseCategory;
     }
 
-    internal static List<string> ParseCsvLine(string line)
+    public static List<string> ParseCsvLine(string line)
     {
         List<string> fields = new List<string>();
         bool inQuotes = false;
@@ -91,6 +91,7 @@ public class BankCsvImportService : IBrokerImportService
                 {
                     date = DateTime.Parse(fields[0], CultureInfo.InvariantCulture);
                 }
+
                 string description = fields[1];
                 decimal amount = decimal.Parse(fields[2], NumberStyles.Any, CultureInfo.InvariantCulture);
                 string currency = fields[3];

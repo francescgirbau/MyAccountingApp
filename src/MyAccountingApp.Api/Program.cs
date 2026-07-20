@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Diagnostics;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
 using MyAccountingApp.Domain.ValueObjects;
+using System.Globalization;
+using System.Linq;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -259,6 +261,94 @@ app.MapPost($"{prefix}/import/upload", async (HttpContext http, IImportService i
     {
         Directory.Delete(tempDir, recursive: true);
     }
+});
+
+// Raw CSV import: direct dump with minimal parsing, no transformations
+app.MapPost($"{prefix}/import/raw-csv", async (
+    HttpContext http,
+    ITransactionRepository transactionRepo,
+    ITransactionValidator validator,
+    ILogger<Program> logger) =>
+{
+    IFormFile? file = http.Request.Form.Files.FirstOrDefault();
+    if (file is null || file.Length == 0)
+        return Results.BadRequest(new { error = "No file provided" });
+
+    using var reader = new StreamReader(file.OpenReadStream());
+    string[] lines = await reader.ReadToEndAsync().ContinueWith(t => t.Result.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+
+    if (lines.Length < 2)
+        return Results.BadRequest(new { error = "CSV must have a header row and at least one data row" });
+
+    List<Transaction> parsed = new();
+    List<string> errors = new();
+    string defaultCurrency = "EUR";
+
+    for (int i = 1; i < lines.Length; i++)
+    {
+        List<string> parts = BankCsvImportService.ParseCsvLine(lines[i]);
+        if (parts.Count < 3)
+        {
+            errors.Add($"Line {i + 1}: expected at least 3 columns (Date,Description,Amount), got {parts.Count}");
+            continue;
+        }
+
+        DateTime date;
+        if (!DateTime.TryParse(parts[0], CultureInfo.CreateSpecificCulture("ca-ES"), DateTimeStyles.None, out date)
+            && !DateTime.TryParse(parts[0], CultureInfo.InvariantCulture, DateTimeStyles.None, out date))
+        {
+            errors.Add($"Line {i + 1}: invalid date '{parts[0]}'");
+            continue;
+        }
+
+        string description = parts[1];
+
+        decimal amount;
+        if (!decimal.TryParse(parts[2], NumberStyles.Any, CultureInfo.InvariantCulture, out amount))
+        {
+            errors.Add($"Line {i + 1}: invalid amount '{parts[2]}'");
+            continue;
+        }
+
+        string currency = parts.Count >= 4 ? parts[3].ToUpperInvariant() : defaultCurrency;
+
+        TransactionCategory category = amount >= 0 ? TransactionCategory.INCOME : TransactionCategory.EXPENSE;
+        Money money = new Money(Math.Abs(amount), currency);
+        Transaction transaction = new Transaction(date, description, money, category);
+
+        ValidationResult vr = validator.Validate(transaction);
+        if (!vr.IsValid)
+        {
+            errors.AddRange(vr.Errors.Select(e => $"Line {i + 1}: {e.Message}"));
+            continue;
+        }
+
+        parsed.Add(transaction);
+    }
+
+    if (parsed.Count == 0)
+    {
+        return Results.Ok(new
+        {
+            imported = 0,
+            skipped = 0,
+            errors = errors,
+            message = "No valid transactions found in CSV",
+        });
+    }
+
+    List<Transaction> existing = transactionRepo.GetAll().ToList();
+    existing.AddRange(parsed);
+    transactionRepo.Initialize(existing);
+
+    logger.LogInformation("Raw CSV import: {Imported} imported", parsed.Count);
+
+    return Results.Ok(new
+    {
+        imported = parsed.Count,
+        skipped = 0,
+        errors = errors,
+    });
 });
 
 // Clears cash transactions and portfolio (asset) data. Does not touch currency conversions.
