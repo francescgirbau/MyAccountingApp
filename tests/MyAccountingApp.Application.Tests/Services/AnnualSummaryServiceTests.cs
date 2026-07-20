@@ -180,6 +180,8 @@ public class AnnualSummaryServiceTests
 
         public IEnumerable<Transaction> GetAll() => this._transactions;
 
+        public int DeleteByYear(int year) => this._transactions.RemoveAll(t => t.Date.Year == year);
+
         public void Initialize(IEnumerable<Transaction> transactions)
         {
             this._transactions.Clear();

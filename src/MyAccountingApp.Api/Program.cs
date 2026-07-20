@@ -166,6 +166,12 @@ app.MapDelete($"{prefix}/transactions/{{id:guid}}", (Guid id, ITransactionReposi
     return Results.NoContent();
 });
 
+app.MapDelete($"{prefix}/transactions/year/{{year:int}}", (int year, ITransactionRepository repo) =>
+{
+    int removed = repo.DeleteByYear(year);
+    return Results.Ok(new { year, deleted = removed });
+});
+
 app.MapGet($"{prefix}/asset-transactions", (IPortfolioRepository repo) =>
 {
     List<AssetTransactionDto> transactions = repo.GetAllTransactions().Select(t => t.ToDto()).ToList();

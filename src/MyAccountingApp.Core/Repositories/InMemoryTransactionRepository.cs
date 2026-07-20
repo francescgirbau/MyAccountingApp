@@ -43,6 +43,11 @@ public class InMemoryTransactionRepository : ITransactionRepository
     /// The Initialize method clears any existing transactions and populates the repository with the provided collection.
     /// </summary>
     /// <param name="transactions">The transactions to initialize the repository with.</param>
+    public int DeleteByYear(int year)
+    {
+        return this._transactions.RemoveAll(tx => tx.Date.Year == year);
+    }
+
     public void Initialize(IEnumerable<Transaction> transactions)
     {
         this._transactions.Clear();

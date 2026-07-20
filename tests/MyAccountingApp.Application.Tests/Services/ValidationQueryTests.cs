@@ -69,6 +69,7 @@ public class ValidationQueryTests
 
         public IEnumerable<Transaction> GetAll() => this._transactions;
         public bool Delete(Transaction transaction) => this._transactions.Remove(transaction);
+        public int DeleteByYear(int year) => this._transactions.RemoveAll(t => t.Date.Year == year);
     }
 
     private sealed class FakePfRepo : IPortfolioRepository

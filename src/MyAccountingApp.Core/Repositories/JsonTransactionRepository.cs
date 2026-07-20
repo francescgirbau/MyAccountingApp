@@ -96,6 +96,18 @@ public class JsonTransactionRepository : ITransactionRepository
         }
     }
 
+    public int DeleteByYear(int year)
+    {
+        List<Transaction> transactions = this.GetAll().ToList();
+        int removed = transactions.RemoveAll(tx => tx.Date.Year == year);
+        if (removed > 0)
+        {
+            this.WriteAll(transactions);
+        }
+
+        return removed;
+    }
+
     public void Initialize(IEnumerable<Transaction> transactions) => this.WriteAll(transactions);
 
     private void WriteAll(IEnumerable<Transaction> transactions)
