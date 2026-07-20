@@ -160,4 +160,34 @@ public class BankCsvImportServiceTests
 
         Assert.Empty(result);
     }
+
+    [Fact]
+    public void ParseCsvLine_ShouldSplitSimpleLine()
+    {
+        List<string> parts = BankCsvImportService.ParseCsvLine("2024-01-15,Supermercat,-85.30,EUR");
+
+        Assert.Equal(4, parts.Count);
+        Assert.Equal("2024-01-15", parts[0]);
+        Assert.Equal("Supermercat", parts[1]);
+        Assert.Equal("-85.30", parts[2]);
+        Assert.Equal("EUR", parts[3]);
+    }
+
+    [Fact]
+    public void ParseCsvLine_ShouldHandleQuotedFieldWithCommas()
+    {
+        List<string> parts = BankCsvImportService.ParseCsvLine("2024-01-15,\"R/ TELEFONICA, S. A.\",-48.01,EUR");
+
+        Assert.Equal(4, parts.Count);
+        Assert.Equal("R/ TELEFONICA, S. A.", parts[1]);
+    }
+
+    [Fact]
+    public void ParseCsvLine_ShouldHandleQuotedFieldAtEnd()
+    {
+        List<string> parts = BankCsvImportService.ParseCsvLine("2024-01-15,Test,100,\"USD\"");
+
+        Assert.Equal(4, parts.Count);
+        Assert.Equal("USD", parts[3]);
+    }
 }
