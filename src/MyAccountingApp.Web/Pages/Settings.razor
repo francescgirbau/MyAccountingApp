@@ -60,11 +60,11 @@
     </MudText>
     <MudGrid>
         <MudItem xs="6" sm="3">
-            <MudSelect @bind-Value="_deleteYear" Label="Year" Variant="Variant.Outlined"
+            <MudSelect T="int?" @bind-Value="_deleteYear" Label="Year" Variant="Variant.Outlined"
                        Disabled="@_isDeletingYear">
                 @foreach (int y in Enumerable.Range(2000, 50))
                 {
-                    <MudSelectItem Value="y">@y</MudSelectItem>
+                    <MudSelectItem T="int?" Value="y">@y</MudSelectItem>
                 }
             </MudSelect>
         </MudItem>
@@ -82,11 +82,41 @@
             <strong>@_deleteYearResult.deletedAssets</strong> asset transactions for year @_deleteYear.
         </MudAlert>
     }
+
+    <MudDivider Class="my-4" />
+
+    <MudText Typo="Typo.subtitle1" GutterBottom="true">Delete asset transactions by year</MudText>
+    <MudText Typo="Typo.body2" Class="mb-4">
+        Delete only portfolio / asset transactions for a specific year. Cash transactions are kept.
+    </MudText>
+    <MudGrid>
+        <MudItem xs="6" sm="3">
+            <MudSelect T="int?" @bind-Value="_deleteAssetYear" Label="Year" Variant="Variant.Outlined"
+                       Disabled="@_isDeletingAssetYear">
+                @foreach (int y in Enumerable.Range(2000, 50))
+                {
+                    <MudSelectItem T="int?" Value="y">@y</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="6" sm="3" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Warning"
+                       OnClick="@DeleteAssetYearAsync" Disabled="@(_deleteAssetYear is null || _isDeletingAssetYear)">
+                Delete asset year
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+    @if (_deleteAssetYearResult is not null)
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-2">
+            Deleted <strong>@_deleteAssetYearResult.deletedAssets</strong> asset transactions for year @_deleteAssetYear.
+        </MudAlert>
+    }
 </MudPaper>
 
 @if (_lastRestoreMessage is not null)
 {
-    <MudAlert Severity="@_restoreSeverity" Class="mb-4" Dismissible="true">
+    <MudAlert Severity="@_restoreSeverity" Class="mb-4" Dismissable="true">
         @_lastRestoreMessage
     </MudAlert>
 }
@@ -122,6 +152,9 @@
     private int? _deleteYear;
     private DeleteYearResultDto? _deleteYearResult;
     private bool _isDeletingYear;
+    private int? _deleteAssetYear;
+    private DeleteAssetYearResultDto? _deleteAssetYearResult;
+    private bool _isDeletingAssetYear;
 
     private void DownloadBackup()
     {
@@ -255,5 +288,40 @@
         public int year { get; set; }
         public int deletedTransactions { get; set; }
         public int deletedAssets { get; set; }
+    }
+
+    private sealed class DeleteAssetYearResultDto
+    {
+        public int year { get; set; }
+        public int deletedAssets { get; set; }
+    }
+
+    private async Task DeleteAssetYearAsync()
+    {
+        if (_deleteAssetYear is null) return;
+
+        _isDeletingAssetYear = true;
+        _deleteAssetYearResult = null;
+        try
+        {
+            var response = await Http.DeleteAsync($"/api/asset-transactions/year/{_deleteAssetYear}");
+            if (!response.IsSuccessStatusCode)
+            {
+                string body = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Delete failed: {(int)response.StatusCode} {body}", Severity.Error);
+                return;
+            }
+
+            _deleteAssetYearResult = await response.Content.ReadFromJsonAsync<DeleteAssetYearResultDto>();
+            Snackbar.Add($"Deleted {_deleteAssetYearResult?.deletedAssets} asset transactions for {_deleteAssetYear}.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Delete failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isDeletingAssetYear = false;
+        }
     }
 }
