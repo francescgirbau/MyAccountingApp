@@ -60,11 +60,11 @@
     </MudText>
     <MudGrid>
         <MudItem xs="6" sm="3">
-            <MudSelect @bind-Value="_deleteYear" Label="Year" Variant="Variant.Outlined"
+            <MudSelect T="int?" @bind-Value="_deleteYear" Label="Year" Variant="Variant.Outlined"
                        Disabled="@_isDeletingYear">
                 @foreach (int y in Enumerable.Range(2000, 50))
                 {
-                    <MudSelectItem Value="y">@y</MudSelectItem>
+                    <MudSelectItem T="int?" Value="y">@y</MudSelectItem>
                 }
             </MudSelect>
         </MudItem>
@@ -91,11 +91,11 @@
     </MudText>
     <MudGrid>
         <MudItem xs="6" sm="3">
-            <MudSelect @bind-Value="_deleteAssetYear" Label="Year" Variant="Variant.Outlined"
+            <MudSelect T="int?" @bind-Value="_deleteAssetYear" Label="Year" Variant="Variant.Outlined"
                        Disabled="@_isDeletingAssetYear">
                 @foreach (int y in Enumerable.Range(2000, 50))
                 {
-                    <MudSelectItem Value="y">@y</MudSelectItem>
+                    <MudSelectItem T="int?" Value="y">@y</MudSelectItem>
                 }
             </MudSelect>
         </MudItem>
