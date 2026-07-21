@@ -300,9 +300,9 @@ app.MapPost($"{prefix}/import/raw-csv", async (
     for (int i = 1; i < lines.Length; i++)
     {
         List<string> parts = BankCsvImportService.ParseCsvLine(lines[i]);
-        if (parts.Count < 3)
+        if (parts.Count < 4)
         {
-            errors.Add($"Line {i + 1}: expected at least 3 columns (Date,Description,Amount), got {parts.Count}");
+            errors.Add($"Line {i + 1}: expected at least 4 columns (Date,Description,Amount,Type), got {parts.Count}");
             continue;
         }
 
@@ -323,9 +323,13 @@ app.MapPost($"{prefix}/import/raw-csv", async (
             continue;
         }
 
-        string currency = parts.Count >= 4 ? parts[3].ToUpperInvariant() : defaultCurrency;
+        if (!Enum.TryParse<TransactionCategory>(parts[3], ignoreCase: true, out TransactionCategory category))
+        {
+            errors.Add($"Line {i + 1}: invalid type '{parts[3]}' (valid: Income, Expense, Transfer, Deposit)");
+            continue;
+        }
 
-        TransactionCategory category = amount >= 0 ? TransactionCategory.INCOME : TransactionCategory.EXPENSE;
+        string currency = parts.Count >= 5 ? parts[4].ToUpperInvariant() : defaultCurrency;
         Money money = new Money(Math.Abs(amount), currency);
         Transaction transaction = new Transaction(date, description, money, category);
 
