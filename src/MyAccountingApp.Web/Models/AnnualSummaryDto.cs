@@ -17,6 +17,8 @@ public class MonthlySummaryDto
     public decimal NetCashFlow { get; set; }
     public int TransactionCount { get; set; }
     public int AssetTransactionCount { get; set; }
+    public decimal Transfers { get; set; }
+    public decimal Deposits { get; set; }
 }
 
 public class AnnualSummaryDto
@@ -30,4 +32,6 @@ public class AnnualSummaryDto
     public int TransactionCount { get; set; }
     public int AssetTransactionCount { get; set; }
     public List<MonthlySummaryDto>? Months { get; set; }
+    public decimal Transfers { get; set; }
+    public decimal Deposits { get; set; }
 }

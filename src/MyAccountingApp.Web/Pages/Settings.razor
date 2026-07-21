@@ -142,6 +142,39 @@
     </DialogActions>
 </MudDialog>
 
+<MudDialog @bind-Visible="_showDeleteYearDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete year @_deleteYear?</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>
+            This will remove <strong>@_deleteYearPreviewTransactions</strong> cash and
+            <strong>@_deleteYearPreviewAssets</strong> asset transactions for year @_deleteYear.
+        </MudText>
+        <MudText Class="mt-2" Typo="Typo.body2">This cannot be undone.</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@CloseDeleteYearDialog">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@ConfirmDeleteYearAsync" Disabled="@_isDeletingYear">Yes, delete @_deleteYear</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_showDeleteAssetYearDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete asset transactions for @_deleteAssetYear?</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>
+            This will remove <strong>@_deleteAssetYearPreviewAssets</strong> asset transactions for year @_deleteAssetYear.
+        </MudText>
+        <MudText Class="mt-2" Typo="Typo.body2">This cannot be undone.</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@CloseDeleteAssetYearDialog">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@ConfirmDeleteAssetYearAsync" Disabled="@_isDeletingAssetYear">Yes, delete @_deleteAssetYear</MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
     private bool _isRestoring;
     private bool _isResetting;
@@ -155,6 +188,11 @@
     private int? _deleteAssetYear;
     private DeleteAssetYearResultDto? _deleteAssetYearResult;
     private bool _isDeletingAssetYear;
+    private bool _showDeleteYearDialog;
+    private int _deleteYearPreviewTransactions;
+    private int _deleteYearPreviewAssets;
+    private bool _showDeleteAssetYearDialog;
+    private int _deleteAssetYearPreviewAssets;
 
     private void DownloadBackup()
     {
@@ -255,6 +293,39 @@
         _deleteYearResult = null;
         try
         {
+            var preview = await Http.GetFromJsonAsync<DeleteYearCountDto>($"/api/transactions/year/{_deleteYear}/count");
+            if (preview is null)
+            {
+                Snackbar.Add("Failed to load preview counts.", Severity.Error);
+                return;
+            }
+
+            _deleteYearPreviewTransactions = preview.transactions;
+            _deleteYearPreviewAssets = preview.assets;
+            _showDeleteYearDialog = true;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load preview: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isDeletingYear = false;
+        }
+    }
+
+    private void CloseDeleteYearDialog()
+    {
+        _showDeleteYearDialog = false;
+    }
+
+    private async Task ConfirmDeleteYearAsync()
+    {
+        if (_deleteYear is null) return;
+
+        _isDeletingYear = true;
+        try
+        {
             var response = await Http.DeleteAsync($"/api/transactions/year/{_deleteYear}");
             if (!response.IsSuccessStatusCode)
             {
@@ -264,6 +335,7 @@
             }
 
             _deleteYearResult = await response.Content.ReadFromJsonAsync<DeleteYearResultDto>();
+            _showDeleteYearDialog = false;
             Snackbar.Add($"Deleted {_deleteYearResult?.deletedTransactions} transactions and {_deleteYearResult?.deletedAssets} assets for {_deleteYear}.", Severity.Success);
         }
         catch (Exception ex)
@@ -296,12 +368,57 @@
         public int deletedAssets { get; set; }
     }
 
+    private sealed class DeleteYearCountDto
+    {
+        public int year { get; set; }
+        public int transactions { get; set; }
+        public int assets { get; set; }
+    }
+
+    private sealed class DeleteAssetYearCountDto
+    {
+        public int year { get; set; }
+        public int assets { get; set; }
+    }
+
     private async Task DeleteAssetYearAsync()
     {
         if (_deleteAssetYear is null) return;
 
         _isDeletingAssetYear = true;
         _deleteAssetYearResult = null;
+        try
+        {
+            var preview = await Http.GetFromJsonAsync<DeleteAssetYearCountDto>($"/api/asset-transactions/year/{_deleteAssetYear}/count");
+            if (preview is null)
+            {
+                Snackbar.Add("Failed to load preview counts.", Severity.Error);
+                return;
+            }
+
+            _deleteAssetYearPreviewAssets = preview.assets;
+            _showDeleteAssetYearDialog = true;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load preview: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isDeletingAssetYear = false;
+        }
+    }
+
+    private void CloseDeleteAssetYearDialog()
+    {
+        _showDeleteAssetYearDialog = false;
+    }
+
+    private async Task ConfirmDeleteAssetYearAsync()
+    {
+        if (_deleteAssetYear is null) return;
+
+        _isDeletingAssetYear = true;
         try
         {
             var response = await Http.DeleteAsync($"/api/asset-transactions/year/{_deleteAssetYear}");
@@ -313,6 +430,7 @@
             }
 
             _deleteAssetYearResult = await response.Content.ReadFromJsonAsync<DeleteAssetYearResultDto>();
+            _showDeleteAssetYearDialog = false;
             Snackbar.Add($"Deleted {_deleteAssetYearResult?.deletedAssets} asset transactions for {_deleteAssetYear}.", Severity.Success);
         }
         catch (Exception ex)

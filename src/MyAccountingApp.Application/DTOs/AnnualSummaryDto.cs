@@ -8,7 +8,9 @@ public record MonthlySummaryDto(
     decimal InvestmentSales,
     decimal NetCashFlow,
     int TransactionCount,
-    int AssetTransactionCount);
+    int AssetTransactionCount,
+    decimal Transfers,
+    decimal Deposits);
 
 public record AnnualSummaryDto(
     int Year,
@@ -19,4 +21,6 @@ public record AnnualSummaryDto(
     decimal NetCashFlow,
     int TransactionCount,
     int AssetTransactionCount,
-    List<MonthlySummaryDto> Months);
+    List<MonthlySummaryDto> Months,
+    decimal Transfers,
+    decimal Deposits);

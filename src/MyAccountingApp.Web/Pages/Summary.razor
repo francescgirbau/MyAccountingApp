@@ -25,6 +25,8 @@ else if (Year.HasValue)
             <MudGrid>
                 <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Income</MudText><MudText Typo="Typo.h5" Color="Color.Success">@_summary?.Income.ToString("N2") €</MudText></MudItem>
                 <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Expenses</MudText><MudText Typo="Typo.h5" Color="Color.Error">@_summary?.Expenses.ToString("N2") €</MudText></MudItem>
+                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Transfers</MudText><MudText Typo="Typo.h5">@_summary?.Transfers.ToString("N2") €</MudText></MudItem>
+                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Deposits</MudText><MudText Typo="Typo.h5" Color="Color.Success">@_summary?.Deposits.ToString("N2") €</MudText></MudItem>
                 <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Net Cash Flow</MudText><MudText Typo="Typo.h5" Color="@NetCashFlowColor">@_summary?.NetCashFlow.ToString("N2") €</MudText></MudItem>
                 <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Transactions</MudText><MudText Typo="Typo.h5">@_summary?.TransactionCount</MudText></MudItem>
                 <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Investment Purchases</MudText><MudText Typo="Typo.h5">@_summary?.InvestmentPurchases.ToString("N2") €</MudText></MudItem>
@@ -39,18 +41,22 @@ else if (Year.HasValue)
         <MudText Typo="Typo.h5" GutterBottom="true" Class="mt-8">Monthly Breakdown</MudText>
         <MudTable Items="@_summary.Months" Dense="true" Hover="true" Striped="true" Class="mt-4">
             <ColGroup>
-                <col style="width: 12%" />
-                <col style="width: 16%" />
-                <col style="width: 16%" />
-                <col style="width: 16%" />
-                <col style="width: 16%" />
-                <col style="width: 12%" />
-                <col style="width: 12%" />
+                <col style="width: 10%" />
+                <col style="width: 13%" />
+                <col style="width: 13%" />
+                <col style="width: 11%" />
+                <col style="width: 11%" />
+                <col style="width: 13%" />
+                <col style="width: 13%" />
+                <col style="width: 8%" />
+                <col style="width: 8%" />
             </ColGroup>
             <HeaderContent>
                 <MudTh>Month</MudTh>
                 <MudTh><MudText Color="Color.Success">Income</MudText></MudTh>
                 <MudTh><MudText Color="Color.Error">Expenses</MudText></MudTh>
+                <MudTh>Transfers</MudTh>
+                <MudTh>Deposits</MudTh>
                 <MudTh>Net Cash Flow</MudTh>
                 <MudTh>Purchases</MudTh>
                 <MudTh>Sales</MudTh>
@@ -60,6 +66,8 @@ else if (Year.HasValue)
                 <MudTd DataLabel="Month">@GetMonthName(context.Month)</MudTd>
                 <MudTd DataLabel="Income"><MudText Color="Color.Success">@context.Income.ToString("N2") €</MudText></MudTd>
                 <MudTd DataLabel="Expenses"><MudText Color="Color.Error">@context.Expenses.ToString("N2") €</MudText></MudTd>
+                <MudTd DataLabel="Transfers">@context.Transfers.ToString("N2") €</MudTd>
+                <MudTd DataLabel="Deposits">@context.Deposits.ToString("N2") €</MudTd>
                 <MudTd DataLabel="Net Cash Flow"><MudText Color="@NetColor(context.NetCashFlow)">@context.NetCashFlow.ToString("N2") €</MudText></MudTd>
                 <MudTd DataLabel="Purchases">@context.InvestmentPurchases.ToString("N2") €</MudTd>
                 <MudTd DataLabel="Sales">@context.InvestmentSales.ToString("N2") €</MudTd>
@@ -69,6 +77,8 @@ else if (Year.HasValue)
                 <MudTd><MudText Typo="Typo.subtitle2">Total</MudText></MudTd>
                 <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Success">@_summary?.Income.ToString("N2") €</MudText></MudTd>
                 <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Error">@_summary?.Expenses.ToString("N2") €</MudText></MudTd>
+                <MudTd><MudText Typo="Typo.subtitle2">@_summary?.Transfers.ToString("N2") €</MudText></MudTd>
+                <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Success">@_summary?.Deposits.ToString("N2") €</MudText></MudTd>
                 <MudTd><MudText Typo="Typo.subtitle2" Color="@NetCashFlowColor">@_summary?.NetCashFlow.ToString("N2") €</MudText></MudTd>
                 <MudTd><MudText Typo="Typo.subtitle2">@_summary?.InvestmentPurchases.ToString("N2") €</MudText></MudTd>
                 <MudTd><MudText Typo="Typo.subtitle2">@_summary?.InvestmentSales.ToString("N2") €</MudText></MudTd>

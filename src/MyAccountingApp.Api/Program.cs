@@ -173,6 +173,13 @@ app.MapDelete($"{prefix}/transactions/year/{{year:int}}", (int year, ITransactio
     return Results.Ok(new { year, deletedTransactions = transactionsRemoved, deletedAssets = assetsRemoved });
 });
 
+app.MapGet($"{prefix}/transactions/year/{{year:int}}/count", (int year, ITransactionRepository repo, IPortfolioRepository portfolioRepo) =>
+{
+    int transactions = repo.GetAll().Count(t => t.Date.Year == year);
+    int assets = portfolioRepo.GetAllTransactions().Count(a => a.Transaction.Date.Year == year);
+    return Results.Ok(new { year, transactions, assets });
+});
+
 app.MapGet($"{prefix}/asset-transactions", (IPortfolioRepository repo) =>
 {
     List<AssetTransactionDto> transactions = repo.GetAllTransactions().Select(t => t.ToDto()).ToList();
@@ -243,6 +250,12 @@ app.MapDelete($"{prefix}/asset-transactions/year/{{year:int}}", (int year, IPort
 {
     int removed = portfolioRepo.DeleteByYear(year);
     return Results.Ok(new { year, deletedAssets = removed });
+});
+
+app.MapGet($"{prefix}/asset-transactions/year/{{year:int}}/count", (int year, IPortfolioRepository portfolioRepo) =>
+{
+    int assets = portfolioRepo.GetAllTransactions().Count(a => a.Transaction.Date.Year == year);
+    return Results.Ok(new { year, assets });
 });
 
 app.MapPost($"{prefix}/import", async (ImportRequest request, IImportService importService) =>
@@ -461,8 +474,7 @@ app.MapPost($"{prefix}/backup", async (HttpRequest request, ITransactionReposito
             return Results.BadRequest(new { error = "Invalid backup file format: 'transactions' array is required" });
 
         txRepo.Initialize(backup.Transactions);
-        if (backup.AssetTransactions is not null)
-            pfRepo.Initialize(backup.AssetTransactions);
+        pfRepo.Initialize(backup.AssetTransactions ?? Array.Empty<AssetTransaction>());
 
         logger.LogInformation("Backup restored: {Count} transactions, {Count2} asset transactions",
             backup.Transactions.Count, backup.AssetTransactions?.Count ?? 0);

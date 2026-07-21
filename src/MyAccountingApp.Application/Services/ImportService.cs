@@ -116,34 +116,8 @@ public class ImportService : IImportService
 
         if (pendingTransactions.Count > 0)
         {
-            int dupsSkipped = DeduplicateByFingerprint(pendingTransactions, out List<Domain.Entities.Transaction> deduped);
-
-            if (dupsSkipped > 0)
-            {
-                this._logger.LogInformation("Skipped {Count} duplicate transactions by content fingerprint", dupsSkipped);
-            }
-
             List<Domain.Entities.Transaction> merged = this._transactionRepo.GetAll().ToList();
-            HashSet<TransactionFingerprint> existingFingerprints = new HashSet<TransactionFingerprint>(
-                merged.Select(t => t.GetFingerprint()));
-
-            int skippedAgainstExisting = 0;
-            foreach (Domain.Entities.Transaction tx in deduped)
-            {
-                if (!existingFingerprints.Add(tx.GetFingerprint()))
-                {
-                    skippedAgainstExisting++;
-                    continue;
-                }
-
-                merged.Add(tx);
-            }
-
-            if (skippedAgainstExisting > 0)
-            {
-                this._logger.LogInformation("Skipped {Count} transactions already present in store", skippedAgainstExisting);
-            }
-
+            merged.AddRange(pendingTransactions);
             this._transactionRepo.Initialize(merged);
         }
 
