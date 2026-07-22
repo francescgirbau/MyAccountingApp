@@ -193,19 +193,34 @@ public partial class DegiroImportService : IBrokerImportService
     private static Transaction? CreateCashTransaction(
         DateTime date, string description, decimal amount, string currency)
     {
-        TransactionCategory category = ClassifyDescription(description, amount);
-        if (category == TransactionCategory.DEPOSIT)
+        TransactionCategory? category = ClassifyDescription(description, amount);
+        if (category is null)
         {
             return null;
         }
 
         Money money = new Money(Math.Abs(amount), currency);
-        return new Transaction(date, description, money, category);
+        return new Transaction(date, description, money, category.Value);
     }
 
-    private static TransactionCategory ClassifyDescription(string description, decimal amount)
+    private static TransactionCategory? ClassifyDescription(string description, decimal amount)
     {
         string upper = description.ToUpperInvariant();
+
+        if (upper.Contains("CASH SWEEP") || upper.Contains("CASH SWEEP TRANSFER"))
+        {
+            return null;
+        }
+
+        if (upper.Contains("TRANSFERIR") && upper.Contains("CUENTA DE EFECTIVO"))
+        {
+            return null;
+        }
+
+        if (upper.Contains("CAMBIO DE DIVISA") || upper == "FX")
+        {
+            return null;
+        }
 
         if (upper.Contains("DIVIDENDO") || upper.Contains("DIVIDEND"))
         {
@@ -242,22 +257,12 @@ public partial class DegiroImportService : IBrokerImportService
             return TransactionCategory.EXPENSE;
         }
 
-        if (upper.Contains("CASH SWEEP") || upper.Contains("TRANSFERIR") || upper.Contains("TRANSFER"))
-        {
-            return TransactionCategory.DEPOSIT;
-        }
-
-        if (upper.Contains("DEPOSIT") || upper.Contains("WITHDRAWAL"))
-        {
-            return TransactionCategory.DEPOSIT;
-        }
-
         if (upper.Contains("FLATEX"))
         {
             return TransactionCategory.DEPOSIT;
         }
 
-        if (upper.Contains("CAMBIO DE DIVISA") || upper.Contains("FX") || upper.Contains("EXCHANGE"))
+        if (upper.Contains("DEPOSIT"))
         {
             return TransactionCategory.DEPOSIT;
         }
