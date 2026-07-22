@@ -159,7 +159,7 @@ public class BrokerImportDispatcherTests
 
             Assert.Empty(txs);
             Assert.NotEmpty(assets);
-            Assert.Equal("ES0171996087", assets.First().Symbol);
+            Assert.Equal("GRIFOLS", assets.First().Symbol);
             Assert.Equal(40, assets.First().Quantity);
         }
         finally

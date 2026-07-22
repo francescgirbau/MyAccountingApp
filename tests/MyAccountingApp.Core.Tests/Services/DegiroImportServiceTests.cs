@@ -24,7 +24,7 @@ public class DegiroImportServiceTests
 
             Assert.Empty(txs);
             var a = Assert.Single(assets);
-            Assert.Equal("ES0171996087", a.Symbol);
+            Assert.Equal("GRIFOLS", a.Symbol);
             Assert.Equal(40, a.Quantity);
             Assert.Equal(661.20m, a.Transaction.Money.Amount);
             Assert.Equal("EUR", a.Transaction.Money.Currency);
@@ -49,7 +49,7 @@ public class DegiroImportServiceTests
 
             Assert.Empty(txs);
             var a = Assert.Single(assets);
-            Assert.Equal("US9111631035", a.Symbol);
+            Assert.Equal("UNITED", a.Symbol);
             Assert.Equal(21, a.Quantity);
             Assert.Equal(903, a.Transaction.Money.Amount);
         }
@@ -161,7 +161,7 @@ public class DegiroImportServiceTests
 
             Assert.Empty(txs);
             var a = Assert.Single(assets);
-            Assert.Equal("DE000A27Z304", a.Symbol);
+            Assert.Equal("BTCETC", a.Symbol);
             Assert.Equal(5, a.Quantity);
             Assert.Equal(496.13m, a.Transaction.Money.Amount);
             Assert.Equal("USD", a.Transaction.Money.Currency);

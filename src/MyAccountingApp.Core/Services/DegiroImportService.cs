@@ -41,6 +41,7 @@ public partial class DegiroImportService : IBrokerImportService
                 }
 
                 DateTime date = ParseDate(fields[0]);
+                string producto = fields[3];
                 string description = fields[5];
                 string isin = fields[4];
                 string currency = NormalizeCurrency(fields[7], fields[9]);
@@ -53,7 +54,7 @@ public partial class DegiroImportService : IBrokerImportService
 
                 if (IsBuySell(description))
                 {
-                    var (assetTx, cashTx) = CreateAssetTransaction(date, description, isin, amount, currency);
+                    var (assetTx, cashTx) = CreateAssetTransaction(date, description, isin, producto, amount, currency);
                     assetTransactions.Add(assetTx);
                     if (cashTx is not null)
                     {
@@ -141,15 +142,48 @@ public partial class DegiroImportService : IBrokerImportService
     [GeneratedRegex(@"^(?:Compra|Venta)\s+(\d+)\s", RegexOptions.IgnoreCase, 1000)]
     private static partial Regex QuantityPattern();
 
+    private static string ExtractSymbol(string producto, string isin)
+    {
+        if (string.IsNullOrWhiteSpace(producto))
+        {
+            return string.IsNullOrWhiteSpace(isin) ? "UNKNOWN" : isin;
+        }
+
+        string trimmed = producto.TrimStart();
+
+        if (trimmed.StartsWith("ADR ", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("ADR/GDR ", StringComparison.OrdinalIgnoreCase))
+        {
+            int spaceIdx = trimmed.IndexOf(' ');
+            if (spaceIdx > 0)
+            {
+                string rest = trimmed[(spaceIdx + 1)..].TrimStart();
+                if (rest.StartsWith("ON ", StringComparison.OrdinalIgnoreCase))
+                {
+                    rest = rest[3..].TrimStart();
+                }
+
+                if (rest.Length > 0)
+                {
+                    int nextSpace = rest.IndexOf(' ');
+                    return nextSpace > 0 ? rest[..nextSpace].ToUpperInvariant() : rest.ToUpperInvariant();
+                }
+            }
+        }
+
+        int firstSpace = trimmed.IndexOf(' ');
+        return firstSpace > 0 ? trimmed[..firstSpace].ToUpperInvariant() : trimmed.ToUpperInvariant();
+    }
+
     private static (AssetTransaction, Transaction?) CreateAssetTransaction(
-        DateTime date, string description, string isin, decimal amount, string currency)
+        DateTime date, string description, string isin, string producto, decimal amount, string currency)
     {
         bool isBuy = description.StartsWith("Compra ", StringComparison.OrdinalIgnoreCase);
         int quantity = ExtractQuantity(description);
         AssetTransactionType type = isBuy ? AssetTransactionType.Buy : AssetTransactionType.Sell;
         TransactionCategory category = isBuy ? TransactionCategory.EXPENSE : TransactionCategory.INCOME;
 
-        string symbol = string.IsNullOrWhiteSpace(isin) ? "UNKNOWN" : isin;
+        string symbol = ExtractSymbol(producto, isin);
         Money money = new Money(Math.Abs(amount), currency);
         Transaction transaction = new Transaction(date, description, money, category);
         AssetTransaction assetTx = new AssetTransaction(transaction, symbol, quantity, type);

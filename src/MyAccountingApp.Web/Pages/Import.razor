@@ -100,6 +100,31 @@
         </MudText>
     </MudAlert>
 
+    @if (_result.AssetTransactions.Count > 0 && _showAssetTable)
+    {
+        <MudText Typo="Typo.subtitle1" GutterBottom="true">Asset Transactions</MudText>
+        <MudAlert Severity="Severity.Warning" Class="mb-4" Dense="true">
+            Verify the detected symbols. Incorrect symbols can be edited later in the Portfolio page.
+        </MudAlert>
+        <MudSimpleTable Class="mb-4" Outlined="true" Hover="true">
+            <thead>
+                <tr><th>Symbol</th><th>Description</th><th>Amount</th><th>Currency</th><th>Quantity</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var a in _result.AssetTransactions)
+                {
+                    <tr>
+                        <td><MudText Typo="Typo.body2" Class="mud-primary-text">@a.Symbol</MudText></td>
+                        <td>@a.Transaction.Description</td>
+                        <td>@a.Transaction.Money.Amount.ToString("N2")</td>
+                        <td>@a.Transaction.Money.Currency</td>
+                        <td>@a.Quantity</td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    }
+
     @if (_result.Errors.Count > 0)
     {
         <MudText Typo="Typo.subtitle1" GutterBottom="true">Errors</MudText>
@@ -147,6 +172,7 @@
 @code {
     private ImportResultDto? _result;
     private bool _loading;
+    private bool _showAssetTable;
     private IBrowserFile? _selectedFile;
     private IBrowserFile? _rawFile;
     private IBrowserFile? _degiroFile;
@@ -175,6 +201,7 @@
 
         _loading = true;
         _result = null;
+        _showAssetTable = false;
         try
         {
             using var content = new MultipartFormDataContent();
@@ -202,6 +229,7 @@
 
         _loading = true;
         _result = null;
+        _showAssetTable = false;
         try
         {
             using var content = new MultipartFormDataContent();
@@ -210,6 +238,7 @@
 
             var response = await Http.PostAsync("/api/import/upload", content);
             _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
+            _showAssetTable = true;
             Snackbar.Add("DeGiro import completed.", Severity.Success);
             _degiroFile = null;
         }
@@ -229,6 +258,7 @@
 
         _loading = true;
         _result = null;
+        _showAssetTable = false;
         try
         {
             using var content = new MultipartFormDataContent();
