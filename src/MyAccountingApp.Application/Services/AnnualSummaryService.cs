@@ -77,6 +77,14 @@ public class AnnualSummaryService : IAnnualSummaryService
             .Where(t => t.Category == TransactionCategory.INCOME)
             .Sum(t => t.Money.Amount);
 
+        decimal transfers = yearTxs
+            .Where(t => t.Category == TransactionCategory.TRANSFER)
+            .Sum(t => t.Money.Amount);
+
+        decimal deposits = yearTxs
+            .Where(t => t.Category == TransactionCategory.DEPOSIT)
+            .Sum(t => t.Money.Amount);
+
         decimal investmentPurchases = yearAssetTxs
             .Where(a => a.Type == AssetTransactionType.Buy)
             .Sum(a => a.Transaction.Money.Amount);
@@ -98,7 +106,9 @@ public class AnnualSummaryService : IAnnualSummaryService
             Math.Round(netCashFlow, 2),
             yearTxs.Count,
             yearAssetTxs.Count,
-            months);
+            months,
+            Math.Round(transfers, 2),
+            Math.Round(deposits, 2));
     }
 
     private List<MonthlySummaryDto> BuildMonthlySummaries(
@@ -131,6 +141,14 @@ public class AnnualSummaryService : IAnnualSummaryService
                 .Where(t => t.Category == TransactionCategory.INCOME)
                 .Sum(t => t.Money.Amount);
 
+            decimal transfers = monthTxs
+                .Where(t => t.Category == TransactionCategory.TRANSFER)
+                .Sum(t => t.Money.Amount);
+
+            decimal deposits = monthTxs
+                .Where(t => t.Category == TransactionCategory.DEPOSIT)
+                .Sum(t => t.Money.Amount);
+
             decimal investmentPurchases = monthAssetTxs
                 .Where(a => a.Type == AssetTransactionType.Buy)
                 .Sum(a => a.Transaction.Money.Amount);
@@ -149,7 +167,9 @@ public class AnnualSummaryService : IAnnualSummaryService
                 Math.Round(investmentSales, 2),
                 Math.Round(netCashFlow, 2),
                 monthTxs.Count,
-                monthAssetTxs.Count));
+                monthAssetTxs.Count,
+                Math.Round(transfers, 2),
+                Math.Round(deposits, 2)));
         }
 
         return result;
