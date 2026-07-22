@@ -100,11 +100,12 @@
         </MudText>
     </MudAlert>
 
-    @if (_result.AssetTransactions.Count > 0 && _showAssetTable)
+    @if (_result.AssetTransactions.Count > 0)
     {
-        <MudText Typo="Typo.subtitle1" GutterBottom="true">Asset Transactions</MudText>
+        <MudText Typo="Typo.subtitle1" GutterBottom="true">Asset Transactions — verify and correct symbols</MudText>
         <MudAlert Severity="Severity.Warning" Class="mb-4" Dense="true">
-            Verify the detected symbols. Incorrect symbols can be edited later in the Portfolio page.
+            Symbols are extracted from the product name and may not match the exact Yahoo Finance ticker.
+            Edit them below and click "Save Symbol Corrections".
         </MudAlert>
         <MudSimpleTable Class="mb-4" Outlined="true" Hover="true">
             <thead>
@@ -114,7 +115,13 @@
                 @foreach (var a in _result.AssetTransactions)
                 {
                     <tr>
-                        <td><MudText Typo="Typo.body2" Class="mud-primary-text">@a.Symbol</MudText></td>
+                        <td>
+                            <MudTextField @bind-Value="_editableSymbols[a.Transaction.Id]"
+                                          Variant="Variant.Outlined"
+                                          Dense="true"
+                                          Immediate="true"
+                                          Class="mud-width-full" />
+                        </td>
                         <td>@a.Transaction.Description</td>
                         <td>@a.Transaction.Money.Amount.ToString("N2")</td>
                         <td>@a.Transaction.Money.Currency</td>
@@ -123,6 +130,16 @@
                 }
             </tbody>
         </MudSimpleTable>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   OnClick="@SaveSymbolCorrectionsAsync"
+                   Disabled="@_savingSymbols"
+                   StartIcon="@Icons.Material.Filled.Save">
+            Save Symbol Corrections
+        </MudButton>
+        @if (_savingSymbols)
+        {
+            <MudProgressLinear Indeterminate="true" Class="mt-2" />
+        }
     }
 
     @if (_result.Errors.Count > 0)
@@ -172,7 +189,8 @@
 @code {
     private ImportResultDto? _result;
     private bool _loading;
-    private bool _showAssetTable;
+    private bool _savingSymbols;
+    private Dictionary<Guid, string> _editableSymbols = new();
     private IBrowserFile? _selectedFile;
     private IBrowserFile? _rawFile;
     private IBrowserFile? _degiroFile;
@@ -201,7 +219,7 @@
 
         _loading = true;
         _result = null;
-        _showAssetTable = false;
+        _editableSymbols = new();
         try
         {
             using var content = new MultipartFormDataContent();
@@ -210,6 +228,7 @@
 
             var response = await Http.PostAsync("/api/import/upload", content);
             _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
+            InitEditableSymbols();
             Snackbar.Add("Upload import completed.", Severity.Success);
             _selectedFile = null;
         }
@@ -229,7 +248,7 @@
 
         _loading = true;
         _result = null;
-        _showAssetTable = false;
+        _editableSymbols = new();
         try
         {
             using var content = new MultipartFormDataContent();
@@ -238,7 +257,7 @@
 
             var response = await Http.PostAsync("/api/import/upload", content);
             _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
-            _showAssetTable = true;
+            InitEditableSymbols();
             Snackbar.Add("DeGiro import completed.", Severity.Success);
             _degiroFile = null;
         }
@@ -258,7 +277,7 @@
 
         _loading = true;
         _result = null;
-        _showAssetTable = false;
+        _editableSymbols = new();
         try
         {
             using var content = new MultipartFormDataContent();
@@ -290,4 +309,70 @@
         }
     }
 
+    private void InitEditableSymbols()
+    {
+        if (_result is null) return;
+        _editableSymbols = new();
+        foreach (var a in _result.AssetTransactions)
+        {
+            _editableSymbols[a.Transaction.Id] = a.Symbol;
+        }
+    }
+
+    private async Task SaveSymbolCorrectionsAsync()
+    {
+        if (_result is null || _editableSymbols.Count == 0) return;
+
+        _savingSymbols = true;
+        int saved = 0;
+        int errors = 0;
+
+        foreach (var kv in _editableSymbols)
+        {
+            AssetTransactionDto? original = _result.AssetTransactions.FirstOrDefault(a => a.Transaction.Id == kv.Key);
+            if (original is null) continue;
+            if (original.Symbol == kv.Value) continue;
+
+            try
+            {
+                var request = new
+                {
+                    date = original.Transaction.Date,
+                    description = original.Transaction.Description,
+                    amount = original.Transaction.Money.Amount,
+                    currency = original.Transaction.Money.Currency,
+                    category = original.Transaction.Category,
+                    symbol = kv.Value,
+                    quantity = original.Quantity,
+                    type = original.Type,
+                };
+
+                var response = await Http.PutAsJsonAsync($"/api/asset-transactions/{kv.Key}", request);
+                if (response.IsSuccessStatusCode)
+                {
+                    original.Symbol = kv.Value;
+                    saved++;
+                }
+                else
+                {
+                    errors++;
+                }
+            }
+            catch
+            {
+                errors++;
+            }
+        }
+
+        _savingSymbols = false;
+
+        if (errors == 0)
+        {
+            Snackbar.Add($"Symbols corrected: {saved} updated.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add($"Symbols corrected: {saved} updated, {errors} failed.", Severity.Warning);
+        }
+    }
 }
