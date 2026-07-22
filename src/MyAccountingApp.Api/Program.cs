@@ -63,6 +63,7 @@ builder.Services.AddSingleton<InteractiveBrokersImportService>(sp =>
 });
 builder.Services.AddSingleton<BankCsvImportService>();
 builder.Services.AddSingleton<AssetTransactionCsvImportService>();
+builder.Services.AddSingleton<DegiroImportService>();
 builder.Services.AddSingleton<IBrokerImportService, BrokerImportDispatcher>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -474,7 +475,7 @@ app.MapPost($"{prefix}/backup", async (HttpRequest request, ITransactionReposito
             return Results.BadRequest(new { error = "Invalid backup file format: 'transactions' array is required" });
 
         txRepo.Initialize(backup.Transactions);
-        pfRepo.Initialize(backup.AssetTransactions ?? Array.Empty<AssetTransaction>());
+        pfRepo.Initialize(backup.AssetTransactions ?? []);
 
         logger.LogInformation("Backup restored: {Count} transactions, {Count2} asset transactions",
             backup.Transactions.Count, backup.AssetTransactions?.Count ?? 0);
