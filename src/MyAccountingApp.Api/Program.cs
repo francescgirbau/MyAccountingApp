@@ -487,6 +487,42 @@ app.MapPost($"{prefix}/backup", async (HttpRequest request, ITransactionReposito
     }
 });
 
+// Yahoo Finance symbol lookup by company name
+app.MapGet($"{prefix}/symbol-lookup", async (string name) =>
+{
+    if (string.IsNullOrWhiteSpace(name))
+        return Results.BadRequest(new { error = "Company name is required" });
+
+    using HttpClient client = new();
+    string url = $"https://query1.finance.yahoo.com/v1/finance/search?q={Uri.EscapeDataString(name)}&quotesCount=10";
+
+    try
+    {
+        string json = await client.GetStringAsync(url);
+        using JsonDocument doc = JsonDocument.Parse(json);
+        List<object> results = new();
+
+        foreach (JsonElement quote in doc.RootElement.GetProperty("quotes").EnumerateArray())
+        {
+            string? symbol = quote.TryGetProperty("symbol", out JsonElement s) ? s.GetString() : null;
+            string? longName = quote.TryGetProperty("longname", out JsonElement ln) ? ln.GetString() : null;
+            string? exchange = quote.TryGetProperty("exchange", out JsonElement ex) ? ex.GetString() : null;
+            string? quoteType = quote.TryGetProperty("quoteType", out JsonElement qt) ? qt.GetString() : null;
+
+            if (symbol is not null)
+            {
+                results.Add(new { symbol, name = longName ?? symbol, exchange = exchange ?? string.Empty, type = quoteType ?? string.Empty });
+            }
+        }
+
+        return Results.Ok(results);
+    }
+    catch (Exception ex)
+    {
+        return Results.Ok(new List<object>());
+    }
+});
+
 app.MapFallbackToFile("index.html");
 
 app.Run();

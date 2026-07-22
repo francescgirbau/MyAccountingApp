@@ -116,11 +116,29 @@
                 {
                     <tr>
                         <td>
-                            <MudTextField @bind-Value="_editableSymbols[a.Transaction.Id]"
-                                          Variant="Variant.Outlined"
-                                          Dense="true"
-                                          Immediate="true"
-                                          Class="mud-width-full" />
+                            <div class="d-flex align-center">
+                                <MudTextField @bind-Value="_editableSymbols[a.Transaction.Id]"
+                                              Variant="Variant.Outlined"
+                                              Dense="true"
+                                              Immediate="true"
+                                              Class="flex-grow-1" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                               Size="Size.Small"
+                                               OnClick="@(() => SearchSymbolAsync(a.Transaction.Id, a.Transaction.Description))"
+                                               Disabled="@_symbolSearching.Contains(a.Transaction.Id)" />
+                            </div>
+                            @if (_symbolResults.TryGetValue(a.Transaction.Id, out var symResults) && symResults.Count > 0)
+                            {
+                                <MudPaper Class="pa-2 mt-1" Outlined="true">
+                                    @foreach (var sr in symResults)
+                                    {
+                                        <MudText Typo="Typo.body2" Class="mud-primary-text cursor-pointer"
+                                                 @onclick="@(() => SelectSymbolResult(a.Transaction.Id, sr.Symbol))">
+                                            <strong>@sr.Symbol</strong> — @sr.Name (@sr.Exchange)
+                                        </MudText>
+                                    }
+                                </MudPaper>
+                            }
                         </td>
                         <td>@a.Transaction.Description</td>
                         <td>@a.Transaction.Money.Amount.ToString("N2")</td>
@@ -191,6 +209,8 @@
     private bool _loading;
     private bool _savingSymbols;
     private Dictionary<Guid, string> _editableSymbols = new();
+    private Dictionary<Guid, List<SymbolLookupResult>> _symbolResults = new();
+    private HashSet<Guid> _symbolSearching = new();
     private IBrowserFile? _selectedFile;
     private IBrowserFile? _rawFile;
     private IBrowserFile? _degiroFile;
@@ -374,5 +394,51 @@
         {
             Snackbar.Add($"Symbols corrected: {saved} updated, {errors} failed.", Severity.Warning);
         }
+    }
+
+    private async Task SearchSymbolAsync(Guid assetId, string description)
+    {
+        if (_symbolSearching.Contains(assetId)) return;
+
+        _symbolSearching.Add(assetId);
+        _symbolResults.Remove(assetId);
+
+        string name = description;
+        int atIdx = description.IndexOf('@');
+        if (atIdx > 0)
+        {
+            int spaceBefore = description.LastIndexOf(' ', atIdx - 1);
+            name = spaceBefore > 0 ? description[..spaceBefore].Trim() : description;
+        }
+
+        name = name.Replace("Compra ", string.Empty).Replace("Venta ", string.Empty).Trim();
+
+        try
+        {
+            var results = await Http.GetFromJsonAsync<List<SymbolLookupResult>>($"/api/symbol-lookup?name={Uri.EscapeDataString(name)}");
+            _symbolResults[assetId] = results ?? new();
+        }
+        catch
+        {
+            _symbolResults[assetId] = new();
+        }
+        finally
+        {
+            _symbolSearching.Remove(assetId);
+        }
+    }
+
+    private void SelectSymbolResult(Guid assetId, string symbol)
+    {
+        _editableSymbols[assetId] = symbol;
+        _symbolResults.Remove(assetId);
+    }
+
+    private sealed class SymbolLookupResult
+    {
+        public string Symbol { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Exchange { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
     }
 }
