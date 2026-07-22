@@ -171,4 +171,70 @@ public class DegiroImportServiceTests
             File.Delete(file);
         }
     }
+
+    [Fact]
+    public async Task ParseAllAsync_FlatexDeposit_CreatesDepositTransaction()
+    {
+        string csv = "Fecha,Hora,Fecha valor,Producto,ISIN,Descripción,Tipo,Variación,,Saldo,,ID Orden\n" +
+            "07-11-2021,10:30,07-11-2021,,,Flatex Deposit,,EUR,\"8000,00\",EUR,\"8000,00\",\n";
+
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            var (txs, assets) = await this.service.ParseAllAsync(file);
+
+            Assert.Empty(assets);
+            var t = Assert.Single(txs);
+            Assert.Equal(8000m, t.Money.Amount);
+            Assert.Equal("EUR", t.Money.Currency);
+            Assert.Equal(Domain.Enums.TransactionCategory.DEPOSIT, t.Category);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_FlatexWithdrawal_Skipped()
+    {
+        string csv = "Fecha,Hora,Fecha valor,Producto,ISIN,Descripción,Tipo,Variación,,Saldo,,ID Orden\n" +
+            "17-12-2021,10:30,17-12-2021,,,Flatex Withdrawal,,EUR,\"-800,00\",EUR,\"7200,00\",\n";
+
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            var (txs, assets) = await this.service.ParseAllAsync(file);
+
+            Assert.Empty(txs);
+            Assert.Empty(assets);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_ProcessedFlatexWithdrawal_Skipped()
+    {
+        string csv = "Fecha,Hora,Fecha valor,Producto,ISIN,Descripción,Tipo,Variación,,Saldo,,ID Orden\n" +
+            "17-12-2021,10:30,17-12-2021,,,Processed Flatex Withdrawal,,EUR,\"800,00\",EUR,\"8000,00\",\n";
+
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            var (txs, assets) = await this.service.ParseAllAsync(file);
+
+            Assert.Empty(txs);
+            Assert.Empty(assets);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
 }
