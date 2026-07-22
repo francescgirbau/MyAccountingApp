@@ -407,11 +407,15 @@
         int atIdx = description.IndexOf('@');
         if (atIdx > 0)
         {
-            int spaceBefore = description.LastIndexOf(' ', atIdx - 1);
-            name = spaceBefore > 0 ? description[..spaceBefore].Trim() : description;
+            string beforeAt = description[..atIdx].Trim();
+            string stripped = beforeAt.Replace("Compra ", string.Empty).Replace("Venta ", string.Empty).Trim();
+            int firstSpace = stripped.IndexOf(' ');
+            if (firstSpace > 0 && int.TryParse(stripped[..firstSpace], out int _))
+            {
+                stripped = stripped[(firstSpace + 1)..].Trim();
+            }
+            name = stripped;
         }
-
-        name = name.Replace("Compra ", string.Empty).Replace("Venta ", string.Empty).Trim();
 
         try
         {
