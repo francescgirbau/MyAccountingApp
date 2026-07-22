@@ -28,13 +28,17 @@ public partial class DegiroImportService : IBrokerImportService
         foreach (string line in lines.Skip(1))
         {
             if (string.IsNullOrWhiteSpace(line))
+            {
                 continue;
+            }
 
             try
             {
                 List<string> fields = BankCsvImportService.ParseCsvLine(line);
                 if (fields.Count < 12)
+                {
                     continue;
+                }
 
                 DateTime date = ParseDate(fields[0]);
                 string description = fields[5];
@@ -43,20 +47,26 @@ public partial class DegiroImportService : IBrokerImportService
                 decimal amount = ParseEuropeanDecimal(fields[8]);
 
                 if (string.IsNullOrWhiteSpace(description) || amount == 0)
+                {
                     continue;
+                }
 
                 if (IsBuySell(description))
                 {
                     var (assetTx, cashTx) = CreateAssetTransaction(date, description, isin, amount, currency);
                     assetTransactions.Add(assetTx);
                     if (cashTx is not null)
+                    {
                         transactions.Add(cashTx);
+                    }
                 }
                 else
                 {
                     Transaction? tx = CreateCashTransaction(date, description, amount, currency);
                     if (tx is not null)
+                    {
                         transactions.Add(tx);
+                    }
                 }
             }
             catch
@@ -77,15 +87,21 @@ public partial class DegiroImportService : IBrokerImportService
     private static DateTime ParseDate(string value)
     {
         if (DateTime.TryParseExact(value, "dd-MM-yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime date))
+        {
             return date;
+        }
+
         if (DateTime.TryParse(value, CultureInfo.CreateSpecificCulture("ca-ES"), DateTimeStyles.None, out date))
+        {
             return date;
+        }
+
         return DateTime.Parse(value, CultureInfo.InvariantCulture);
     }
 
     private static decimal ParseEuropeanDecimal(string value)
     {
-        string cleaned = value.Replace(".", "").Replace(",", ".");
+        string cleaned = value.Replace(".", string.Empty).Replace(",", ".");
         return decimal.Parse(cleaned, NumberStyles.Any, CultureInfo.InvariantCulture);
     }
 
@@ -93,9 +109,15 @@ public partial class DegiroImportService : IBrokerImportService
     {
         string c = variationCurrency;
         if (string.IsNullOrWhiteSpace(c) || c.Length != 3 || c == "---")
+        {
             c = balanceCurrency;
+        }
+
         if (string.IsNullOrWhiteSpace(c) || c.Length != 3)
+        {
             c = "EUR";
+        }
+
         return c.ToUpperInvariant();
     }
 
@@ -109,7 +131,10 @@ public partial class DegiroImportService : IBrokerImportService
     {
         Match m = QuantityPattern().Match(description);
         if (m.Success && int.TryParse(m.Groups[1].Value, out int qty))
+        {
             return qty;
+        }
+
         return 1;
     }
 
@@ -136,7 +161,9 @@ public partial class DegiroImportService : IBrokerImportService
     {
         TransactionCategory category = ClassifyDescription(description, amount);
         if (category == TransactionCategory.DEPOSIT)
+        {
             return null;
+        }
 
         Money money = new Money(Math.Abs(amount), currency);
         return new Transaction(date, description, money, category);
@@ -147,40 +174,64 @@ public partial class DegiroImportService : IBrokerImportService
         string upper = description.ToUpperInvariant();
 
         if (upper.Contains("DIVIDENDO") || upper.Contains("DIVIDEND"))
+        {
             return amount >= 0 ? TransactionCategory.INCOME : TransactionCategory.EXPENSE;
+        }
 
         if (upper.Contains("RETENCI") || upper.Contains("WITHHOLDING"))
+        {
             return TransactionCategory.EXPENSE;
+        }
 
         if (upper.Contains("COSTES") || upper.Contains("COST") || upper.Contains("COMISI"))
+        {
             return TransactionCategory.EXPENSE;
+        }
 
         if (upper.Contains("TAX") || upper.Contains("IMPUESTO"))
+        {
             return TransactionCategory.EXPENSE;
+        }
 
         if (upper.Contains("INTEREST") || upper.Contains("INTERES"))
+        {
             return amount >= 0 ? TransactionCategory.INCOME : TransactionCategory.EXPENSE;
+        }
 
         if (upper.Contains("PRESTAMO") || upper.Contains("LENDING"))
+        {
             return TransactionCategory.INCOME;
+        }
 
         if (upper.Contains("PASS-THROUGH") || upper.Contains("PASS THROUGH") || upper.Contains("PASSTHROUGH"))
+        {
             return TransactionCategory.EXPENSE;
+        }
 
         if (upper.Contains("CASH SWEEP") || upper.Contains("TRANSFERIR") || upper.Contains("TRANSFER"))
+        {
             return TransactionCategory.DEPOSIT;
+        }
 
         if (upper.Contains("DEPOSIT") || upper.Contains("WITHDRAWAL"))
+        {
             return TransactionCategory.DEPOSIT;
+        }
 
         if (upper.Contains("FLATEX"))
+        {
             return TransactionCategory.DEPOSIT;
+        }
 
         if (upper.Contains("CAMBIO DE DIVISA") || upper.Contains("FX") || upper.Contains("EXCHANGE"))
+        {
             return TransactionCategory.DEPOSIT;
+        }
 
         if (upper.Contains("PROCESSED"))
+        {
             return TransactionCategory.DEPOSIT;
+        }
 
         return amount >= 0 ? TransactionCategory.INCOME : TransactionCategory.EXPENSE;
     }
