@@ -26,13 +26,10 @@ public class AssetTransactionDto
 
 public class OptionTransactionDto
 {
-    public Guid Id { get; set; }
-    public DateTime Date { get; set; }
-    public string Description { get; set; } = string.Empty;
+    public TransactionDto Transaction { get; set; } = new();
     public string Symbol { get; set; } = string.Empty;
     public string Isin { get; set; } = string.Empty;
     public decimal Quantity { get; set; }
-    public MoneyDto Premium { get; set; } = new();
     public string Type { get; set; } = string.Empty;
 }
 
@@ -62,6 +59,7 @@ public class ImportResultDto
 {
     public List<TransactionDto> Transactions { get; set; } = new();
     public List<AssetTransactionDto> AssetTransactions { get; set; } = new();
+    public List<OptionTransactionDto> OptionTransactions { get; set; } = new();
     public List<string> Errors { get; set; } = new();
     public List<ValidationError> ValidationErrors { get; set; } = new();
     public List<ValidationError> ValidationWarnings { get; set; } = new();

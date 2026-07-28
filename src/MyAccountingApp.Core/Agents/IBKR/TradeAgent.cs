@@ -51,9 +51,11 @@ public class TradeAgent : IIBKRStatementAgent
         string isin = string.Empty;
         string optionSymbol = ExtractUnderlyingSymbol(symbol);
         AssetTransactionType type = isBuy ? AssetTransactionType.Buy : AssetTransactionType.Sell;
+        TransactionCategory category = isBuy ? TransactionCategory.EXPENSE : TransactionCategory.INCOME;
         Money premium = new Money(Math.Abs(proceeds), currency);
+        Transaction transaction = new Transaction(date, description, premium, category);
 
-        return new OptionTransaction(date, description, optionSymbol, isin, quantity, premium, type);
+        return new OptionTransaction(transaction, optionSymbol, isin, quantity, type);
     }
 
     private static AssetTransaction CreateAssetTransaction(DateTime date, string symbol, string currency, int quantity, decimal proceeds, bool isBuy)

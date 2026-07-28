@@ -33,13 +33,10 @@ public static class DtoMapper
 
     public static OptionTransactionDto ToDto(this OptionTransaction optionTransaction) =>
         new(
-            optionTransaction.Id,
-            optionTransaction.Date,
-            optionTransaction.Description,
+            optionTransaction.Transaction.ToDto(),
             optionTransaction.Symbol,
             optionTransaction.Isin,
             optionTransaction.Quantity,
-            optionTransaction.Premium.ToDto(),
             optionTransaction.Type.ToString());
 
     public static ImportResultDto ToDto(this ImportResult result) =>

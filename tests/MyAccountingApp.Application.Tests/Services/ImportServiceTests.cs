@@ -320,7 +320,7 @@ public class ImportServiceTests
 
         public void Update(OptionTransaction tx)
         {
-            int index = this._transactions.FindIndex(t => t.Id == tx.Id);
+            int index = this._transactions.FindIndex(t => t.Transaction.Id == tx.Transaction.Id);
             if (index >= 0)
             {
                 this._transactions[index] = tx;
@@ -328,6 +328,6 @@ public class ImportServiceTests
         }
 
         public bool Delete(Guid id) => true;
-        public int DeleteByYear(int year) => this._transactions.RemoveAll(t => t.Date.Year == year);
+        public int DeleteByYear(int year) => this._transactions.RemoveAll(t => t.Transaction.Date.Year == year);
     }
 }

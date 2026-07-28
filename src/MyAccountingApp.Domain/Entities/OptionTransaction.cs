@@ -6,62 +6,30 @@ using MyAccountingApp.Domain.ValueObjects;
 
 public class OptionTransaction
 {
-    public Guid Id { get; private set; }
+    public Transaction Transaction { get; }
 
-    public DateTime Date { get; private set; }
+    public string Symbol { get; }
 
-    public string Description { get; private set; }
+    public string Isin { get; }
 
-    public string Symbol { get; private set; }
+    public decimal Quantity { get; }
 
-    public string Isin { get; private set; }
-
-    public decimal Quantity { get; private set; }
-
-    public Money Premium { get; private set; }
-
-    public AssetTransactionType Type { get; private set; }
+    public AssetTransactionType Type { get; }
 
     public OptionTransaction(
-        DateTime date,
-        string description,
+        Transaction transaction,
         string symbol,
         string isin,
         decimal quantity,
-        Money premium,
         AssetTransactionType type)
     {
-        Id = Guid.NewGuid();
-        Date = date;
-        Description = description;
+        Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
         Symbol = symbol;
         Isin = isin;
         Quantity = quantity < 0 ? -quantity : quantity;
-        Premium = premium;
         Type = type;
 
         Validate();
-    }
-
-    [JsonConstructor]
-    public OptionTransaction(
-        Guid id,
-        DateTime date,
-        string description,
-        string symbol,
-        string isin,
-        decimal quantity,
-        Money premium,
-        AssetTransactionType type)
-    {
-        Id = id;
-        Date = date;
-        Description = description;
-        Symbol = symbol;
-        Isin = isin;
-        Quantity = quantity;
-        Premium = premium;
-        Type = type;
     }
 
     private void Validate()
@@ -74,11 +42,6 @@ public class OptionTransaction
         if (Quantity <= 0)
         {
             throw new ArgumentException("Quantity must be greater than zero.");
-        }
-
-        if (Premium.Amount <= 0)
-        {
-            throw new ArgumentException("Premium amount must be greater than zero.");
         }
     }
 }

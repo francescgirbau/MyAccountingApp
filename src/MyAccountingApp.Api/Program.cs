@@ -289,16 +289,17 @@ app.MapGet($"{prefix}/option-transactions/{{symbol}}", (string symbol, IOptionTr
 
 app.MapPut($"{prefix}/option-transactions/{{id:guid}}", (Guid id, UpdateOptionTransactionRequest request, IOptionTransactionRepository repo) =>
 {
-    OptionTransaction? existing = repo.GetAll().FirstOrDefault(t => t.Id == id);
+    OptionTransaction? existing = repo.GetAll().FirstOrDefault(t => t.Transaction.Id == id);
     if (existing is null)
     {
         return Results.NotFound(new { id, message = "Option transaction not found" });
     }
 
-    Money premium = new(request.PremiumAmount, request.PremiumCurrency);
+    Money money = new(request.Amount, request.Currency);
+    TransactionCategory category = Enum.Parse<TransactionCategory>(request.Category);
+    Transaction transaction = new(id, request.Date, request.Description, money, category);
     AssetTransactionType type = Enum.Parse<AssetTransactionType>(request.Type);
-    OptionTransaction updated = new(
-        id, request.Date, request.Description, request.Symbol, request.Isin, request.Quantity, premium, type);
+    OptionTransaction updated = new(transaction, request.Symbol, request.Isin, request.Quantity, type);
     repo.Update(updated);
     return Results.Ok(updated.ToDto());
 });
@@ -317,7 +318,7 @@ app.MapDelete($"{prefix}/option-transactions/year/{{year:int}}", (int year, IOpt
 
 app.MapGet($"{prefix}/option-transactions/year/{{year:int}}/count", (int year, IOptionTransactionRepository repo) =>
 {
-    int count = repo.GetAll().Count(t => t.Date.Year == year);
+    int count = repo.GetAll().Count(t => t.Transaction.Date.Year == year);
     return Results.Ok(new { year, options = count });
 });
 
@@ -602,5 +603,5 @@ finally
 record ImportRequest(List<string> FolderPaths);
 record CreateTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category);
 record CreateAssetTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, decimal Quantity, string Type);
-record UpdateOptionTransactionRequest(DateTime Date, string Description, string Symbol, string Isin, decimal Quantity, decimal PremiumAmount, string PremiumCurrency, string Type);
+record UpdateOptionTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, string Isin, decimal Quantity, string Type);
 record BackupData(List<Transaction> Transactions, List<AssetTransaction>? AssetTransactions);
