@@ -41,6 +41,13 @@ public partial class DegiroTransactionImportService : IBrokerImportService
                 DateTime date = ParseDate(fields[0]);
                 string producto = fields[2];
                 string isin = fields[3];
+                string exchange = fields[4];
+
+                if (string.Equals(exchange, "MEF", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
                 int rawQuantity = int.Parse(fields[6], NumberStyles.Any, CultureInfo.InvariantCulture);
                 decimal amount = ParseEuropeanDecimal(fields[9]);
                 string currency = NormalizeCurrency(fields[8]);
