@@ -54,20 +54,13 @@ public partial class DegiroImportService : IBrokerImportService
 
                 if (IsBuySell(description))
                 {
-                    var (assetTx, cashTx) = CreateAssetTransaction(date, description, isin, producto, amount, currency);
-                    assetTransactions.Add(assetTx);
-                    if (cashTx is not null)
-                    {
-                        transactions.Add(cashTx);
-                    }
+                    continue;
                 }
-                else
+
+                Transaction? tx = CreateCashTransaction(date, description, amount, currency);
+                if (tx is not null)
                 {
-                    Transaction? tx = CreateCashTransaction(date, description, amount, currency);
-                    if (tx is not null)
-                    {
-                        transactions.Add(tx);
-                    }
+                    transactions.Add(tx);
                 }
             }
             catch

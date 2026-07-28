@@ -146,7 +146,7 @@ public class BrokerImportDispatcherTests
     }
 
     [Fact]
-    public async Task ParseAllAsync_DegiroBuy_CreatesAssetTransaction()
+    public async Task ParseAllAsync_DegiroAccountBuy_Skipped()
     {
         string csv = "Fecha,Hora,Fecha valor,Producto,ISIN,Descripción,Tipo,Variación,,Saldo,,ID Orden\n30-12-2021,09:08,30-12-2021,GRIFOLS SA CLASS A,ES0171996087,\"Compra 40 Grifols SA Class A@16,53 EUR (ES0171996087)\",,EUR,\"-661,20\",EUR,\"1837,81\",577e222d-567c-4f9a-aa66-f462e3508a20";
         string file = Path.GetTempFileName();
@@ -158,9 +158,7 @@ public class BrokerImportDispatcherTests
             var (txs, assets) = await dispatcher.ParseAllAsync(file);
 
             Assert.Empty(txs);
-            Assert.NotEmpty(assets);
-            Assert.Equal("GRIFOLS", assets.First().Symbol);
-            Assert.Equal(40, assets.First().Quantity);
+            Assert.Empty(assets);
         }
         finally
         {
