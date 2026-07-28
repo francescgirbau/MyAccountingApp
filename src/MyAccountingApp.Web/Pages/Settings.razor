@@ -36,7 +36,7 @@
 <MudPaper Class="pa-4 mb-4" Outlined="true" Style="border-color: var(--mud-palette-error);">
     <MudText Typo="Typo.h6" GutterBottom="true" Color="Color.Error">Danger Zone</MudText>
     <MudText Typo="Typo.body2" Class="mb-4">
-        Reset the database: deletes <strong>all cash transactions</strong> and <strong>all portfolio / asset transactions</strong>.
+        Reset the database: deletes <strong>all cash transactions</strong>, <strong>all portfolio / asset transactions</strong>, and <strong>all option transactions</strong>.
         Currency conversions are kept. This cannot be undone — make a backup first if needed.
     </MudText>
     <MudButton Variant="Variant.Filled" Color="Color.Error" Size="Size.Large"
@@ -47,8 +47,9 @@
     @if (_resetResult is not null)
     {
         <MudAlert Severity="Severity.Info" Class="mt-4">
-            Cleared <strong>@_resetResult.ClearedTransactions</strong> transactions and
-            <strong>@_resetResult.ClearedAssetTransactions</strong> asset transactions.
+            Cleared <strong>@_resetResult.ClearedTransactions</strong> transactions,
+            <strong>@_resetResult.ClearedAssetTransactions</strong> asset transactions, and
+            <strong>@_resetResult.ClearedOptionTransactions</strong> option transactions.
         </MudAlert>
     }
 
@@ -56,7 +57,7 @@
 
     <MudText Typo="Typo.subtitle1" GutterBottom="true">Delete transactions by year</MudText>
     <MudText Typo="Typo.body2" Class="mb-4">
-        Delete all cash and asset transactions for a specific year.
+        Delete all cash, asset, and option transactions for a specific year.
     </MudText>
     <MudGrid>
         <MudItem xs="6" sm="3">
@@ -78,8 +79,9 @@
     @if (_deleteYearResult is not null)
     {
         <MudAlert Severity="Severity.Info" Class="mt-2">
-            Deleted <strong>@_deleteYearResult.deletedTransactions</strong> transactions and
-            <strong>@_deleteYearResult.deletedAssets</strong> asset transactions for year @_deleteYear.
+            Deleted <strong>@_deleteYearResult.deletedTransactions</strong> transactions,
+            <strong>@_deleteYearResult.deletedAssets</strong> asset transactions, and
+            <strong>@_deleteYearResult.deletedOptions</strong> option transactions for year @_deleteYear.
         </MudAlert>
     }
 
@@ -127,7 +129,7 @@
     </TitleContent>
     <DialogContent>
         <MudText>
-            This will permanently delete all cash transactions and all portfolio / asset transactions.
+            This will permanently delete all cash transactions, all portfolio / asset transactions, and all option transactions.
             Currency conversions will not be deleted.
         </MudText>
         <MudText Class="mt-2" Typo="Typo.body2">
@@ -148,8 +150,9 @@
     </TitleContent>
     <DialogContent>
         <MudText>
-            This will remove <strong>@_deleteYearPreviewTransactions</strong> cash and
-            <strong>@_deleteYearPreviewAssets</strong> asset transactions for year @_deleteYear.
+            This will remove <strong>@_deleteYearPreviewTransactions</strong> cash,
+            <strong>@_deleteYearPreviewAssets</strong> asset, and
+            <strong>@_deleteYearPreviewOptions</strong> option transactions for year @_deleteYear.
         </MudText>
         <MudText Class="mt-2" Typo="Typo.body2">This cannot be undone.</MudText>
     </DialogContent>
@@ -191,6 +194,7 @@
     private bool _showDeleteYearDialog;
     private int _deleteYearPreviewTransactions;
     private int _deleteYearPreviewAssets;
+    private int _deleteYearPreviewOptions;
     private bool _showDeleteAssetYearDialog;
     private int _deleteAssetYearPreviewAssets;
 
@@ -302,6 +306,7 @@
 
             _deleteYearPreviewTransactions = preview.transactions;
             _deleteYearPreviewAssets = preview.assets;
+            _deleteYearPreviewOptions = preview.options;
             _showDeleteYearDialog = true;
         }
         catch (Exception ex)
@@ -336,7 +341,7 @@
 
             _deleteYearResult = await response.Content.ReadFromJsonAsync<DeleteYearResultDto>();
             _showDeleteYearDialog = false;
-            Snackbar.Add($"Deleted {_deleteYearResult?.deletedTransactions} transactions and {_deleteYearResult?.deletedAssets} assets for {_deleteYear}.", Severity.Success);
+            Snackbar.Add($"Deleted {_deleteYearResult?.deletedTransactions} transactions, {_deleteYearResult?.deletedAssets} assets, and {_deleteYearResult?.deletedOptions} options for {_deleteYear}.", Severity.Success);
         }
         catch (Exception ex)
         {
@@ -353,6 +358,7 @@
         public string? Message { get; set; }
         public int ClearedTransactions { get; set; }
         public int ClearedAssetTransactions { get; set; }
+        public int ClearedOptionTransactions { get; set; }
     }
 
     private sealed class DeleteYearResultDto
@@ -360,6 +366,7 @@
         public int year { get; set; }
         public int deletedTransactions { get; set; }
         public int deletedAssets { get; set; }
+        public int deletedOptions { get; set; }
     }
 
     private sealed class DeleteAssetYearResultDto
@@ -373,6 +380,7 @@
         public int year { get; set; }
         public int transactions { get; set; }
         public int assets { get; set; }
+        public int options { get; set; }
     }
 
     private sealed class DeleteAssetYearCountDto

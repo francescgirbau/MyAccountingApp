@@ -21,7 +21,14 @@ public class JsonOptionTransactionRepository : IOptionTransactionRepository
         }
 
         string json = File.ReadAllText(this.filePath);
-        return JsonSerializer.Deserialize<List<OptionTransaction>>(json) ?? new List<OptionTransaction>();
+        try
+        {
+            return JsonSerializer.Deserialize<List<OptionTransaction>>(json) ?? new List<OptionTransaction>();
+        }
+        catch
+        {
+            return new List<OptionTransaction>();
+        }
     }
 
     public void Add(OptionTransaction transaction)
