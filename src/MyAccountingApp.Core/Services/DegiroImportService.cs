@@ -258,9 +258,14 @@ public partial class DegiroImportService : IBrokerImportService
 
         if (upper.Contains("FLATEX") || upper.Contains("DEPOSIT"))
         {
-            if (upper.Contains("WITHDRAWAL") || upper.Contains("PROCESSED"))
+            if (upper.Contains("PROCESSED"))
             {
                 return null;
+            }
+
+            if (upper.Contains("WITHDRAWAL"))
+            {
+                return TransactionCategory.TRANSFER;
             }
 
             return TransactionCategory.DEPOSIT;
