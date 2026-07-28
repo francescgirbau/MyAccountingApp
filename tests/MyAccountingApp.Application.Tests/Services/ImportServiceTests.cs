@@ -18,7 +18,7 @@ public class ImportServiceTests
         FakePfRepo pfRepo = new();
         TransactionValidator validator = new();
         FakeLogger<ImportService> logger = new();
-        ImportService service = new(broker, txRepo, pfRepo, validator, logger);
+        ImportService service = new(broker, txRepo, pfRepo, new FakeOptionRepo(), validator, logger);
 
         ImportResult result = await service.ImportFromFoldersAsync(new[] { "/nonexistent/path" });
 
@@ -50,7 +50,7 @@ public class ImportServiceTests
         FakePfRepo pfRepo = new();
         TransactionValidator validator = new();
         FakeLogger<ImportService> logger = new();
-        ImportService service = new(broker, txRepo, pfRepo, validator, logger);
+        ImportService service = new(broker, txRepo, pfRepo, new FakeOptionRepo(), validator, logger);
 
         ImportResult result = await service.ImportFromFoldersAsync(new[] { dir });
 
@@ -83,7 +83,7 @@ public class ImportServiceTests
         FakePfRepo pfRepo = new();
         TransactionValidator validator = new();
         FakeLogger<ImportService> logger = new();
-        ImportService service = new(broker, txRepo, pfRepo, validator, logger);
+        ImportService service = new(broker, txRepo, pfRepo, new FakeOptionRepo(), validator, logger);
 
         ImportResult result = await service.ImportFromFoldersAsync(new[] { dir });
 
@@ -114,7 +114,7 @@ public class ImportServiceTests
         FakePfRepo pfRepo = new();
         TransactionValidator validator = new();
         FakeLogger<ImportService> logger = new();
-        ImportService service = new(broker, txRepo, pfRepo, validator, logger);
+        ImportService service = new(broker, txRepo, pfRepo, new FakeOptionRepo(), validator, logger);
 
         ImportResult result = await service.ImportFromFoldersAsync(new[] { dir });
 
@@ -136,7 +136,7 @@ public class ImportServiceTests
         FakePfRepo pfRepo = new();
         TransactionValidator validator = new();
         FakeLogger<ImportService> logger = new();
-        ImportService service = new(broker, txRepo, pfRepo, validator, logger);
+        ImportService service = new(broker, txRepo, pfRepo, new FakeOptionRepo(), validator, logger);
 
         ImportResult result = await service.ImportFromFoldersAsync(new[] { dir });
 
@@ -173,7 +173,7 @@ public class ImportServiceTests
         FakePfRepo pfRepo = new();
         TransactionValidator validator = new();
         FakeLogger<ImportService> logger = new();
-        ImportService service = new(broker, txRepo, pfRepo, validator, logger);
+        ImportService service = new(broker, txRepo, pfRepo, new FakeOptionRepo(), validator, logger);
 
         ImportResult result = await service.ImportFromFoldersAsync(new[] { dir });
 
@@ -210,7 +210,7 @@ public class ImportServiceTests
         FakePfRepo pfRepo = new();
         TransactionValidator validator = new();
         FakeLogger<ImportService> logger = new();
-        ImportService service = new(broker, txRepo, pfRepo, validator, logger);
+        ImportService service = new(broker, txRepo, pfRepo, new FakeOptionRepo(), validator, logger);
 
         ImportResult result = await service.ImportFromFoldersAsync(new[] { dir });
 
@@ -231,9 +231,10 @@ public class ImportServiceTests
     {
         public IEnumerable<Transaction> Transactions { get; set; } = Array.Empty<Transaction>();
         public IEnumerable<AssetTransaction> AssetTransactions { get; set; } = Array.Empty<AssetTransaction>();
+        public IEnumerable<OptionTransaction> OptionTransactions { get; set; } = Array.Empty<OptionTransaction>();
         public bool ThrowOnParse { get; set; }
 
-        public Task<(IEnumerable<Transaction>, IEnumerable<AssetTransaction>)> ParseAllAsync(
+        public Task<(IEnumerable<Transaction>, IEnumerable<AssetTransaction>, IEnumerable<OptionTransaction>)> ParseAllAsync(
             string filePath, CancellationToken cancellationToken = default)
         {
             if (this.ThrowOnParse)
@@ -241,7 +242,7 @@ public class ImportServiceTests
                 throw new InvalidOperationException("Broker error");
             }
 
-            return Task.FromResult((this.Transactions, this.AssetTransactions));
+            return Task.FromResult((this.Transactions, this.AssetTransactions, this.OptionTransactions));
         }
 
         public Task<IEnumerable<AssetTransaction>> ParseCorporateActionsAsync(
@@ -303,5 +304,21 @@ public class ImportServiceTests
 
         public bool Delete(Guid transactionId) => true;
         public int DeleteByYear(int year) => this._transactions.RemoveAll(t => t.Transaction.Date.Year == year);
+    }
+
+    private sealed class FakeOptionRepo : IOptionTransactionRepository
+    {
+        private readonly List<OptionTransaction> _transactions = new();
+
+        public void Add(OptionTransaction tx) => this._transactions.Add(tx);
+        public IEnumerable<OptionTransaction> GetAll() => this._transactions;
+        public void Initialize(IEnumerable<OptionTransaction> transactions)
+        {
+            this._transactions.Clear();
+            this._transactions.AddRange(transactions);
+        }
+
+        public bool Delete(Guid id) => true;
+        public int DeleteByYear(int year) => this._transactions.RemoveAll(t => t.Date.Year == year);
     }
 }

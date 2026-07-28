@@ -54,7 +54,7 @@ public class InteractiveBrokersImportServiceTests
             .Setup(p => p.ParseIBKRAsync(It.IsAny<string>()))
             .ReturnsAsync(records);
 
-        (IEnumerable<Transaction> transactions, IEnumerable<AssetTransaction> assetTransactions) =
+        (IEnumerable<Transaction> transactions, IEnumerable<AssetTransaction> assetTransactions, IEnumerable<OptionTransaction> optionTransactions) =
             await this.agent.ParseAllAsync("test.csv");
 
         Assert.Empty(transactions);
@@ -94,7 +94,7 @@ public class InteractiveBrokersImportServiceTests
             .Setup(p => p.ParseIBKRAsync(It.IsAny<string>()))
             .ReturnsAsync(records);
 
-        (IEnumerable<Transaction> transactions, IEnumerable<AssetTransaction> assetTransactions) =
+        (IEnumerable<Transaction> transactions, IEnumerable<AssetTransaction> assetTransactions, IEnumerable<OptionTransaction> optionTransactions) =
             await this.agent.ParseAllAsync("test.csv");
 
         Assert.Empty(assetTransactions);
@@ -108,7 +108,7 @@ public class InteractiveBrokersImportServiceTests
             .Setup(p => p.ParseIBKRAsync(It.IsAny<string>()))
             .ReturnsAsync(new List<IBKRTransactionRecord>());
 
-        (IEnumerable<Transaction> transactions, IEnumerable<AssetTransaction> assetTransactions) =
+        (IEnumerable<Transaction> transactions, IEnumerable<AssetTransaction> assetTransactions, IEnumerable<OptionTransaction> optionTransactions) =
             await this.agent.ParseAllAsync("test.csv");
 
         Assert.Empty(transactions);
@@ -196,7 +196,7 @@ public class InteractiveBrokersImportServiceTests
             .Setup(p => p.ParseIBKRAsync(It.IsAny<string>()))
             .ReturnsAsync(records);
 
-        (IEnumerable<Transaction> transactions, IEnumerable<AssetTransaction> assetTransactions) =
+        (IEnumerable<Transaction> transactions, IEnumerable<AssetTransaction> assetTransactions, IEnumerable<OptionTransaction> optionTransactions) =
             await this.agent.ParseAllAsync("test.csv");
 
         Assert.Single(transactions);

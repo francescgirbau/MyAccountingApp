@@ -14,7 +14,7 @@ using MyAccountingApp.Domain.ValueObjects;
 
 public partial class DegiroTransactionImportService : IBrokerImportService
 {
-    public async Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions)> ParseAllAsync(
+    public async Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions, IEnumerable<OptionTransaction> OptionTransactions)> ParseAllAsync(
         string filePath,
         CancellationToken cancellationToken = default)
     {
@@ -22,6 +22,7 @@ public partial class DegiroTransactionImportService : IBrokerImportService
 
         string[] lines = await File.ReadAllLinesAsync(filePath, cancellationToken);
         List<AssetTransaction> assetTransactions = new();
+        List<OptionTransaction> optionTransactions = new();
 
         foreach (string line in lines.Skip(1))
         {
@@ -43,11 +44,6 @@ public partial class DegiroTransactionImportService : IBrokerImportService
                 string isin = fields[3];
                 string exchange = fields[4];
 
-                if (string.Equals(exchange, "MEF", StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
                 int rawQuantity = int.Parse(fields[6], NumberStyles.Any, CultureInfo.InvariantCulture);
                 decimal amount = ParseEuropeanDecimal(fields[9]);
                 string currency = NormalizeCurrency(fields[8]);
@@ -57,15 +53,27 @@ public partial class DegiroTransactionImportService : IBrokerImportService
                     continue;
                 }
 
+                if (string.Equals(exchange, "MEF", StringComparison.OrdinalIgnoreCase))
+                {
+                    bool premiumReceived = amount > 0;
+                    string symbol = ExtractSymbol(producto, isin);
+                    AssetTransactionType optionType = premiumReceived ? AssetTransactionType.Sell : AssetTransactionType.Buy;
+                    Money premium = new Money(Math.Abs(amount), currency);
+                    OptionTransaction optionTx = new OptionTransaction(
+                        date, producto, symbol, isin, Math.Abs(rawQuantity), premium, optionType);
+                    optionTransactions.Add(optionTx);
+                    continue;
+                }
+
                 int quantity = Math.Abs(rawQuantity);
                 bool isBuy = amount < 0;
-                string symbol = ExtractSymbol(producto, isin);
+                string assetSymbol = ExtractSymbol(producto, isin);
                 AssetTransactionType type = isBuy ? AssetTransactionType.Buy : AssetTransactionType.Sell;
                 TransactionCategory category = isBuy ? TransactionCategory.EXPENSE : TransactionCategory.INCOME;
 
                 Money money = new Money(Math.Abs(amount), currency);
                 Transaction transaction = new Transaction(date, producto, money, category);
-                AssetTransaction assetTx = new AssetTransaction(transaction, symbol, quantity, type);
+                AssetTransaction assetTx = new AssetTransaction(transaction, assetSymbol, quantity, type);
                 assetTransactions.Add(assetTx);
             }
             catch
@@ -73,7 +81,7 @@ public partial class DegiroTransactionImportService : IBrokerImportService
             }
         }
 
-        return (Array.Empty<Transaction>(), assetTransactions);
+        return (Array.Empty<Transaction>(), assetTransactions, optionTransactions);
     }
 
     public Task<IEnumerable<AssetTransaction>> ParseCorporateActionsAsync(

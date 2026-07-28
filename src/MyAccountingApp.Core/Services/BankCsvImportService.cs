@@ -62,7 +62,7 @@ public class BankCsvImportService : IBrokerImportService
         return fields;
     }
 
-    public async Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions)> ParseAllAsync(
+    public async Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions, IEnumerable<OptionTransaction> OptionTransactions)> ParseAllAsync(
         string filePath,
         CancellationToken cancellationToken = default)
     {
@@ -111,7 +111,7 @@ public class BankCsvImportService : IBrokerImportService
             }
         }
 
-        return (transactions, Array.Empty<AssetTransaction>());
+        return (transactions, Array.Empty<AssetTransaction>(), Enumerable.Empty<OptionTransaction>());
     }
 
     public Task<IEnumerable<AssetTransaction>> ParseCorporateActionsAsync(

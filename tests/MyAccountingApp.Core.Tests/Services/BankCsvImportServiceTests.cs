@@ -22,7 +22,7 @@ public class BankCsvImportServiceTests
             await File.WriteAllTextAsync(file, csv);
 
             BankCsvImportService service = new();
-            var (transactions, assetTransactions) = await service.ParseAllAsync(file);
+            var (transactions, assetTransactions, _) = await service.ParseAllAsync(file);
 
             Assert.Equal(3, transactions.Count());
             Assert.Empty(assetTransactions);
@@ -45,7 +45,7 @@ public class BankCsvImportServiceTests
             await File.WriteAllTextAsync(file, csv);
 
             BankCsvImportService service = new();
-            var (transactions, _) = await service.ParseAllAsync(file);
+            var (transactions, _, _) = await service.ParseAllAsync(file);
 
             var tx = Assert.Single(transactions);
             Assert.Equal(new DateTime(2019, 6, 15), tx.Date);
@@ -72,7 +72,7 @@ public class BankCsvImportServiceTests
             await File.WriteAllTextAsync(file, csv);
 
             BankCsvImportService service = new();
-            var (transactions, _) = await service.ParseAllAsync(file);
+            var (transactions, _, _) = await service.ParseAllAsync(file);
 
             var tx = Assert.Single(transactions);
             Assert.Equal("R/ TELEFONICA DE ESPANA, S. A. U.", tx.Description);
@@ -96,7 +96,7 @@ public class BankCsvImportServiceTests
             await File.WriteAllTextAsync(file, csv);
 
             BankCsvImportService service = new();
-            var (transactions, _) = await service.ParseAllAsync(file);
+            var (transactions, _, _) = await service.ParseAllAsync(file);
 
             Assert.All(transactions, tx => Assert.Equal(Domain.Enums.TransactionCategory.INCOME, tx.Category));
         }
@@ -119,7 +119,7 @@ public class BankCsvImportServiceTests
             await File.WriteAllTextAsync(file, csv);
 
             BankCsvImportService service = new();
-            var (transactions, _) = await service.ParseAllAsync(file);
+            var (transactions, _, _) = await service.ParseAllAsync(file);
 
             var list = transactions.ToList();
             Assert.Equal(Domain.Enums.TransactionCategory.TRANSFER, list[0].Category);
@@ -142,7 +142,7 @@ public class BankCsvImportServiceTests
             await File.WriteAllTextAsync(file, csv);
 
             BankCsvImportService service = new();
-            var (transactions, _) = await service.ParseAllAsync(file);
+            var (transactions, _, _) = await service.ParseAllAsync(file);
 
             Assert.Empty(transactions);
         }
