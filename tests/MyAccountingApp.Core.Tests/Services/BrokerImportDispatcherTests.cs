@@ -4,6 +4,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using MyAccountingApp.Core.Agents;
+using MyAccountingApp.Core.Agents.IBKR;
 using MyAccountingApp.Core.Services;
 using Xunit;
 
@@ -231,7 +232,8 @@ public class BrokerImportDispatcherTests
     private static BrokerImportDispatcher CreateDispatcher()
     {
         InteractiveBrokersImportService ibkr = new(Parser, new FakeLogger<InteractiveBrokersImportService>());
-        return new BrokerImportDispatcher(ibkr, new BankCsvImportService(), new AssetTransactionCsvImportService(), new DegiroImportService(), new DegiroTransactionImportService());
+        IBKRFlexQueryImportService flexQuery = new(Array.Empty<IIBKRStatementAgent>());
+        return new BrokerImportDispatcher(ibkr, new BankCsvImportService(), new AssetTransactionCsvImportService(), new DegiroImportService(), new DegiroTransactionImportService(), flexQuery);
     }
 }
 
