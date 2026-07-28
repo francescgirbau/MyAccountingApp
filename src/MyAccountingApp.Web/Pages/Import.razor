@@ -31,6 +31,34 @@
 </MudPaper>
 
 <MudPaper Class="pa-6 mb-4" Outlined="true">
+    <MudText Typo="Typo.h6" GutterBottom="true">Import Interactive Brokers (Flex Query Report)</MudText>
+    <MudText Typo="Typo.body2" Class="mb-4">
+        Upload a Flex Query report from Interactive Brokers. Trades, dividends, deposits, corporate actions, fees and interest are detected automatically.
+    </MudText>
+    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+        <strong>Format detected by filename.</strong> Files starting with <strong>U8997440_</strong> are routed to the IBKR Flex Query parser.<br />
+        <strong>Trades</strong> become portfolio/option entries. <strong>Dividends</strong>, <strong>Fees</strong>, <strong>Deposits</strong>, <strong>Interest</strong> and <strong>Withholding Tax</strong> become cash transactions.
+    </MudAlert>
+    <MudGrid>
+        <MudItem xs="12" sm="8">
+            <InputFile OnChange="@OnIbkrFileSelected" accept=".csv" class="mud-input-outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="4" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Info" Size="Size.Large"
+                       OnClick="@UploadIbkrAsync" Disabled="@(_ibkrFile is null || _loading)"
+                       StartIcon="@Icons.Material.Filled.FileUpload"
+                       FullWidth="true">
+                Import IBKR
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+    @if (_ibkrFile is not null)
+    {
+        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">Selected: @_ibkrFile.Name</MudText>
+    }
+</MudPaper>
+
+<MudPaper Class="pa-6 mb-4" Outlined="true">
     <MudText Typo="Typo.h6" GutterBottom="true">Import DeGiro / Flatex CSV</MudText>
     <MudText Typo="Typo.body2" Class="mb-4">
         Upload a CSV exported from DeGiro or Flatex (Spanish format). Asset transactions, dividends, and fees are detected automatically.
@@ -214,6 +242,7 @@
     private IBrowserFile? _selectedFile;
     private IBrowserFile? _rawFile;
     private IBrowserFile? _degiroFile;
+    private IBrowserFile? _ibkrFile;
 
     private void OnFileSelected(InputFileChangeEventArgs args)
     {
@@ -230,6 +259,12 @@
     private void OnDegiroFileSelected(InputFileChangeEventArgs args)
     {
         _degiroFile = args.File;
+        _result = null;
+    }
+
+    private void OnIbkrFileSelected(InputFileChangeEventArgs args)
+    {
+        _ibkrFile = args.File;
         _result = null;
     }
 
@@ -284,6 +319,35 @@
         catch (Exception ex)
         {
             Snackbar.Add($"DeGiro import failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task UploadIbkrAsync()
+    {
+        if (_ibkrFile is null) return;
+
+        _loading = true;
+        _result = null;
+        _editableSymbols = new();
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            using var stream = _ibkrFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            content.Add(new StreamContent(stream), "file", _ibkrFile.Name);
+
+            var response = await Http.PostAsync("/api/import/upload", content);
+            _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
+            InitEditableSymbols();
+            Snackbar.Add("IBKR import completed.", Severity.Success);
+            _ibkrFile = null;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"IBKR import failed: {ex.Message}", Severity.Error);
         }
         finally
         {
