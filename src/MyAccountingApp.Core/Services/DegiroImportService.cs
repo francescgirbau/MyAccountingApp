@@ -223,6 +223,11 @@ public partial class DegiroImportService : IBrokerImportService
             return null;
         }
 
+        if (upper == "INGRESO")
+        {
+            return TransactionCategory.DEPOSIT;
+        }
+
         if (upper.Contains("DIVIDENDO") || upper.Contains("DIVIDEND"))
         {
             return amount >= 0 ? TransactionCategory.INCOME : TransactionCategory.EXPENSE;

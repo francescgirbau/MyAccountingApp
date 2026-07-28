@@ -237,4 +237,27 @@ public class DegiroImportServiceTests
             File.Delete(file);
         }
     }
+
+    [Fact]
+    public async Task ParseAllAsync_Ingreso_CreatesDepositTransaction()
+    {
+        string csv = "Fecha,Hora,Fecha valor,Producto,ISIN,Descripción,Tipo,Variación,,Saldo,,ID Orden\n" +
+            "01-11-2021,01:06,31-10-2021,,,Ingreso,,EUR,\"50,00\",EUR,\"50,00\",\n";
+
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            var (txs, assets) = await this.service.ParseAllAsync(file);
+
+            Assert.Empty(assets);
+            var t = Assert.Single(txs);
+            Assert.Equal(50m, t.Money.Amount);
+            Assert.Equal(Domain.Enums.TransactionCategory.DEPOSIT, t.Category);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
 }
