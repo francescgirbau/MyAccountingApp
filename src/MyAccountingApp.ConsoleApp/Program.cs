@@ -43,6 +43,7 @@ string[] folderPaths = new string[]
 
 List<Transaction> allTransactions = new List<Transaction>();
 List<AssetTransaction> allAssetTransactions = new List<AssetTransaction>();
+List<OptionTransaction> allOptionTransactions = new List<OptionTransaction>();
 
 foreach (string folderPath in folderPaths)
 {
@@ -65,9 +66,10 @@ foreach (string folderPath in folderPaths)
         }
         else
         {
-            (IEnumerable<Transaction> transactions, IEnumerable<AssetTransaction> assetTransactions) = await ibAgent.ParseAllAsync(csvFile);
+            (IEnumerable<Transaction> transactions, IEnumerable<AssetTransaction> assetTransactions, IEnumerable<OptionTransaction> optionTransactions) = await ibAgent.ParseAllAsync(csvFile);
             allTransactions.AddRange(transactions);
             allAssetTransactions.AddRange(assetTransactions);
+            allOptionTransactions.AddRange(optionTransactions);
         }
     }
 }
@@ -102,7 +104,7 @@ else
     }
 }
 
-Console.WriteLine($"\nTotal: {allTransactions.Count} transactions, {allAssetTransactions.Count} asset transactions");
+Console.WriteLine($"\nTotal: {allTransactions.Count} transactions, {allAssetTransactions.Count} asset transactions, {allOptionTransactions.Count} option transactions");
 
 YahooMarketPriceService priceService = new YahooMarketPriceService();
 

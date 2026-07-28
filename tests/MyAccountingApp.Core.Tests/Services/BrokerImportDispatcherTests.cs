@@ -21,7 +21,7 @@ public class BrokerImportDispatcherTests
             await File.WriteAllTextAsync(file, csv);
             BrokerImportDispatcher dispatcher = CreateDispatcher();
 
-            var (txs, assets) = await dispatcher.ParseAllAsync(file);
+            var (txs, assets, _) = await dispatcher.ParseAllAsync(file);
 
             Assert.Empty(txs);
             Assert.NotEmpty(assets);
@@ -42,7 +42,7 @@ public class BrokerImportDispatcherTests
             await File.WriteAllTextAsync(file, csv);
             BrokerImportDispatcher dispatcher = CreateDispatcher();
 
-            var (txs, assets) = await dispatcher.ParseAllAsync(file);
+            var (txs, assets, _) = await dispatcher.ParseAllAsync(file);
 
             Assert.NotEmpty(txs);
             Assert.Empty(assets);
@@ -63,7 +63,7 @@ public class BrokerImportDispatcherTests
             await File.WriteAllTextAsync(file, csv);
             BrokerImportDispatcher dispatcher = CreateDispatcher();
 
-            var (txs, assets) = await dispatcher.ParseAllAsync(file);
+            var (txs, assets, _) = await dispatcher.ParseAllAsync(file);
 
             Assert.NotEmpty(txs);
             Assert.Empty(assets);
@@ -84,7 +84,7 @@ public class BrokerImportDispatcherTests
             await File.WriteAllTextAsync(file, csv);
             BrokerImportDispatcher dispatcher = CreateDispatcher();
 
-            var (txs, assets) = await dispatcher.ParseAllAsync(file);
+            var (txs, assets, _) = await dispatcher.ParseAllAsync(file);
 
             Assert.Empty(txs);
             Assert.NotEmpty(assets);
@@ -105,7 +105,7 @@ public class BrokerImportDispatcherTests
             await File.WriteAllTextAsync(file, csv);
             BrokerImportDispatcher dispatcher = CreateDispatcher();
 
-            var (txs, assets) = await dispatcher.ParseAllAsync(file);
+            var (txs, assets, _) = await dispatcher.ParseAllAsync(file);
 
             Assert.Empty(txs);
             Assert.Empty(assets);
@@ -134,7 +134,7 @@ public class BrokerImportDispatcherTests
             await File.WriteAllTextAsync(file, csv);
             BrokerImportDispatcher dispatcher = CreateDispatcher();
 
-            var (txs, assets) = await dispatcher.ParseAllAsync(file);
+            var (txs, assets, _) = await dispatcher.ParseAllAsync(file);
 
             Assert.Empty(txs);
             Assert.Empty(assets);
@@ -155,7 +155,7 @@ public class BrokerImportDispatcherTests
             await File.WriteAllTextAsync(file, csv);
             BrokerImportDispatcher dispatcher = CreateDispatcher();
 
-            var (txs, assets) = await dispatcher.ParseAllAsync(file);
+            var (txs, assets, _) = await dispatcher.ParseAllAsync(file);
 
             Assert.Empty(txs);
             Assert.Empty(assets);
@@ -176,7 +176,7 @@ public class BrokerImportDispatcherTests
             await File.WriteAllTextAsync(file, csv);
             BrokerImportDispatcher dispatcher = CreateDispatcher();
 
-            var (txs, assets) = await dispatcher.ParseAllAsync(file);
+            var (txs, assets, _) = await dispatcher.ParseAllAsync(file);
 
             Assert.Empty(txs);
             Assert.NotEmpty(assets);
@@ -199,7 +199,7 @@ public class BrokerImportDispatcherTests
             await File.WriteAllTextAsync(file, csv);
             BrokerImportDispatcher dispatcher = CreateDispatcher();
 
-            var (txs, assets) = await dispatcher.ParseAllAsync(file);
+            var (txs, assets, _) = await dispatcher.ParseAllAsync(file);
 
             Assert.Empty(txs);
             Assert.Empty(assets);

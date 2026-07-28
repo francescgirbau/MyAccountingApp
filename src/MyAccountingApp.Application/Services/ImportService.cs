@@ -13,6 +13,7 @@ public class ImportService : IImportService
     private readonly IBrokerImportService _broker;
     private readonly ITransactionRepository _transactionRepo;
     private readonly IPortfolioRepository _portfolioRepo;
+    private readonly IOptionTransactionRepository _optionRepo;
     private readonly ITransactionValidator _validator;
     private readonly ILogger<ImportService> _logger;
 
@@ -20,12 +21,14 @@ public class ImportService : IImportService
         IBrokerImportService broker,
         ITransactionRepository transactionRepo,
         IPortfolioRepository portfolioRepo,
+        IOptionTransactionRepository optionRepo,
         ITransactionValidator validator,
         ILogger<ImportService> logger)
     {
         this._broker = broker ?? throw new ArgumentNullException(nameof(broker));
         this._transactionRepo = transactionRepo ?? throw new ArgumentNullException(nameof(transactionRepo));
         this._portfolioRepo = portfolioRepo ?? throw new ArgumentNullException(nameof(portfolioRepo));
+        this._optionRepo = optionRepo ?? throw new ArgumentNullException(nameof(optionRepo));
         this._validator = validator ?? throw new ArgumentNullException(nameof(validator));
         this._logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -38,6 +41,7 @@ public class ImportService : IImportService
         // each time and times out HttpClient (~100s) on ~2k-row imports.
         List<Domain.Entities.Transaction> pendingTransactions = new List<Domain.Entities.Transaction>();
         List<Domain.Entities.AssetTransaction> pendingAssets = new List<Domain.Entities.AssetTransaction>();
+        List<Domain.Entities.OptionTransaction> pendingOptions = new List<Domain.Entities.OptionTransaction>();
 
         foreach (string folderPath in folderPaths)
         {
@@ -75,7 +79,7 @@ public class ImportService : IImportService
                     }
                     else
                     {
-                        (IEnumerable<Domain.Entities.Transaction> transactions, IEnumerable<Domain.Entities.AssetTransaction> assetTransactions) =
+                        (IEnumerable<Domain.Entities.Transaction> transactions, IEnumerable<Domain.Entities.AssetTransaction> assetTransactions, IEnumerable<Domain.Entities.OptionTransaction> optionTransactions) =
                             await this._broker.ParseAllAsync(csvFile);
 
                         foreach (Domain.Entities.Transaction tx in transactions)
@@ -100,8 +104,14 @@ public class ImportService : IImportService
                             }
                         }
 
+                        foreach (Domain.Entities.OptionTransaction tx in optionTransactions)
+                        {
+                            pendingOptions.Add(tx);
+                        }
+
                         result.Transactions.AddRange(transactions);
                         result.AssetTransactions.AddRange(assetTransactions);
+                        result.OptionTransactions.AddRange(optionTransactions);
                     }
 
                     result.FilesProcessed++;
@@ -147,13 +157,21 @@ public class ImportService : IImportService
             this._portfolioRepo.Initialize(mergedAssets);
         }
 
+        if (pendingOptions.Count > 0)
+        {
+            List<Domain.Entities.OptionTransaction> mergedOptions = this._optionRepo.GetAll().ToList();
+            mergedOptions.AddRange(pendingOptions);
+            this._optionRepo.Initialize(mergedOptions);
+        }
+
         int matchedPairs = this.MatchTransferPairs();
 
         this._logger.LogInformation(
-            "Import completed: {FilesProcessed} files, {Transactions} transactions, {AssetTransactions} asset transactions, {Matches} transfer pairs matched, {Errors} errors",
+            "Import completed: {FilesProcessed} files, {Transactions} transactions, {AssetTransactions} asset transactions, {OptionTransactions} option transactions, {Matches} transfer pairs matched, {Errors} errors",
             result.FilesProcessed,
             result.Transactions.Count,
             result.AssetTransactions.Count,
+            result.OptionTransactions.Count,
             matchedPairs,
             result.Errors.Count);
 

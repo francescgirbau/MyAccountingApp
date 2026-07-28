@@ -21,7 +21,7 @@ public class AssetTransactionCsvImportServiceTests
             await File.WriteAllTextAsync(file, csv);
 
             AssetTransactionCsvImportService service = new();
-            var (transactions, assetTransactions) = await service.ParseAllAsync(file);
+            var (transactions, assetTransactions, _) = await service.ParseAllAsync(file);
 
             Assert.Empty(transactions);
             Assert.Equal(2, assetTransactions.Count());
@@ -44,7 +44,7 @@ public class AssetTransactionCsvImportServiceTests
             await File.WriteAllTextAsync(file, csv);
 
             AssetTransactionCsvImportService service = new();
-            var (_, assetTransactions) = await service.ParseAllAsync(file);
+            var (_, assetTransactions, _) = await service.ParseAllAsync(file);
 
             var atx = Assert.Single(assetTransactions);
             Assert.Equal("COBAS_SELECCION", atx.Symbol);
@@ -72,7 +72,7 @@ public class AssetTransactionCsvImportServiceTests
             await File.WriteAllTextAsync(file, csv);
 
             AssetTransactionCsvImportService service = new();
-            var (_, assetTransactions) = await service.ParseAllAsync(file);
+            var (_, assetTransactions, _) = await service.ParseAllAsync(file);
 
             var atx = Assert.Single(assetTransactions);
             Assert.Equal("ES9876543210", atx.Symbol);
@@ -98,7 +98,7 @@ public class AssetTransactionCsvImportServiceTests
             await File.WriteAllTextAsync(file, csv);
 
             AssetTransactionCsvImportService service = new();
-            var (transactions, assetTransactions) = await service.ParseAllAsync(file);
+            var (transactions, assetTransactions, _) = await service.ParseAllAsync(file);
 
             Assert.Empty(transactions);
             Assert.Empty(assetTransactions);
@@ -121,7 +121,7 @@ public class AssetTransactionCsvImportServiceTests
             await File.WriteAllTextAsync(file, csv);
 
             AssetTransactionCsvImportService service = new();
-            var (_, assetTransactions) = await service.ParseAllAsync(file);
+            var (_, assetTransactions, _) = await service.ParseAllAsync(file);
 
             var atx = Assert.Single(assetTransactions);
             Assert.Equal(Domain.Enums.TransactionCategory.TRANSFER, atx.Transaction.Category);
@@ -145,7 +145,7 @@ public class AssetTransactionCsvImportServiceTests
             await File.WriteAllTextAsync(file, csv);
 
             AssetTransactionCsvImportService service = new();
-            var (_, assetTransactions) = await service.ParseAllAsync(file);
+            var (_, assetTransactions, _) = await service.ParseAllAsync(file);
 
             var atx = Assert.Single(assetTransactions);
             Assert.Equal(100m, atx.Transaction.Money.Amount);

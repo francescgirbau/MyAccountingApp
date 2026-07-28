@@ -27,7 +27,7 @@ public class InteractiveBrokersImportService : IBrokerImportService
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions)> ParseAllAsync(
+    public async Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions, IEnumerable<OptionTransaction> OptionTransactions)> ParseAllAsync(
         string filePath,
         CancellationToken cancellationToken = default)
     {
@@ -69,7 +69,7 @@ public class InteractiveBrokersImportService : IBrokerImportService
             transactions.Count,
             assetTransactions.Count);
 
-        return (transactions, assetTransactions);
+        return (transactions, assetTransactions, Enumerable.Empty<OptionTransaction>());
     }
 
     public async Task<IEnumerable<AssetTransaction>> ParseCorporateActionsAsync(

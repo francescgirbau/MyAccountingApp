@@ -36,7 +36,7 @@ public class BrokerImportDispatcher : IBrokerImportService
         this.degiroTransactionService = degiroTransactionService ?? throw new ArgumentNullException(nameof(degiroTransactionService));
     }
 
-    public Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions)> ParseAllAsync(
+    public Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions, IEnumerable<OptionTransaction> OptionTransactions)> ParseAllAsync(
         string filePath,
         CancellationToken cancellationToken = default)
     {

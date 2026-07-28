@@ -14,7 +14,7 @@ using MyAccountingApp.Domain.ValueObjects;
 
 public class DegiroImportService : IBrokerImportService
 {
-    public async Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions)> ParseAllAsync(
+    public async Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions, IEnumerable<OptionTransaction> OptionTransactions)> ParseAllAsync(
         string filePath,
         CancellationToken cancellationToken = default)
     {
@@ -65,7 +65,7 @@ public class DegiroImportService : IBrokerImportService
             }
         }
 
-        return (transactions, assetTransactions);
+        return (transactions, assetTransactions, Enumerable.Empty<OptionTransaction>());
     }
 
     public Task<IEnumerable<AssetTransaction>> ParseCorporateActionsAsync(

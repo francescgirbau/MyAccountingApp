@@ -11,4 +11,6 @@ public interface IOptionTransactionRepository
     bool Delete(Guid id);
 
     int DeleteByYear(int year);
+
+    void Initialize(IEnumerable<OptionTransaction> transactions);
 }

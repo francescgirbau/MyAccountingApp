@@ -20,7 +20,7 @@ public class DegiroImportServiceTests
         try
         {
             await File.WriteAllTextAsync(file, csv);
-            var (txs, assets) = await this.service.ParseAllAsync(file);
+            var (txs, assets, _) = await this.service.ParseAllAsync(file);
 
             Assert.Empty(txs);
             Assert.Empty(assets);
@@ -41,7 +41,7 @@ public class DegiroImportServiceTests
         try
         {
             await File.WriteAllTextAsync(file, csv);
-            var (txs, assets) = await this.service.ParseAllAsync(file);
+            var (txs, assets, _) = await this.service.ParseAllAsync(file);
 
             Assert.Empty(txs);
             Assert.Empty(assets);
@@ -63,7 +63,7 @@ public class DegiroImportServiceTests
         try
         {
             await File.WriteAllTextAsync(file, csv);
-            var (txs, assets) = await this.service.ParseAllAsync(file);
+            var (txs, assets, _) = await this.service.ParseAllAsync(file);
 
             Assert.Empty(assets);
             Assert.Equal(2, txs.Count());
@@ -87,7 +87,7 @@ public class DegiroImportServiceTests
         try
         {
             await File.WriteAllTextAsync(file, csv);
-            var (txs, assets) = await this.service.ParseAllAsync(file);
+            var (txs, assets, _) = await this.service.ParseAllAsync(file);
 
             Assert.Empty(txs);
             Assert.Empty(assets);
@@ -106,7 +106,7 @@ public class DegiroImportServiceTests
         try
         {
             await File.WriteAllTextAsync(file, csv);
-            var (txs, assets) = await this.service.ParseAllAsync(file);
+            var (txs, assets, _) = await this.service.ParseAllAsync(file);
 
             Assert.Empty(txs);
             Assert.Empty(assets);
@@ -127,7 +127,7 @@ public class DegiroImportServiceTests
         try
         {
             await File.WriteAllTextAsync(file, csv);
-            var (txs, assets) = await this.service.ParseAllAsync(file);
+            var (txs, assets, _) = await this.service.ParseAllAsync(file);
 
             Assert.Empty(assets);
             var t = Assert.Single(txs);
@@ -150,7 +150,7 @@ public class DegiroImportServiceTests
         try
         {
             await File.WriteAllTextAsync(file, csv);
-            var (txs, assets) = await this.service.ParseAllAsync(file);
+            var (txs, assets, _) = await this.service.ParseAllAsync(file);
 
             Assert.Empty(txs);
             Assert.Empty(assets);
@@ -171,7 +171,7 @@ public class DegiroImportServiceTests
         try
         {
             await File.WriteAllTextAsync(file, csv);
-            var (txs, assets) = await this.service.ParseAllAsync(file);
+            var (txs, assets, _) = await this.service.ParseAllAsync(file);
 
             Assert.Empty(assets);
             var t = Assert.Single(txs);
@@ -195,7 +195,7 @@ public class DegiroImportServiceTests
         try
         {
             await File.WriteAllTextAsync(file, csv);
-            var (txs, assets) = await this.service.ParseAllAsync(file);
+            var (txs, assets, _) = await this.service.ParseAllAsync(file);
 
             Assert.Empty(assets);
             var t = Assert.Single(txs);
@@ -218,7 +218,7 @@ public class DegiroImportServiceTests
         try
         {
             await File.WriteAllTextAsync(file, csv);
-            var (txs, assets) = await this.service.ParseAllAsync(file);
+            var (txs, assets, _) = await this.service.ParseAllAsync(file);
 
             Assert.Empty(txs);
             Assert.Empty(assets);
@@ -239,7 +239,7 @@ public class DegiroImportServiceTests
         try
         {
             await File.WriteAllTextAsync(file, csv);
-            var (txs, assets) = await this.service.ParseAllAsync(file);
+            var (txs, assets, _) = await this.service.ParseAllAsync(file);
 
             Assert.Empty(assets);
             var t = Assert.Single(txs);
@@ -262,7 +262,7 @@ public class DegiroImportServiceTests
         try
         {
             await File.WriteAllTextAsync(file, csv);
-            var (txs, assets) = await this.service.ParseAllAsync(file);
+            var (txs, assets, _) = await this.service.ParseAllAsync(file);
 
             Assert.Empty(txs);
             Assert.Empty(assets);
@@ -283,7 +283,7 @@ public class DegiroImportServiceTests
         try
         {
             await File.WriteAllTextAsync(file, csv);
-            var (txs, assets) = await this.service.ParseAllAsync(file);
+            var (txs, assets, _) = await this.service.ParseAllAsync(file);
 
             Assert.Empty(txs);
             Assert.Empty(assets);
@@ -304,7 +304,7 @@ public class DegiroImportServiceTests
         try
         {
             await File.WriteAllTextAsync(file, csv);
-            var (txs, assets) = await this.service.ParseAllAsync(file);
+            var (txs, assets, _) = await this.service.ParseAllAsync(file);
 
             Assert.Empty(assets);
             var t = Assert.Single(txs);

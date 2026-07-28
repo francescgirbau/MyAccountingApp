@@ -55,6 +55,11 @@ public class JsonOptionTransactionRepository : IOptionTransactionRepository
         return removed;
     }
 
+    public void Initialize(IEnumerable<OptionTransaction> transactions)
+    {
+        this.WriteAll(transactions.ToList());
+    }
+
     private void WriteAll(List<OptionTransaction> transactions)
     {
         string? dir = Path.GetDirectoryName(this.filePath);

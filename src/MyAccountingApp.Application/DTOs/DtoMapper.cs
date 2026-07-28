@@ -46,6 +46,7 @@ public static class DtoMapper
         new(
             result.Transactions.Select(t => t.ToDto()).ToList(),
             result.AssetTransactions.Select(at => at.ToDto()).ToList(),
+            result.OptionTransactions.Select(o => o.ToDto()).ToList(),
             result.Errors,
             result.ValidationErrors,
             result.ValidationWarnings,

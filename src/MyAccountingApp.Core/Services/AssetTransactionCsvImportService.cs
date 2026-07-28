@@ -15,7 +15,7 @@ using MyAccountingApp.Domain.ValueObjects;
 
 public class AssetTransactionCsvImportService : IBrokerImportService
 {
-    public async Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions)> ParseAllAsync(
+    public async Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions, IEnumerable<OptionTransaction> OptionTransactions)> ParseAllAsync(
         string filePath,
         CancellationToken cancellationToken = default)
     {
@@ -65,7 +65,7 @@ public class AssetTransactionCsvImportService : IBrokerImportService
             }
         }
 
-        return (Array.Empty<Transaction>(), assetTransactions);
+        return (Array.Empty<Transaction>(), assetTransactions, Enumerable.Empty<OptionTransaction>());
     }
 
     public Task<IEnumerable<AssetTransaction>> ParseCorporateActionsAsync(
