@@ -251,4 +251,69 @@ public class DegiroImportServiceTests
             File.Delete(file);
         }
     }
+
+    [Fact]
+    public async Task ParseAllAsync_OptionExercise_Skipped()
+    {
+        string csv = "Fecha,Hora,Fecha valor,Producto,ISIN,Descripción,Tipo,Variación,,Saldo,,ID Orden\n" +
+            "18-03-2023,10:00,17-03-2023,REDEIA CORPORACION SA,ES0173093024,\"OPCIÓN EJERCIDA: Compra 100 Redeia Corporacion SA@15,5 EUR (ES0173093024)\",,EUR,\"-1550,00\",EUR,\"-1462,20\",\n";
+
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            var (txs, assets) = await this.service.ParseAllAsync(file);
+
+            Assert.Empty(txs);
+            Assert.Empty(assets);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_CosteDeLaAccion_Skipped()
+    {
+        string csv = "Fecha,Hora,Fecha valor,Producto,ISIN,Descripción,Tipo,Variación,,Saldo,,ID Orden\n" +
+            "02-04-2024,13:17,02-04-2024,SOLVENTUM CORP,US83444M1018,Coste de la Acción,,USD,\"17,54\",USD,\"82,82\",\n";
+
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            var (txs, assets) = await this.service.ParseAllAsync(file);
+
+            Assert.Empty(txs);
+            Assert.Empty(assets);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_SecuritiesLending_CreatesIncome()
+    {
+        string csv = "Fecha,Hora,Fecha valor,Producto,ISIN,Descripción,Tipo,Variación,,Saldo,,ID Orden\n" +
+            "01-11-2025,10:00,31-10-2025,,,Ingresos por Préstamo de Valores - Octubre,,EUR,\"5,00\",EUR,\"100,00\",\n";
+
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            var (txs, assets) = await this.service.ParseAllAsync(file);
+
+            Assert.Empty(assets);
+            var t = Assert.Single(txs);
+            Assert.Equal(5m, t.Money.Amount);
+            Assert.Equal(Domain.Enums.TransactionCategory.INCOME, t.Category);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
 }

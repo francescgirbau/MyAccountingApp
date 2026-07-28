@@ -128,4 +128,51 @@ public class DegiroTransactionImportServiceTests
             File.Delete(file);
         }
     }
+
+    [Fact]
+    public async Task ParseAllAsync_SellWithNegativeQuantity_CreatesAssetTransaction()
+    {
+        string csv = "Fecha,Hora,Producto,ISIN,Bolsa de referencia,Centro de ejecución,Número,Precio,,Valor local,,Valor EUR,Tipo de cambio,Comisión AutoFX,Costes de transacción y/o externos EUR,Total EUR,ID Orden\n" +
+            "15-10-2025,20:41,UNITED NATURAL FOODS INC,US9111631035,NSY,XNAS,-21,\"43,0000\",USD,\"903,00\",USD,\"797,32\",\"1,1326\",\"-0,80\",,\"796,52\",,9731a893-b30b-4d04-b5c9-734ed5617a74";
+
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            var (txs, assets) = await this.service.ParseAllAsync(file);
+
+            Assert.Empty(txs);
+            var a = Assert.Single(assets);
+            Assert.Equal("UNITED", a.Symbol);
+            Assert.Equal(21, a.Quantity);
+            Assert.Equal(903, a.Transaction.Money.Amount);
+            Assert.Equal("USD", a.Transaction.Money.Currency);
+            Assert.Equal(Domain.Enums.AssetTransactionType.Sell, a.Type);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_OptionExchange_Skipped()
+    {
+        string csv = "Fecha,Hora,Producto,ISIN,Bolsa de referencia,Centro de ejecución,Número,Precio,,Valor local,,Valor EUR,Tipo de cambio,Comisión AutoFX,Costes de transacción y/o externos EUR,Total EUR,ID Orden\n" +
+            "01-03-2023,09:01,REE P15.50 17MAR23,ES0A03271814,MEF,XMRV,-1,\"0,1500\",EUR,\"15,00\",EUR,\"15,00\",,\"0,00\",\"-0,75\",\"14,25\",,0eb322a1-5668-4e28-bd12-12fcdb1bd25d";
+
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            var (txs, assets) = await this.service.ParseAllAsync(file);
+
+            Assert.Empty(txs);
+            Assert.Empty(assets);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
 }
