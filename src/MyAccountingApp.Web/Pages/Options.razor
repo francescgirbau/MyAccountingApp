@@ -1,0 +1,280 @@
+@page "/options"
+@using System.Text.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<PageTitle>Options</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Options</MudText>
+
+<MudPaper Class="pa-4 mb-4" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12" sm="4">
+            <MudSelect T="int?" @bind-Value="_selectedYear" @bind-Value:after="ApplyFilters" Label="Year" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+                @foreach (var year in _availableYears)
+                {
+                    <MudSelectItem T="int?" Value="@((int?)year)">@year</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect @bind-Value="_selectedSymbol" @bind-Value:after="ApplyFilters" Label="Symbol" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+                @foreach (var symbol in _availableSymbols)
+                {
+                    <MudSelectItem Value="symbol">@symbol</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteSweep"
+                       OnClick="@OpenDeleteYearDialog" Disabled="@(!_selectedYear.HasValue)">
+                Delete Year
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudTable Items="@_filteredTransactions" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true" SortLabel="Sort by">
+        <ToolBarContent>
+            <MudText Typo="Typo.subtitle1">@_filteredTransactions.Count option transactions</MudText>
+            <MudSpacer />
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@LoadDataAsync" Size="Size.Small" />
+        </ToolBarContent>
+        <ColGroup>
+            <col style="width: 120px" />
+            <col style="width: 80px" />
+            <col />
+            <col style="width: 80px" />
+            <col style="width: 100px" />
+            <col style="width: 80px" />
+            <col style="width: 80px" />
+            <col style="width: 80px" />
+        </ColGroup>
+        <HeaderContent>
+            <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Date)">Date</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Symbol)">Symbol</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Description)">Description</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Quantity)">Qty</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Premium.Amount)">Premium</MudTableSortLabel></MudTh>
+            <MudTh>Curr.</MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Type)">Type</MudTableSortLabel></MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Date">@context.Date.ToString("yyyy-MM-dd")</MudTd>
+            <MudTd DataLabel="Symbol">
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary">@context.Symbol</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Description">@context.Description</MudTd>
+            <MudTd DataLabel="Qty">@context.Quantity.ToString("G")</MudTd>
+            <MudTd DataLabel="Premium">@context.Premium.Amount.ToString("N2")</MudTd>
+            <MudTd DataLabel="Curr.">@context.Premium.Currency</MudTd>
+            <MudTd DataLabel="Type">@context.Type</MudTd>
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => OpenDeleteDialog(context))" />
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="@(new int[]{25, 50, 100})" />
+        </PagerContent>
+    </MudTable>
+}
+
+<MudDialog @bind-Visible="_showDeleteDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete Option Transaction</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>Are you sure you want to delete this option transaction?</MudText>
+        @if (_deletingTx is not null)
+        {
+            <MudText Typo="Typo.body2" Class="mt-2">
+                @_deletingTx.Date.ToString("yyyy-MM-dd") — @_deletingTx.Symbol @_deletingTx.Type
+                (premium @_deletingTx.Premium.Amount.ToString("N2") @_deletingTx.Premium.Currency)
+            </MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@CloseDeleteDialog">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@ConfirmDeleteAsync">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_showDeleteYearDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete Option Transactions by Year</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_deleteYearCount.HasValue)
+        {
+            <MudText>This will delete <strong>@_deleteYearCount option transactions</strong> from @_selectedYear.</MudText>
+            <MudText Class="mt-2" Color="Color.Error">This action cannot be undone.</MudText>
+        }
+        else
+        {
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@CloseDeleteYearDialog">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@ConfirmDeleteYearAsync"
+                   Disabled="@(!_deleteYearCount.HasValue)">
+            Delete @_selectedYear
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private List<OptionTransactionDto> _allTransactions = new();
+    private List<OptionTransactionDto> _filteredTransactions = new();
+    private List<int> _availableYears = new();
+    private List<string> _availableSymbols = new();
+    private bool _loading = true;
+
+    private int? _selectedYear { get; set; }
+    private string? _selectedSymbol { get; set; }
+
+    private bool _showDeleteDialog;
+    private OptionTransactionDto? _deletingTx;
+
+    private bool _showDeleteYearDialog;
+    private int? _deleteYearCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            _allTransactions = await Http.GetFromJsonAsync<List<OptionTransactionDto>>("/api/option-transactions") ?? new();
+            _availableYears = _allTransactions
+                .Select(t => t.Date.Year)
+                .Distinct()
+                .OrderByDescending(y => y)
+                .ToList();
+            _availableSymbols = _allTransactions
+                .Select(t => t.Symbol)
+                .Distinct()
+                .OrderBy(s => s)
+                .ToList();
+            ApplyFilters();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        var query = _allTransactions.AsEnumerable();
+
+        if (_selectedYear.HasValue)
+            query = query.Where(t => t.Date.Year == _selectedYear.Value);
+
+        if (!string.IsNullOrWhiteSpace(_selectedSymbol))
+            query = query.Where(t => t.Symbol == _selectedSymbol);
+
+        _filteredTransactions = query.OrderByDescending(t => t.Date).ToList();
+    }
+
+    private void OpenDeleteDialog(OptionTransactionDto tx)
+    {
+        _deletingTx = tx;
+        _showDeleteDialog = true;
+    }
+
+    private void CloseDeleteDialog()
+    {
+        _showDeleteDialog = false;
+        _deletingTx = null;
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (_deletingTx is null) return;
+
+        try
+        {
+            HttpResponseMessage response = await Http.DeleteAsync($"/api/option-transactions/{_deletingTx.Id}");
+            _showDeleteDialog = false;
+            _deletingTx = null;
+
+            if (response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NoContent)
+            {
+                Snackbar.Add("Option transaction deleted", Severity.Success);
+                await LoadDataAsync();
+            }
+            else
+            {
+                string error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Failed to delete: {error}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OpenDeleteYearDialog()
+    {
+        if (!_selectedYear.HasValue) return;
+
+        _deleteYearCount = null;
+        _showDeleteYearDialog = true;
+
+        try
+        {
+            var countResult = await Http.GetFromJsonAsync<Dictionary<string, object>>($"/api/option-transactions/year/{_selectedYear}/count");
+            _deleteYearCount = countResult?.GetValueOrDefault("options") is JsonElement je ? je.GetInt32() : 0;
+        }
+        catch
+        {
+            _deleteYearCount = 0;
+        }
+    }
+
+    private void CloseDeleteYearDialog()
+    {
+        _showDeleteYearDialog = false;
+        _deleteYearCount = null;
+    }
+
+    private async Task ConfirmDeleteYearAsync()
+    {
+        if (!_selectedYear.HasValue) return;
+
+        try
+        {
+            HttpResponseMessage response = await Http.DeleteAsync($"/api/option-transactions/year/{_selectedYear}");
+            _showDeleteYearDialog = false;
+            _deleteYearCount = null;
+
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add($"Deleted option transactions for {_selectedYear}", Severity.Success);
+                await LoadDataAsync();
+            }
+            else
+            {
+                string error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Failed to delete: {error}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+}

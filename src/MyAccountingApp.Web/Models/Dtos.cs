@@ -24,6 +24,18 @@ public class AssetTransactionDto
     public MoneyDto UnitaryCost { get; set; } = new();
 }
 
+public class OptionTransactionDto
+{
+    public Guid Id { get; set; }
+    public DateTime Date { get; set; }
+    public string Description { get; set; } = string.Empty;
+    public string Symbol { get; set; } = string.Empty;
+    public string Isin { get; set; } = string.Empty;
+    public decimal Quantity { get; set; }
+    public MoneyDto Premium { get; set; } = new();
+    public string Type { get; set; } = string.Empty;
+}
+
 public class PortfolioPositionDto
 {
     public string Symbol { get; set; } = string.Empty;

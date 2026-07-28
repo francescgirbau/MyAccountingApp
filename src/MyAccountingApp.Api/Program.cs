@@ -274,6 +274,12 @@ app.MapGet($"{prefix}/option-transactions/{{symbol}}", (string symbol, IOptionTr
     return Results.Ok(transactions);
 });
 
+app.MapDelete($"{prefix}/option-transactions/{{id:guid}}", (Guid id, IOptionTransactionRepository repo) =>
+{
+    bool deleted = repo.Delete(id);
+    return deleted ? Results.NoContent() : Results.NotFound(new { id, message = "Option transaction not found" });
+});
+
 app.MapDelete($"{prefix}/option-transactions/year/{{year:int}}", (int year, IOptionTransactionRepository repo) =>
 {
     int removed = repo.DeleteByYear(year);
