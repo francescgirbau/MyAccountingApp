@@ -63,6 +63,18 @@ builder.Services.AddSingleton<InteractiveBrokersImportService>(sp =>
     ILogger<InteractiveBrokersImportService> logger = sp.GetRequiredService<ILogger<InteractiveBrokersImportService>>();
     return new InteractiveBrokersImportService(csvParser, logger);
 });
+builder.Services.AddSingleton<IBKRFlexQueryImportService>(sp =>
+{
+    IEnumerable<IIBKRStatementAgent> agents = sp.GetServices<IIBKRStatementAgent>();
+    return new IBKRFlexQueryImportService(agents);
+});
+builder.Services.AddSingleton<IIBKRStatementAgent, TradeAgent>();
+builder.Services.AddSingleton<IIBKRStatementAgent, DividendAgent>();
+builder.Services.AddSingleton<IIBKRStatementAgent, DepositWithdrawalAgent>();
+builder.Services.AddSingleton<IIBKRStatementAgent, CorporateActionAgent>();
+builder.Services.AddSingleton<IIBKRStatementAgent, FeeAgent>();
+builder.Services.AddSingleton<IIBKRStatementAgent, WithholdingTaxAgent>();
+builder.Services.AddSingleton<IIBKRStatementAgent, InterestAgent>();
 builder.Services.AddSingleton<BankCsvImportService>();
 builder.Services.AddSingleton<AssetTransactionCsvImportService>();
 builder.Services.AddSingleton<DegiroImportService>();

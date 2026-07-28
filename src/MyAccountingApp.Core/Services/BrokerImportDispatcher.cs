@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MyAccountingApp.Core.Agents;
+using MyAccountingApp.Core.Agents.IBKR;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Interfaces;
 
@@ -21,19 +22,22 @@ public class BrokerImportDispatcher : IBrokerImportService
     private readonly AssetTransactionCsvImportService assetService;
     private readonly DegiroImportService degiroService;
     private readonly DegiroTransactionImportService degiroTransactionService;
+    private readonly IBKRFlexQueryImportService flexQueryService;
 
     public BrokerImportDispatcher(
         InteractiveBrokersImportService ibkrService,
         BankCsvImportService bankService,
         AssetTransactionCsvImportService assetService,
         DegiroImportService degiroService,
-        DegiroTransactionImportService degiroTransactionService)
+        DegiroTransactionImportService degiroTransactionService,
+        IBKRFlexQueryImportService flexQueryService)
     {
         this.ibkrService = ibkrService ?? throw new ArgumentNullException(nameof(ibkrService));
         this.bankService = bankService ?? throw new ArgumentNullException(nameof(bankService));
         this.assetService = assetService ?? throw new ArgumentNullException(nameof(assetService));
         this.degiroService = degiroService ?? throw new ArgumentNullException(nameof(degiroService));
         this.degiroTransactionService = degiroTransactionService ?? throw new ArgumentNullException(nameof(degiroTransactionService));
+        this.flexQueryService = flexQueryService ?? throw new ArgumentNullException(nameof(flexQueryService));
     }
 
     public Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions, IEnumerable<OptionTransaction> OptionTransactions)> ParseAllAsync(
@@ -69,6 +73,11 @@ public class BrokerImportDispatcher : IBrokerImportService
     private IBrokerImportService SelectService(string filePath)
     {
         string fileName = Path.GetFileName(filePath);
+
+        if (fileName.StartsWith("U8997440_", StringComparison.OrdinalIgnoreCase))
+        {
+            return this.flexQueryService;
+        }
 
         if (fileName.EndsWith("_asset_transactions.csv", StringComparison.OrdinalIgnoreCase))
         {
