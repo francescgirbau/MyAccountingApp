@@ -2,6 +2,7 @@ using MyAccountingApp.Application.DTOs;
 using MyAccountingApp.Application.Interfaces;
 using MyAccountingApp.Application.Services;
 using MyAccountingApp.Core.Agents;
+using MyAccountingApp.Core.Agents.IBKR;
 using MyAccountingApp.Core.Repositories;
 using MyAccountingApp.Core.Services;
 using MyAccountingApp.Domain.Entities;
