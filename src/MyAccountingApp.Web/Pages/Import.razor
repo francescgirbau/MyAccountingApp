@@ -31,6 +31,34 @@
 </MudPaper>
 
 <MudPaper Class="pa-6 mb-4" Outlined="true">
+    <MudText Typo="Typo.h6" GutterBottom="true">Import DeGiro / Flatex CSV</MudText>
+    <MudText Typo="Typo.body2" Class="mb-4">
+        Upload a CSV exported from DeGiro or Flatex (Spanish format). Asset transactions, dividends, and fees are detected automatically.
+    </MudText>
+    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+        <strong>Format detected automatically.</strong> Expected columns: Fecha, Hora, Fecha valor, Producto, ISIN, Descripción, Tipo, Variación, (amount), Saldo, (balance), ID Orden.<br />
+        <strong>Compra</strong> / <strong>Venta</strong> rows become portfolio entries. <strong>Dividendo</strong>, <strong>Retención</strong> and <strong>Costes</strong> become cash transactions. Internal transfers are skipped.
+    </MudAlert>
+    <MudGrid>
+        <MudItem xs="12" sm="8">
+            <InputFile OnChange="@OnDegiroFileSelected" accept=".csv" class="mud-input-outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="4" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Large"
+                       OnClick="@UploadDegiroAsync" Disabled="@(_degiroFile is null || _loading)"
+                       StartIcon="@Icons.Material.Filled.FileUpload"
+                       FullWidth="true">
+                Import DeGiro
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+    @if (_degiroFile is not null)
+    {
+        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">Selected: @_degiroFile.Name</MudText>
+    }
+</MudPaper>
+
+<MudPaper Class="pa-6 mb-4" Outlined="true">
     <MudText Typo="Typo.h6" GutterBottom="true">Import Raw CSV</MudText>
     <MudText Typo="Typo.body2" Class="mb-4">
         Upload a CSV with your own format. No transformations applied.
@@ -71,6 +99,66 @@
             @if (_result.Errors.Count > 0) { <span><strong>@_result.Errors.Count</strong> errors.</span> }
         </MudText>
     </MudAlert>
+
+    @if (_result.AssetTransactions.Count > 0)
+    {
+        <MudText Typo="Typo.subtitle1" GutterBottom="true">Asset Transactions — verify and correct symbols</MudText>
+        <MudAlert Severity="Severity.Warning" Class="mb-4" Dense="true">
+            Symbols are extracted from the product name and may not match the exact Yahoo Finance ticker.
+            Edit them below and click "Save Symbol Corrections".
+        </MudAlert>
+        <MudSimpleTable Class="mb-4" Outlined="true" Hover="true">
+            <thead>
+                <tr><th>Symbol</th><th>Description</th><th>Amount</th><th>Currency</th><th>Quantity</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var a in _result.AssetTransactions)
+                {
+                    <tr>
+                        <td>
+                            <div class="d-flex align-center">
+                                <MudTextField @bind-Value="_editableSymbols[a.Transaction.Id]"
+                                              Variant="Variant.Outlined"
+                                              Dense="true"
+                                              Immediate="true"
+                                              Class="flex-grow-1" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                               Size="Size.Small"
+                                               OnClick="@(() => SearchSymbolAsync(a.Transaction.Id, a.Transaction.Description))"
+                                               Disabled="@_symbolSearching.Contains(a.Transaction.Id)" />
+                            </div>
+                            @if (_symbolResults.TryGetValue(a.Transaction.Id, out var symResults) && symResults.Count > 0)
+                            {
+                                <MudPaper Class="pa-2 mt-1" Outlined="true">
+                                    @foreach (var sr in symResults)
+                                    {
+                                        <MudText Typo="Typo.body2" Class="mud-primary-text cursor-pointer"
+                                                 @onclick="@(() => SelectSymbolResult(a.Transaction.Id, sr.Symbol))">
+                                            <strong>@sr.Symbol</strong> — @sr.Name (@sr.Exchange)
+                                        </MudText>
+                                    }
+                                </MudPaper>
+                            }
+                        </td>
+                        <td>@a.Transaction.Description</td>
+                        <td>@a.Transaction.Money.Amount.ToString("N2")</td>
+                        <td>@a.Transaction.Money.Currency</td>
+                        <td>@a.Quantity</td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   OnClick="@SaveSymbolCorrectionsAsync"
+                   Disabled="@_savingSymbols"
+                   StartIcon="@Icons.Material.Filled.Save">
+            Save Symbol Corrections
+        </MudButton>
+        @if (_savingSymbols)
+        {
+            <MudProgressLinear Indeterminate="true" Class="mt-2" />
+        }
+    }
 
     @if (_result.Errors.Count > 0)
     {
@@ -119,8 +207,13 @@
 @code {
     private ImportResultDto? _result;
     private bool _loading;
+    private bool _savingSymbols;
+    private Dictionary<Guid, string> _editableSymbols = new();
+    private Dictionary<Guid, List<SymbolLookupResult>> _symbolResults = new();
+    private HashSet<Guid> _symbolSearching = new();
     private IBrowserFile? _selectedFile;
     private IBrowserFile? _rawFile;
+    private IBrowserFile? _degiroFile;
 
     private void OnFileSelected(InputFileChangeEventArgs args)
     {
@@ -134,12 +227,19 @@
         _result = null;
     }
 
+    private void OnDegiroFileSelected(InputFileChangeEventArgs args)
+    {
+        _degiroFile = args.File;
+        _result = null;
+    }
+
     private async Task UploadAndImportAsync()
     {
         if (_selectedFile is null) return;
 
         _loading = true;
         _result = null;
+        _editableSymbols = new();
         try
         {
             using var content = new MultipartFormDataContent();
@@ -148,6 +248,7 @@
 
             var response = await Http.PostAsync("/api/import/upload", content);
             _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
+            InitEditableSymbols();
             Snackbar.Add("Upload import completed.", Severity.Success);
             _selectedFile = null;
         }
@@ -161,12 +262,42 @@
         }
     }
 
+    private async Task UploadDegiroAsync()
+    {
+        if (_degiroFile is null) return;
+
+        _loading = true;
+        _result = null;
+        _editableSymbols = new();
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            using var stream = _degiroFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            content.Add(new StreamContent(stream), "file", _degiroFile.Name);
+
+            var response = await Http.PostAsync("/api/import/upload", content);
+            _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
+            InitEditableSymbols();
+            Snackbar.Add("DeGiro import completed.", Severity.Success);
+            _degiroFile = null;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"DeGiro import failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
     private async Task UploadRawCsvAsync()
     {
         if (_rawFile is null) return;
 
         _loading = true;
         _result = null;
+        _editableSymbols = new();
         try
         {
             using var content = new MultipartFormDataContent();
@@ -198,4 +329,120 @@
         }
     }
 
+    private void InitEditableSymbols()
+    {
+        if (_result is null) return;
+        _editableSymbols = new();
+        foreach (var a in _result.AssetTransactions)
+        {
+            _editableSymbols[a.Transaction.Id] = a.Symbol;
+        }
+    }
+
+    private async Task SaveSymbolCorrectionsAsync()
+    {
+        if (_result is null || _editableSymbols.Count == 0) return;
+
+        _savingSymbols = true;
+        int saved = 0;
+        int errors = 0;
+
+        foreach (var kv in _editableSymbols)
+        {
+            AssetTransactionDto? original = _result.AssetTransactions.FirstOrDefault(a => a.Transaction.Id == kv.Key);
+            if (original is null) continue;
+            if (original.Symbol == kv.Value) continue;
+
+            try
+            {
+                var request = new
+                {
+                    date = original.Transaction.Date,
+                    description = original.Transaction.Description,
+                    amount = original.Transaction.Money.Amount,
+                    currency = original.Transaction.Money.Currency,
+                    category = original.Transaction.Category,
+                    symbol = kv.Value,
+                    quantity = original.Quantity,
+                    type = original.Type,
+                };
+
+                var response = await Http.PutAsJsonAsync($"/api/asset-transactions/{kv.Key}", request);
+                if (response.IsSuccessStatusCode)
+                {
+                    original.Symbol = kv.Value;
+                    saved++;
+                }
+                else
+                {
+                    errors++;
+                }
+            }
+            catch
+            {
+                errors++;
+            }
+        }
+
+        _savingSymbols = false;
+
+        if (errors == 0)
+        {
+            Snackbar.Add($"Symbols corrected: {saved} updated.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add($"Symbols corrected: {saved} updated, {errors} failed.", Severity.Warning);
+        }
+    }
+
+    private async Task SearchSymbolAsync(Guid assetId, string description)
+    {
+        if (_symbolSearching.Contains(assetId)) return;
+
+        _symbolSearching.Add(assetId);
+        _symbolResults.Remove(assetId);
+
+        string name = description;
+        int atIdx = description.IndexOf('@');
+        if (atIdx > 0)
+        {
+            string beforeAt = description[..atIdx].Trim();
+            string stripped = beforeAt.Replace("Compra ", string.Empty).Replace("Venta ", string.Empty).Trim();
+            int firstSpace = stripped.IndexOf(' ');
+            if (firstSpace > 0 && int.TryParse(stripped[..firstSpace], out int _))
+            {
+                stripped = stripped[(firstSpace + 1)..].Trim();
+            }
+            name = stripped;
+        }
+
+        try
+        {
+            var results = await Http.GetFromJsonAsync<List<SymbolLookupResult>>($"/api/symbol-lookup?name={Uri.EscapeDataString(name)}");
+            _symbolResults[assetId] = results ?? new();
+        }
+        catch
+        {
+            _symbolResults[assetId] = new();
+        }
+        finally
+        {
+            _symbolSearching.Remove(assetId);
+        }
+    }
+
+    private void SelectSymbolResult(Guid assetId, string symbol)
+    {
+        _editableSymbols[assetId] = symbol;
+        _symbolResults.Remove(assetId);
+    }
+
+    private sealed class SymbolLookupResult
+    {
+        public string Symbol { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Exchange { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+    }
 }
