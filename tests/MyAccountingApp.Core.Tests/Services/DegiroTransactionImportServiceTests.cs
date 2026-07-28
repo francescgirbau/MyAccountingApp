@@ -128,4 +128,30 @@ public class DegiroTransactionImportServiceTests
             File.Delete(file);
         }
     }
+
+    [Fact]
+    public async Task ParseAllAsync_SellWithNegativeQuantity_CreatesAssetTransaction()
+    {
+        string csv = "Fecha,Hora,Producto,ISIN,Bolsa de referencia,Centro de ejecución,Número,Precio,,Valor local,,Valor EUR,Tipo de cambio,Comisión AutoFX,Costes de transacción y/o externos EUR,Total EUR,ID Orden\n" +
+            "01-03-2023,09:01,REE P15.50 17MAR23,ES0A03271814,MEF,XMRV,-1,\"0,1500\",EUR,\"15,00\",EUR,\"15,00\",,\"0,00\",\"-0,75\",\"14,25\",,0eb322a1-5668-4e28-bd12-12fcdb1bd25d";
+
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            var (txs, assets) = await this.service.ParseAllAsync(file);
+
+            Assert.Empty(txs);
+            var a = Assert.Single(assets);
+            Assert.Equal("REE", a.Symbol);
+            Assert.Equal(1, a.Quantity);
+            Assert.Equal(15, a.Transaction.Money.Amount);
+            Assert.Equal("EUR", a.Transaction.Money.Currency);
+            Assert.Equal(Domain.Enums.AssetTransactionType.Sell, a.Type);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
 }
