@@ -183,18 +183,20 @@ app.MapDelete($"{prefix}/transactions/{{id:guid}}", (Guid id, ITransactionReposi
     return Results.NoContent();
 });
 
-app.MapDelete($"{prefix}/transactions/year/{{year:int}}", (int year, ITransactionRepository repo, IPortfolioRepository portfolioRepo) =>
+app.MapDelete($"{prefix}/transactions/year/{{year:int}}", (int year, ITransactionRepository repo, IPortfolioRepository portfolioRepo, IOptionTransactionRepository optionRepo) =>
 {
     int transactionsRemoved = repo.DeleteByYear(year);
     int assetsRemoved = portfolioRepo.DeleteByYear(year);
-    return Results.Ok(new { year, deletedTransactions = transactionsRemoved, deletedAssets = assetsRemoved });
+    int optionsRemoved = optionRepo.DeleteByYear(year);
+    return Results.Ok(new { year, deletedTransactions = transactionsRemoved, deletedAssets = assetsRemoved, deletedOptions = optionsRemoved });
 });
 
-app.MapGet($"{prefix}/transactions/year/{{year:int}}/count", (int year, ITransactionRepository repo, IPortfolioRepository portfolioRepo) =>
+app.MapGet($"{prefix}/transactions/year/{{year:int}}/count", (int year, ITransactionRepository repo, IPortfolioRepository portfolioRepo, IOptionTransactionRepository optionRepo) =>
 {
     int transactions = repo.GetAll().Count(t => t.Date.Year == year);
     int assets = portfolioRepo.GetAllTransactions().Count(a => a.Transaction.Date.Year == year);
-    return Results.Ok(new { year, transactions, assets });
+    int options = optionRepo.GetAll().Count(o => o.Transaction.Date.Year == year);
+    return Results.Ok(new { year, transactions, assets, options });
 });
 
 app.MapGet($"{prefix}/asset-transactions", (IPortfolioRepository repo) =>
@@ -289,16 +291,17 @@ app.MapGet($"{prefix}/option-transactions/{{symbol}}", (string symbol, IOptionTr
 
 app.MapPut($"{prefix}/option-transactions/{{id:guid}}", (Guid id, UpdateOptionTransactionRequest request, IOptionTransactionRepository repo) =>
 {
-    OptionTransaction? existing = repo.GetAll().FirstOrDefault(t => t.Id == id);
+    OptionTransaction? existing = repo.GetAll().FirstOrDefault(t => t.Transaction.Id == id);
     if (existing is null)
     {
         return Results.NotFound(new { id, message = "Option transaction not found" });
     }
 
-    Money premium = new(request.PremiumAmount, request.PremiumCurrency);
+    Money money = new(request.Amount, request.Currency);
+    TransactionCategory category = Enum.Parse<TransactionCategory>(request.Category);
+    Transaction transaction = new(id, request.Date, request.Description, money, category);
     AssetTransactionType type = Enum.Parse<AssetTransactionType>(request.Type);
-    OptionTransaction updated = new(
-        id, request.Date, request.Description, request.Symbol, request.Isin, request.Quantity, premium, type);
+    OptionTransaction updated = new(transaction, request.Symbol, request.Isin, request.Quantity, type);
     repo.Update(updated);
     return Results.Ok(updated.ToDto());
 });
@@ -317,7 +320,7 @@ app.MapDelete($"{prefix}/option-transactions/year/{{year:int}}", (int year, IOpt
 
 app.MapGet($"{prefix}/option-transactions/year/{{year:int}}/count", (int year, IOptionTransactionRepository repo) =>
 {
-    int count = repo.GetAll().Count(t => t.Date.Year == year);
+    int count = repo.GetAll().Count(t => t.Transaction.Date.Year == year);
     return Results.Ok(new { year, options = count });
 });
 
@@ -444,25 +447,29 @@ app.MapPost($"{prefix}/import/raw-csv", async (
     });
 });
 
-// Clears cash transactions and portfolio (asset) data. Does not touch currency conversions.
-app.MapPost($"{prefix}/data/reset", (ITransactionRepository transactionRepo, IPortfolioRepository portfolioRepo, ILogger<Program> logger) =>
+// Clears cash transactions, portfolio data, and option transactions. Does not touch currency conversions.
+app.MapPost($"{prefix}/data/reset", (ITransactionRepository transactionRepo, IPortfolioRepository portfolioRepo, IOptionTransactionRepository optionRepo, ILogger<Program> logger) =>
 {
     int transactionCount = transactionRepo.GetAll().Count();
     int assetTransactionCount = portfolioRepo.GetAllTransactions().Count();
+    int optionCount = optionRepo.GetAll().Count();
 
     transactionRepo.Initialize(Array.Empty<Transaction>());
     portfolioRepo.Initialize(Array.Empty<AssetTransaction>());
+    optionRepo.Initialize(Array.Empty<OptionTransaction>());
 
     logger.LogWarning(
-        "Data reset: cleared {TransactionCount} transactions and {AssetTransactionCount} asset transactions",
+        "Data reset: cleared {TransactionCount} transactions, {AssetTransactionCount} asset transactions, and {OptionCount} option transactions",
         transactionCount,
-        assetTransactionCount);
+        assetTransactionCount,
+        optionCount);
 
     return Results.Ok(new
     {
         message = "Database reset completed",
         clearedTransactions = transactionCount,
         clearedAssetTransactions = assetTransactionCount,
+        clearedOptionTransactions = optionCount,
     });
 });
 
@@ -516,16 +523,17 @@ app.MapGet($"{prefix}/summary/{{year:int}}", (int year, IAnnualSummaryService su
     return summary is not null ? Results.Ok(summary) : Results.NotFound(new { year, message = "No data found for this year" });
 });
 
-app.MapGet($"{prefix}/backup", (ITransactionRepository txRepo, IPortfolioRepository pfRepo) =>
+app.MapGet($"{prefix}/backup", (ITransactionRepository txRepo, IPortfolioRepository pfRepo, IOptionTransactionRepository optRepo) =>
 {
     List<Transaction> transactions = txRepo.GetAll().ToList();
     List<AssetTransaction> assetTransactions = pfRepo.GetAllTransactions().ToList();
-    string json = JsonSerializer.Serialize(new { transactions, assetTransactions }, new JsonSerializerOptions { WriteIndented = true });
+    List<OptionTransaction> optionTransactions = optRepo.GetAll().ToList();
+    string json = JsonSerializer.Serialize(new { transactions, assetTransactions, optionTransactions }, new JsonSerializerOptions { WriteIndented = true });
     byte[] bytes = Encoding.UTF8.GetBytes(json);
     return Results.File(bytes, "application/json", $"myaccounting-backup-{DateTime.Now:yyyyMMdd}.json");
 });
 
-app.MapPost($"{prefix}/backup", async (HttpRequest request, ITransactionRepository txRepo, IPortfolioRepository pfRepo, ILogger<Program> logger) =>
+app.MapPost($"{prefix}/backup", async (HttpRequest request, ITransactionRepository txRepo, IPortfolioRepository pfRepo, IOptionTransactionRepository optRepo, ILogger<Program> logger) =>
 {
     using StreamReader reader = new(request.Body);
     string body = await reader.ReadToEndAsync();
@@ -538,10 +546,11 @@ app.MapPost($"{prefix}/backup", async (HttpRequest request, ITransactionReposito
 
         txRepo.Initialize(backup.Transactions);
         pfRepo.Initialize(backup.AssetTransactions ?? []);
+        optRepo.Initialize(backup.OptionTransactions ?? []);
 
-        logger.LogInformation("Backup restored: {Count} transactions, {Count2} asset transactions",
-            backup.Transactions.Count, backup.AssetTransactions?.Count ?? 0);
-        return Results.Ok(new { message = $"Restored {backup.Transactions.Count} transactions and {backup.AssetTransactions?.Count ?? 0} asset transactions" });
+        logger.LogInformation("Backup restored: {Count} transactions, {Count2} asset transactions, {Count3} option transactions",
+            backup.Transactions.Count, backup.AssetTransactions?.Count ?? 0, backup.OptionTransactions?.Count ?? 0);
+        return Results.Ok(new { message = $"Restored {backup.Transactions.Count} transactions, {backup.AssetTransactions?.Count ?? 0} asset transactions, and {backup.OptionTransactions?.Count ?? 0} option transactions" });
     }
     catch (JsonException ex)
     {
@@ -602,5 +611,5 @@ finally
 record ImportRequest(List<string> FolderPaths);
 record CreateTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category);
 record CreateAssetTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, decimal Quantity, string Type);
-record UpdateOptionTransactionRequest(DateTime Date, string Description, string Symbol, string Isin, decimal Quantity, decimal PremiumAmount, string PremiumCurrency, string Type);
-record BackupData(List<Transaction> Transactions, List<AssetTransaction>? AssetTransactions);
+record UpdateOptionTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, string Isin, decimal Quantity, string Type);
+record BackupData(List<Transaction> Transactions, List<AssetTransaction>? AssetTransactions, List<OptionTransaction>? OptionTransactions);

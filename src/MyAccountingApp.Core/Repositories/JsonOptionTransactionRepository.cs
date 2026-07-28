@@ -21,7 +21,14 @@ public class JsonOptionTransactionRepository : IOptionTransactionRepository
         }
 
         string json = File.ReadAllText(this.filePath);
-        return JsonSerializer.Deserialize<List<OptionTransaction>>(json) ?? new List<OptionTransaction>();
+        try
+        {
+            return JsonSerializer.Deserialize<List<OptionTransaction>>(json) ?? new List<OptionTransaction>();
+        }
+        catch
+        {
+            return new List<OptionTransaction>();
+        }
     }
 
     public void Add(OptionTransaction transaction)
@@ -34,7 +41,7 @@ public class JsonOptionTransactionRepository : IOptionTransactionRepository
     public void Update(OptionTransaction transaction)
     {
         List<OptionTransaction> transactions = this.GetAll().ToList();
-        int index = transactions.FindIndex(t => t.Id == transaction.Id);
+        int index = transactions.FindIndex(t => t.Transaction.Id == transaction.Transaction.Id);
         if (index >= 0)
         {
             transactions[index] = transaction;
@@ -45,7 +52,7 @@ public class JsonOptionTransactionRepository : IOptionTransactionRepository
     public bool Delete(Guid id)
     {
         List<OptionTransaction> transactions = this.GetAll().ToList();
-        int removed = transactions.RemoveAll(t => t.Id == id);
+        int removed = transactions.RemoveAll(t => t.Transaction.Id == id);
         if (removed > 0)
         {
             this.WriteAll(transactions);
@@ -57,7 +64,7 @@ public class JsonOptionTransactionRepository : IOptionTransactionRepository
     public int DeleteByYear(int year)
     {
         List<OptionTransaction> transactions = this.GetAll().ToList();
-        int removed = transactions.RemoveAll(t => t.Date.Year == year);
+        int removed = transactions.RemoveAll(t => t.Transaction.Date.Year == year);
         if (removed > 0)
         {
             this.WriteAll(transactions);

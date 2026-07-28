@@ -57,24 +57,24 @@ else
             <col style="width: 100px" />
         </ColGroup>
         <HeaderContent>
-            <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Date)">Date</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Transaction.Date)">Date</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Symbol)">Symbol</MudTableSortLabel></MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Description)">Description</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Transaction.Description)">Description</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Quantity)">Qty</MudTableSortLabel></MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Premium.Amount)">Premium</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Transaction.Money.Amount)">Amount</MudTableSortLabel></MudTh>
             <MudTh>Curr.</MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Type)">Type</MudTableSortLabel></MudTh>
             <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd DataLabel="Date">@context.Date.ToString("yyyy-MM-dd")</MudTd>
+            <MudTd DataLabel="Date">@context.Transaction.Date.ToString("yyyy-MM-dd")</MudTd>
             <MudTd DataLabel="Symbol">
                 <MudChip T="string" Size="Size.Small" Color="Color.Primary">@context.Symbol</MudChip>
             </MudTd>
-            <MudTd DataLabel="Description">@context.Description</MudTd>
+            <MudTd DataLabel="Description">@context.Transaction.Description</MudTd>
             <MudTd DataLabel="Qty">@context.Quantity.ToString("G")</MudTd>
-            <MudTd DataLabel="Premium">@context.Premium.Amount.ToString("N2")</MudTd>
-            <MudTd DataLabel="Curr.">@context.Premium.Currency</MudTd>
+            <MudTd DataLabel="Amount">@context.Transaction.Money.Amount.ToString("N2")</MudTd>
+            <MudTd DataLabel="Curr.">@context.Transaction.Money.Currency</MudTd>
             <MudTd DataLabel="Type">@context.Type</MudTd>
             <MudTd DataLabel="Actions">
                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => OpenEditDialog(context))" />
@@ -109,7 +109,7 @@ else
                 <MudNumericField T="decimal" @bind-Value="_formQuantity" Label="Quantity" Variant="Variant.Outlined" Min="@(0.01m)" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudNumericField T="decimal" @bind-Value="_formPremium" Label="Premium" Variant="Variant.Outlined" Min="@(0.01m)" />
+                <MudNumericField T="decimal" @bind-Value="_formAmount" Label="Amount" Variant="Variant.Outlined" Min="@(0.01m)" />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudSelect @bind-Value="_formCurrency" Label="Currency" Variant="Variant.Outlined">
@@ -145,8 +145,8 @@ else
         @if (_deletingTx is not null)
         {
             <MudText Typo="Typo.body2" Class="mt-2">
-                @_deletingTx.Date.ToString("yyyy-MM-dd") — @_deletingTx.Symbol @_deletingTx.Type
-                (premium @_deletingTx.Premium.Amount.ToString("N2") @_deletingTx.Premium.Currency)
+                @_deletingTx.Transaction.Date.ToString("yyyy-MM-dd") — @_deletingTx.Symbol @_deletingTx.Type
+                (amount @_deletingTx.Transaction.Money.Amount.ToString("N2") @_deletingTx.Transaction.Money.Currency)
             </MudText>
         }
     </DialogContent>
@@ -198,7 +198,7 @@ else
     private string _formSymbol = "";
     private string _formIsin = "";
     private decimal _formQuantity;
-    private decimal _formPremium;
+    private decimal _formAmount;
     private string _formCurrency = "EUR";
     private string _formType = "Buy";
 
@@ -208,7 +208,7 @@ else
     private bool _showDeleteYearDialog;
     private int? _deleteYearCount;
 
-    private bool IsFormInvalid() => string.IsNullOrWhiteSpace(_formDescription) || string.IsNullOrWhiteSpace(_formSymbol) || _formPremium <= 0 || _formQuantity <= 0;
+    private bool IsFormInvalid() => string.IsNullOrWhiteSpace(_formDescription) || string.IsNullOrWhiteSpace(_formSymbol) || _formAmount <= 0 || _formQuantity <= 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -222,7 +222,7 @@ else
         {
             _allTransactions = await Http.GetFromJsonAsync<List<OptionTransactionDto>>("/api/option-transactions") ?? new();
             _availableYears = _allTransactions
-                .Select(t => t.Date.Year)
+                .Select(t => t.Transaction.Date.Year)
                 .Distinct()
                 .OrderByDescending(y => y)
                 .ToList();
@@ -244,24 +244,24 @@ else
         var query = _allTransactions.AsEnumerable();
 
         if (_selectedYear.HasValue)
-            query = query.Where(t => t.Date.Year == _selectedYear.Value);
+            query = query.Where(t => t.Transaction.Date.Year == _selectedYear.Value);
 
         if (!string.IsNullOrWhiteSpace(_selectedSymbol))
             query = query.Where(t => t.Symbol == _selectedSymbol);
 
-        _filteredTransactions = query.OrderByDescending(t => t.Date).ToList();
+        _filteredTransactions = query.OrderByDescending(t => t.Transaction.Date).ToList();
     }
 
     private void OpenEditDialog(OptionTransactionDto tx)
     {
-        _editingId = tx.Id;
-        _formDate = tx.Date;
-        _formDescription = tx.Description;
+        _editingId = tx.Transaction.Id;
+        _formDate = tx.Transaction.Date;
+        _formDescription = tx.Transaction.Description;
         _formSymbol = tx.Symbol;
         _formIsin = tx.Isin;
         _formQuantity = tx.Quantity;
-        _formPremium = tx.Premium.Amount;
-        _formCurrency = tx.Premium.Currency;
+        _formAmount = tx.Transaction.Money.Amount;
+        _formCurrency = tx.Transaction.Money.Currency;
         _formType = tx.Type;
         _showFormDialog = true;
     }
@@ -279,11 +279,12 @@ else
             {
                 Date = _formDate ?? DateTime.Today,
                 Description = _formDescription,
+                Amount = _formAmount,
+                Currency = _formCurrency,
+                Category = "EXPENSE",
                 Symbol = _formSymbol,
                 Isin = _formIsin,
                 Quantity = _formQuantity,
-                PremiumAmount = _formPremium,
-                PremiumCurrency = _formCurrency,
                 Type = _formType,
             };
 
@@ -324,7 +325,7 @@ else
 
         try
         {
-            HttpResponseMessage response = await Http.DeleteAsync($"/api/option-transactions/{_deletingTx.Id}");
+            HttpResponseMessage response = await Http.DeleteAsync($"/api/option-transactions/{_deletingTx.Transaction.Id}");
             _showDeleteDialog = false;
             _deletingTx = null;
 

@@ -1,11 +1,8 @@
 namespace MyAccountingApp.Application.DTOs;
 
 public record OptionTransactionDto(
-    Guid Id,
-    DateTime Date,
-    string Description,
+    TransactionDto Transaction,
     string Symbol,
     string Isin,
     decimal Quantity,
-    MoneyDto Premium,
     string Type);

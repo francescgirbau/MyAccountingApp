@@ -172,7 +172,7 @@ public class DegiroTransactionImportServiceTests
             var a = Assert.Single(options);
             Assert.Equal("REE", a.Symbol);
             Assert.Equal(1, a.Quantity);
-            Assert.Equal(15, a.Premium.Amount);
+            Assert.Equal(15, a.Transaction.Money.Amount);
             Assert.Equal(Domain.Enums.AssetTransactionType.Sell, a.Type);
         }
         finally
