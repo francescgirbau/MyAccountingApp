@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using MyAccountingApp.Domain.Entities;
@@ -13,7 +12,7 @@ using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
 using MyAccountingApp.Domain.ValueObjects;
 
-public partial class DegiroImportService : IBrokerImportService
+public class DegiroImportService : IBrokerImportService
 {
     public async Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions)> ParseAllAsync(
         string filePath,
@@ -41,9 +40,7 @@ public partial class DegiroImportService : IBrokerImportService
                 }
 
                 DateTime date = ParseDate(fields[0]);
-                string producto = fields[3];
                 string description = fields[5];
-                string isin = fields[4];
                 string currency = NormalizeCurrency(fields[7], fields[9]);
                 decimal amount = ParseEuropeanDecimal(fields[8]);
 
@@ -119,69 +116,6 @@ public partial class DegiroImportService : IBrokerImportService
     {
         return description.StartsWith("Compra ", StringComparison.OrdinalIgnoreCase)
             || description.StartsWith("Venta ", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static int ExtractQuantity(string description)
-    {
-        Match m = QuantityPattern().Match(description);
-        if (m.Success && int.TryParse(m.Groups[1].Value, out int qty))
-        {
-            return qty;
-        }
-
-        return 1;
-    }
-
-    [GeneratedRegex(@"^(?:Compra|Venta)\s+(\d+)\s", RegexOptions.IgnoreCase, 1000)]
-    private static partial Regex QuantityPattern();
-
-    private static string ExtractSymbol(string producto, string isin)
-    {
-        if (string.IsNullOrWhiteSpace(producto))
-        {
-            return string.IsNullOrWhiteSpace(isin) ? "UNKNOWN" : isin;
-        }
-
-        string trimmed = producto.TrimStart();
-
-        if (trimmed.StartsWith("ADR ", StringComparison.OrdinalIgnoreCase)
-            || trimmed.StartsWith("ADR/GDR ", StringComparison.OrdinalIgnoreCase))
-        {
-            int spaceIdx = trimmed.IndexOf(' ');
-            if (spaceIdx > 0)
-            {
-                                int afterPrefix = spaceIdx + 1;
-                string rest = trimmed[afterPrefix..].TrimStart();
-                if (rest.StartsWith("ON ", StringComparison.OrdinalIgnoreCase))
-                {
-                    rest = rest[3..].TrimStart();
-                }
-
-                if (rest.Length > 0)
-                {
-                    int nextSpace = rest.IndexOf(' ');
-                    return nextSpace > 0 ? rest[..nextSpace].ToUpperInvariant() : rest.ToUpperInvariant();
-                }
-            }
-        }
-
-        int firstSpace = trimmed.IndexOf(' ');
-        return firstSpace > 0 ? trimmed[..firstSpace].ToUpperInvariant() : trimmed.ToUpperInvariant();
-    }
-
-    private static (AssetTransaction, Transaction?) CreateAssetTransaction(
-        DateTime date, string description, string isin, string producto, decimal amount, string currency)
-    {
-        bool isBuy = description.StartsWith("Compra ", StringComparison.OrdinalIgnoreCase);
-        int quantity = ExtractQuantity(description);
-        AssetTransactionType type = isBuy ? AssetTransactionType.Buy : AssetTransactionType.Sell;
-        TransactionCategory category = isBuy ? TransactionCategory.EXPENSE : TransactionCategory.INCOME;
-
-        string symbol = ExtractSymbol(producto, isin);
-        Money money = new Money(Math.Abs(amount), currency);
-        Transaction transaction = new Transaction(date, description, money, category);
-        AssetTransaction assetTx = new AssetTransaction(transaction, symbol, quantity, type);
-        return (assetTx, null);
     }
 
     private static Transaction? CreateCashTransaction(
