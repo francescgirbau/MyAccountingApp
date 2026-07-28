@@ -31,6 +31,17 @@ public class JsonOptionTransactionRepository : IOptionTransactionRepository
         this.WriteAll(transactions);
     }
 
+    public void Update(OptionTransaction transaction)
+    {
+        List<OptionTransaction> transactions = this.GetAll().ToList();
+        int index = transactions.FindIndex(t => t.Id == transaction.Id);
+        if (index >= 0)
+        {
+            transactions[index] = transaction;
+            this.WriteAll(transactions);
+        }
+    }
+
     public bool Delete(Guid id)
     {
         List<OptionTransaction> transactions = this.GetAll().ToList();

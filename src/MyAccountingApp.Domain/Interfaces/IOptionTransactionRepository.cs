@@ -8,6 +8,8 @@ public interface IOptionTransactionRepository
 
     void Add(OptionTransaction transaction);
 
+    void Update(OptionTransaction transaction);
+
     bool Delete(Guid id);
 
     int DeleteByYear(int year);

@@ -54,7 +54,7 @@ else
             <col style="width: 100px" />
             <col style="width: 80px" />
             <col style="width: 80px" />
-            <col style="width: 80px" />
+            <col style="width: 100px" />
         </ColGroup>
         <HeaderContent>
             <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Date)">Date</MudTableSortLabel></MudTh>
@@ -77,6 +77,7 @@ else
             <MudTd DataLabel="Curr.">@context.Premium.Currency</MudTd>
             <MudTd DataLabel="Type">@context.Type</MudTd>
             <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => OpenEditDialog(context))" />
                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => OpenDeleteDialog(context))" />
             </MudTd>
         </RowTemplate>
@@ -85,6 +86,55 @@ else
         </PagerContent>
     </MudTable>
 }
+
+<MudDialog @bind-Visible="_showFormDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Edit Option Transaction</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudDatePicker @bind-Date="_formDate" Label="Date" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_formDescription" Label="Description" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_formSymbol" Label="Symbol" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_formIsin" Label="ISIN" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="decimal" @bind-Value="_formQuantity" Label="Quantity" Variant="Variant.Outlined" Min="@(0.01m)" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="decimal" @bind-Value="_formPremium" Label="Premium" Variant="Variant.Outlined" Min="@(0.01m)" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect @bind-Value="_formCurrency" Label="Currency" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("EUR")">EUR</MudSelectItem>
+                    <MudSelectItem Value="@("USD")">USD</MudSelectItem>
+                    <MudSelectItem Value="@("GBP")">GBP</MudSelectItem>
+                    <MudSelectItem Value="@("CHF")">CHF</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect @bind-Value="_formType" Label="Type" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("Buy")">Buy</MudSelectItem>
+                    <MudSelectItem Value="@("Sell")">Sell</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@CloseFormDialog">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@SaveAsync"
+                   Disabled="@IsFormInvalid()">
+            Save
+        </MudButton>
+    </DialogActions>
+</MudDialog>
 
 <MudDialog @bind-Visible="_showDeleteDialog">
     <TitleContent>
@@ -140,11 +190,25 @@ else
     private int? _selectedYear { get; set; }
     private string? _selectedSymbol { get; set; }
 
+    private bool _showFormDialog;
+    private Guid? _editingId;
+
+    private DateTime? _formDate;
+    private string _formDescription = "";
+    private string _formSymbol = "";
+    private string _formIsin = "";
+    private decimal _formQuantity;
+    private decimal _formPremium;
+    private string _formCurrency = "EUR";
+    private string _formType = "Buy";
+
     private bool _showDeleteDialog;
     private OptionTransactionDto? _deletingTx;
 
     private bool _showDeleteYearDialog;
     private int? _deleteYearCount;
+
+    private bool IsFormInvalid() => string.IsNullOrWhiteSpace(_formDescription) || string.IsNullOrWhiteSpace(_formSymbol) || _formPremium <= 0 || _formQuantity <= 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -186,6 +250,60 @@ else
             query = query.Where(t => t.Symbol == _selectedSymbol);
 
         _filteredTransactions = query.OrderByDescending(t => t.Date).ToList();
+    }
+
+    private void OpenEditDialog(OptionTransactionDto tx)
+    {
+        _editingId = tx.Id;
+        _formDate = tx.Date;
+        _formDescription = tx.Description;
+        _formSymbol = tx.Symbol;
+        _formIsin = tx.Isin;
+        _formQuantity = tx.Quantity;
+        _formPremium = tx.Premium.Amount;
+        _formCurrency = tx.Premium.Currency;
+        _formType = tx.Type;
+        _showFormDialog = true;
+    }
+
+    private void CloseFormDialog()
+    {
+        _showFormDialog = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        try
+        {
+            var payload = new
+            {
+                Date = _formDate ?? DateTime.Today,
+                Description = _formDescription,
+                Symbol = _formSymbol,
+                Isin = _formIsin,
+                Quantity = _formQuantity,
+                PremiumAmount = _formPremium,
+                PremiumCurrency = _formCurrency,
+                Type = _formType,
+            };
+
+            HttpResponseMessage response = await Http.PutAsJsonAsync($"/api/option-transactions/{_editingId}", payload);
+            if (response.IsSuccessStatusCode)
+            {
+                _showFormDialog = false;
+                Snackbar.Add("Option transaction updated", Severity.Success);
+                await LoadDataAsync();
+            }
+            else
+            {
+                string error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Failed to save: {error}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
     }
 
     private void OpenDeleteDialog(OptionTransactionDto tx)

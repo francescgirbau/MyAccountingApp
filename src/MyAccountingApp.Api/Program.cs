@@ -274,6 +274,22 @@ app.MapGet($"{prefix}/option-transactions/{{symbol}}", (string symbol, IOptionTr
     return Results.Ok(transactions);
 });
 
+app.MapPut($"{prefix}/option-transactions/{{id:guid}}", (Guid id, UpdateOptionTransactionRequest request, IOptionTransactionRepository repo) =>
+{
+    OptionTransaction? existing = repo.GetAll().FirstOrDefault(t => t.Id == id);
+    if (existing is null)
+    {
+        return Results.NotFound(new { id, message = "Option transaction not found" });
+    }
+
+    Money premium = new(request.PremiumAmount, request.PremiumCurrency);
+    AssetTransactionType type = Enum.Parse<AssetTransactionType>(request.Type);
+    OptionTransaction updated = new(
+        id, request.Date, request.Description, request.Symbol, request.Isin, request.Quantity, premium, type);
+    repo.Update(updated);
+    return Results.Ok(updated.ToDto());
+});
+
 app.MapDelete($"{prefix}/option-transactions/{{id:guid}}", (Guid id, IOptionTransactionRepository repo) =>
 {
     bool deleted = repo.Delete(id);
@@ -573,4 +589,5 @@ finally
 record ImportRequest(List<string> FolderPaths);
 record CreateTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category);
 record CreateAssetTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, decimal Quantity, string Type);
+record UpdateOptionTransactionRequest(DateTime Date, string Description, string Symbol, string Isin, decimal Quantity, decimal PremiumAmount, string PremiumCurrency, string Type);
 record BackupData(List<Transaction> Transactions, List<AssetTransaction>? AssetTransactions);

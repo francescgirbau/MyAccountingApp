@@ -318,6 +318,15 @@ public class ImportServiceTests
             this._transactions.AddRange(transactions);
         }
 
+        public void Update(OptionTransaction tx)
+        {
+            int index = this._transactions.FindIndex(t => t.Id == tx.Id);
+            if (index >= 0)
+            {
+                this._transactions[index] = tx;
+            }
+        }
+
         public bool Delete(Guid id) => true;
         public int DeleteByYear(int year) => this._transactions.RemoveAll(t => t.Date.Year == year);
     }
