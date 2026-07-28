@@ -150,6 +150,16 @@ public class DegiroImportService : IBrokerImportService
             return null;
         }
 
+        if (upper.Contains("OPCIÓN"))
+        {
+            return null;
+        }
+
+        if (upper.Contains("COSTE DE LA ACCIÓN"))
+        {
+            return null;
+        }
+
         if (upper == "INGRESO")
         {
             return TransactionCategory.DEPOSIT;
@@ -180,7 +190,7 @@ public class DegiroImportService : IBrokerImportService
             return amount >= 0 ? TransactionCategory.INCOME : TransactionCategory.EXPENSE;
         }
 
-        if (upper.Contains("PRESTAMO") || upper.Contains("LENDING"))
+        if (upper.Contains("PRESTAMO") || upper.Contains("PRÉSTAMO") || upper.Contains("LENDING"))
         {
             return TransactionCategory.INCOME;
         }
