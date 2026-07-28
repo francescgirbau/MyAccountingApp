@@ -55,6 +55,8 @@ builder.Services.AddSingleton<ITransactionRepository>(
     new CompositeTransactionRepository("data/transactions.json"));
 builder.Services.AddSingleton<IPortfolioRepository>(
     new CompositePortfolioRepository("data/portfolio.json"));
+builder.Services.AddSingleton<IOptionTransactionRepository>(
+    new JsonOptionTransactionRepository("data/options.json"));
 builder.Services.AddSingleton<InteractiveBrokersImportService>(sp =>
 {
     ICsvParser csvParser = new InteractiveBrokersCsvParser();
@@ -258,6 +260,30 @@ app.MapGet($"{prefix}/asset-transactions/year/{{year:int}}/count", (int year, IP
 {
     int assets = portfolioRepo.GetAllTransactions().Count(a => a.Transaction.Date.Year == year);
     return Results.Ok(new { year, assets });
+});
+
+app.MapGet($"{prefix}/option-transactions", (IOptionTransactionRepository repo) =>
+{
+    List<OptionTransactionDto> transactions = repo.GetAll().Select(t => t.ToDto()).ToList();
+    return Results.Ok(transactions);
+});
+
+app.MapGet($"{prefix}/option-transactions/{{symbol}}", (string symbol, IOptionTransactionRepository repo) =>
+{
+    List<OptionTransactionDto> transactions = repo.GetAll().Where(t => t.Symbol == symbol).Select(t => t.ToDto()).ToList();
+    return Results.Ok(transactions);
+});
+
+app.MapDelete($"{prefix}/option-transactions/year/{{year:int}}", (int year, IOptionTransactionRepository repo) =>
+{
+    int removed = repo.DeleteByYear(year);
+    return Results.Ok(new { year, deletedOptions = removed });
+});
+
+app.MapGet($"{prefix}/option-transactions/year/{{year:int}}/count", (int year, IOptionTransactionRepository repo) =>
+{
+    int count = repo.GetAll().Count(t => t.Date.Year == year);
+    return Results.Ok(new { year, options = count });
 });
 
 app.MapPost($"{prefix}/import", async (ImportRequest request, IImportService importService) =>

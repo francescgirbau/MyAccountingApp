@@ -31,6 +31,17 @@ public static class DtoMapper
             conversion.Source.ToString(),
             conversion.Quotes.ToDictionary(kvp => kvp.Key.ToString(), kvp => kvp.Value));
 
+    public static OptionTransactionDto ToDto(this OptionTransaction optionTransaction) =>
+        new(
+            optionTransaction.Id,
+            optionTransaction.Date,
+            optionTransaction.Description,
+            optionTransaction.Symbol,
+            optionTransaction.Isin,
+            optionTransaction.Quantity,
+            optionTransaction.Premium.ToDto(),
+            optionTransaction.Type.ToString());
+
     public static ImportResultDto ToDto(this ImportResult result) =>
         new(
             result.Transactions.Select(t => t.ToDto()).ToList(),
