@@ -157,7 +157,8 @@ public partial class DegiroImportService : IBrokerImportService
             int spaceIdx = trimmed.IndexOf(' ');
             if (spaceIdx > 0)
             {
-                string rest = trimmed[(spaceIdx + 1)..].TrimStart();
+                                int afterPrefix = spaceIdx + 1;
+                string rest = trimmed[afterPrefix..].TrimStart();
                 if (rest.StartsWith("ON ", StringComparison.OrdinalIgnoreCase))
                 {
                     rest = rest[3..].TrimStart();
