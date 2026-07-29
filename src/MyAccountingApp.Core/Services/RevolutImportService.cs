@@ -136,22 +136,17 @@ public class RevolutImportService : IBrokerImportService
                 return null;
             }
 
-            if (descUpper.Contains("SAVINGS VAULT TOPUP"))
-            {
-                return TransactionCategory.TRANSFER;
-            }
-
             if (descUpper.Contains("FROM CUENTA FLEXIBLE"))
             {
                 return TransactionCategory.DEPOSIT;
             }
 
-            if (descUpper.Contains("FRANCESC") || descUpper.Contains("GIRBAU"))
+            if (amount > 0)
             {
-                return TransactionCategory.TRANSFER;
+                return TransactionCategory.INCOME;
             }
 
-            return amount > 0 ? TransactionCategory.DEPOSIT : TransactionCategory.TRANSFER;
+            return TransactionCategory.EXPENSE;
         }
 
         return null;
