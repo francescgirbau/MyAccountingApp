@@ -209,7 +209,7 @@ public class DegiroImportServiceTests
     }
 
     [Fact]
-    public async Task ParseAllAsync_ProcessedFlatexWithdrawal_Skipped()
+    public async Task ParseAllAsync_ProcessedFlatexWithdrawal_CreatesTransfer()
     {
         string csv = "Fecha,Hora,Fecha valor,Producto,ISIN,Descripción,Tipo,Variación,,Saldo,,ID Orden\n" +
             "17-12-2021,10:30,17-12-2021,,,Processed Flatex Withdrawal,,EUR,\"800,00\",EUR,\"8000,00\",\n";
@@ -220,8 +220,10 @@ public class DegiroImportServiceTests
             await File.WriteAllTextAsync(file, csv);
             var (txs, assets, _) = await this.service.ParseAllAsync(file);
 
-            Assert.Empty(txs);
             Assert.Empty(assets);
+            var t = Assert.Single(txs);
+            Assert.Equal(800m, t.Money.Amount);
+            Assert.Equal(Domain.Enums.TransactionCategory.TRANSFER, t.Category);
         }
         finally
         {
