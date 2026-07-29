@@ -138,7 +138,7 @@ public class RevolutImportService : IBrokerImportService
 
             if (descUpper.Contains("FROM CUENTA FLEXIBLE"))
             {
-                return TransactionCategory.DEPOSIT;
+                return TransactionCategory.INCOME;
             }
 
             if (amount > 0)
