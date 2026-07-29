@@ -87,6 +87,34 @@
 </MudPaper>
 
 <MudPaper Class="pa-6 mb-4" Outlined="true">
+    <MudText Typo="Typo.h6" GutterBottom="true">Import Revolut CSV</MudText>
+    <MudText Typo="Typo.body2" Class="mb-4">
+        Upload a CSV exported from Revolut. Deposits, card payments, ATM withdrawals, and transfers are detected automatically.
+    </MudText>
+    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+        <strong>Format detected automatically.</strong> Expected columns: Type, Product, Started Date, Completed Date, Description, Amount, Fee, Currency, State, Balance.<br />
+        <strong>Deposits</strong> and <strong>transfers</strong> become cash entries. Fees are handled as separate expense transactions.
+    </MudAlert>
+    <MudGrid>
+        <MudItem xs="12" sm="8">
+            <InputFile OnChange="@OnRevolutFileSelected" accept=".csv" class="mud-input-outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="4" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Tertiary" Size="Size.Large"
+                       OnClick="@UploadRevolutAsync" Disabled="@(_revolutFile is null || _loading)"
+                       StartIcon="@Icons.Material.Filled.FileUpload"
+                       FullWidth="true">
+                Import Revolut
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+    @if (_revolutFile is not null)
+    {
+        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">Selected: @_revolutFile.Name</MudText>
+    }
+</MudPaper>
+
+<MudPaper Class="pa-6 mb-4" Outlined="true">
     <MudText Typo="Typo.h6" GutterBottom="true">Import Raw CSV</MudText>
     <MudText Typo="Typo.body2" Class="mb-4">
         Upload a CSV with your own format. No transformations applied.
@@ -243,6 +271,7 @@
     private IBrowserFile? _rawFile;
     private IBrowserFile? _degiroFile;
     private IBrowserFile? _ibkrFile;
+    private IBrowserFile? _revolutFile;
 
     private void OnFileSelected(InputFileChangeEventArgs args)
     {
@@ -259,6 +288,12 @@
     private void OnDegiroFileSelected(InputFileChangeEventArgs args)
     {
         _degiroFile = args.File;
+        _result = null;
+    }
+
+    private void OnRevolutFileSelected(InputFileChangeEventArgs args)
+    {
+        _revolutFile = args.File;
         _result = null;
     }
 
@@ -319,6 +354,35 @@
         catch (Exception ex)
         {
             Snackbar.Add($"DeGiro import failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task UploadRevolutAsync()
+    {
+        if (_revolutFile is null) return;
+
+        _loading = true;
+        _result = null;
+        _editableSymbols = new();
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            using var stream = _revolutFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            content.Add(new StreamContent(stream), "file", _revolutFile.Name);
+
+            var response = await Http.PostAsync("/api/import/upload", content);
+            _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
+            InitEditableSymbols();
+            Snackbar.Add("Revolut import completed.", Severity.Success);
+            _revolutFile = null;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Revolut import failed: {ex.Message}", Severity.Error);
         }
         finally
         {
