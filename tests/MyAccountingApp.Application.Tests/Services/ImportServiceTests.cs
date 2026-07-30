@@ -146,7 +146,7 @@ public class ImportServiceTests
     }
 
     [Fact]
-    public async Task ImportFromFoldersAsync_MatchesTransferPairs()
+    public async Task ImportFromFoldersAsync_DoesNotMatchTransferPairs()
     {
         string dir = CreateTempDir();
         string file = Path.Combine(dir, "tx.csv");
@@ -179,7 +179,8 @@ public class ImportServiceTests
 
         var allTxs = txRepo.GetAll().ToList();
         Assert.Equal(2, allTxs.Count);
-        Assert.All(allTxs, tx => Assert.Equal(TransactionCategory.TRANSFER, tx.Category));
+        Assert.Equal(TransactionCategory.EXPENSE, allTxs[0].Category);
+        Assert.Equal(TransactionCategory.INCOME, allTxs[1].Category);
     }
 
     [Fact]

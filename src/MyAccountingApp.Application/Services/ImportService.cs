@@ -164,17 +164,6 @@ public class ImportService : IImportService
             this._optionRepo.Initialize(mergedOptions);
         }
 
-        int matchedPairs = this.MatchTransferPairs();
-
-        this._logger.LogInformation(
-            "Import completed: {FilesProcessed} files, {Transactions} transactions, {AssetTransactions} asset transactions, {OptionTransactions} option transactions, {Matches} transfer pairs matched, {Errors} errors",
-            result.FilesProcessed,
-            result.Transactions.Count,
-            result.AssetTransactions.Count,
-            result.OptionTransactions.Count,
-            matchedPairs,
-            result.Errors.Count);
-
         return result;
     }
 
