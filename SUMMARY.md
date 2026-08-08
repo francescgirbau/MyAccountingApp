@@ -24,7 +24,7 @@ MyAccountingApp.Web       → Blazor WASM UI (MudBlazor pages)
 - **Asset Transactions**: CRUD with Symbol, Quantity, Type fields
 - **Portfolio**: Positions table with expandable open lots, realized/unrealized P&L, coloring
 - **Annual Summary**: `GET /api/summary` and `GET /api/summary/{year}`
-- **Conversions**: Currency rate management
+- **Conversions**: Currency rate caching with quota management (exchangerate.host). Timeseries fetch, lazy per-day lookups with stale fallback, pending queue for dates that could not be fetched
 - **Market Prices**: Yahoo Finance integration via `IMarketPriceService`
 - **Position Engine**: FIFO cost basis, P&L calculation
 
@@ -40,13 +40,22 @@ MyAccountingApp.Web       → Blazor WASM UI (MudBlazor pages)
 | PUT | `/api/asset-transactions/{id}` | Update asset transaction |
 | DELETE | `/api/asset-transactions/{id}` | Delete asset transaction |
 | GET | `/api/portfolio` | Portfolio positions |
-| GET | `/api/conversions` | Currency conversions |
+| GET | `/api/conversions` | Currency conversions (timeseries lookups) |
+| GET | `/api/conversions?date=YYYY-MM-DD` | Single conversion, fetched on demand and cached (stale fallback when quota is exhausted) |
+| GET | `/api/conversions/quota` | Quota usage, safety margin, availability period, pending queue size |
+| POST | `/api/conversions/sync` | Backfill a date range in one request `{from, to}` |
+| POST | `/api/conversions/process-pending` | Retry dates in the pending queue |
 | GET | `/api/summary` | Annual summaries |
 | POST | `/api/import` | Folder import |
 | POST | `/api/import/upload` | CSV file upload |
 
 ## Persistence
 - **JSON files** mounted as Docker volumes (`./data:/app/data`)
+  - `data/transactions.json` — transactions
+  - `data/portfolio.json` — asset transactions (portfolio)
+  - `data/conversions.json` — cached conversion rates
+  - `data/api_quota.json` — API quota usage per period
+  - `data/pending_conversions.json` — dates waiting for quota to be available
 - Atomic writes: write to `.tmp`, then `File.Move` (prevents corruption)
 - Auto-recovery: `GetAll()` truncates to last valid `}` if JSON is corrupted
 - Deduplication: `GetAll()` removes duplicate IDs on read
@@ -63,10 +72,21 @@ docker compose up --build -d
 ## Key Environment Variables
 - `CURRENCY_API_KEY` — API key for exchangerate.host
 
-## Current State (July 2026)
-- 134 tests, 81.94% combined coverage
-- Branch: `58-transaction-crud` (PR #5 open)
-- CI: GitHub Actions, Release build with `-warnaserror`
+## Currency Options (`appsettings.json` → `CurrencyApi`)
+| Key | Default | Description |
+|---|---|---|
+| `CurrencyApi:BaseUrl` | `https://api.exchangerate.host` | External rate provider |
+| `CurrencyApi:ApiKey` | *(from `CURRENCY_API_KEY`)* | Provider API key |
+| `CurrencyApi:RequestsLimit` | `100` | Monthly request limit |
+| `CurrencyApi:SafetyMargin` | `10` | Requests reserved as safety margin |
+| `CurrencyApi:BackfillDaysOnFirstRun` | `90` | Days backfilled on first run when the repository is empty |
+| `CurrencyApi:MaxTimeseriesDays` | `365` | Max days a single timeseries request may cover |
+
+On startup the API backfills the last 90 days if no conversions are stored. When the quota is exhausted for a requested date, the date is queued in `pending_conversions.json` and the closest cached conversion is returned marked as **stale**; once quota is available again, `POST /api/conversions/process-pending` retries the queue.
+
+## Current State (August 2026)
+- 281 tests, 83.3% combined coverage
+- CI: GitHub Actions, Release build with `-warnaserror`, coverage gate ≥ 80%
 
 ## Known Issues
 - WASM browser cache: use Ctrl+F5 or incognito after rebuild
