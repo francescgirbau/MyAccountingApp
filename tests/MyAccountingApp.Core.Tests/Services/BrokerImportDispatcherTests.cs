@@ -233,7 +233,7 @@ public class BrokerImportDispatcherTests
     {
         InteractiveBrokersImportService ibkr = new(Parser, new FakeLogger<InteractiveBrokersImportService>());
         IBKRFlexQueryImportService flexQuery = new(Array.Empty<IIBKRStatementAgent>());
-        return new BrokerImportDispatcher(ibkr, new BankCsvImportService(), new AssetTransactionCsvImportService(), new DegiroImportService(), new DegiroTransactionImportService(), flexQuery, new RevolutImportService());
+        return new BrokerImportDispatcher(ibkr, new BankCsvImportService(), new AssetTransactionCsvImportService(), new DegiroImportService(), new DegiroTransactionImportService(), flexQuery, new RevolutImportService(), new AbnAmroImportService());
     }
 }
 
