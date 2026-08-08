@@ -81,6 +81,7 @@ builder.Services.AddSingleton<AssetTransactionCsvImportService>();
 builder.Services.AddSingleton<DegiroImportService>();
 builder.Services.AddSingleton<DegiroTransactionImportService>();
 builder.Services.AddSingleton<RevolutImportService>();
+builder.Services.AddSingleton<AbnAmroImportService>();
 builder.Services.AddSingleton<IBrokerImportService, BrokerImportDispatcher>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
