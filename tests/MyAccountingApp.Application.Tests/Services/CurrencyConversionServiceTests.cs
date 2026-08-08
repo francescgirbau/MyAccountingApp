@@ -16,9 +16,11 @@ public class CurrencyConversionServiceTests
 
         FakeConversionRepository fakeRepo = new(); // repositori in-memory per testing
         FakeCurrencyConverter fakeApi = new();     // fake API que retorna quotes
+        FakeApiQuotaManager fakeQuota = new();
+        FakePendingConversionQueue fakeQueue = new();
 
         // Act
-        Action action = () => { new CurencyRateService(fakeRepo, fakeApi, invalidSource); };
+        Action action = () => { new CurencyRateService(fakeRepo, fakeApi, invalidSource, fakeQuota, fakeQueue); };
 
         // Assert
         Assert.Throws<ArgumentException>(() => action());
@@ -31,8 +33,10 @@ public class CurrencyConversionServiceTests
         FakeConversionRepository fakeRepo = new FakeConversionRepository(); // repositori in-memory per testing
         FakeCurrencyConverter fakeApi = new FakeCurrencyConverter();     // fake API que retorna quotes
         Currencies source = Currencies.EUR;
+        FakeApiQuotaManager fakeQuota = new();
+        FakePendingConversionQueue fakeQueue = new();
 
-        CurencyRateService service = new(fakeRepo, fakeApi, source);
+        CurencyRateService service = new(fakeRepo, fakeApi, source, fakeQuota, fakeQueue);
 
         DateTime date = new DateTime(2023, 12, 1); // This date does not exist
         Currencies targetCurrency = Currencies.USD;
@@ -54,8 +58,10 @@ public class CurrencyConversionServiceTests
         FakeConversionRepository fakeRepo = new(); // repositori in-memory per testing
         FakeCurrencyConverter fakeApi = new();     // fake API que retorna quotes
         Currencies source = Currencies.EUR;
+        FakeApiQuotaManager fakeQuota = new();
+        FakePendingConversionQueue fakeQueue = new();
 
-        CurencyRateService service = new CurencyRateService(fakeRepo, fakeApi, source);
+        CurencyRateService service = new CurencyRateService(fakeRepo, fakeApi, source, fakeQuota, fakeQueue);
 
         DateTime date = new DateTime(2005, 12, 1); // This date does  exist
         Currencies targetCurrency = Currencies.USD;
