@@ -1,3 +1,8 @@
+using System.Globalization;
+using System.Linq;
+using System.Text;
+using System.Text.Json;
+using Microsoft.AspNetCore.Diagnostics;
 using MyAccountingApp.Application.DTOs;
 using MyAccountingApp.Application.Interfaces;
 using MyAccountingApp.Application.Options;
@@ -7,15 +12,10 @@ using MyAccountingApp.Core.Agents.IBKR;
 using MyAccountingApp.Core.Repositories;
 using MyAccountingApp.Core.Services;
 using MyAccountingApp.Domain.Entities;
-using System.Text;
-using System.Text.Json;
-using Microsoft.AspNetCore.Diagnostics;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Exceptions;
 using MyAccountingApp.Domain.Interfaces;
 using MyAccountingApp.Domain.ValueObjects;
-using System.Globalization;
-using System.Linq;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -48,13 +48,21 @@ bool useFrankfurter = string.Equals(currencyOptions.Provider, "Frankfurter", Str
 
 CompositeConversionRepository repo = new CompositeConversionRepository("data/conversions.json");
 
-ICurrencyConverter api;
+builder.Services.AddHttpClient("Frankfurter", client =>
+{
+    client.BaseAddress = new Uri(currencyOptions.BaseUrl.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+builder.Services.AddHttpClient("ExchangeRateHost", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
 IApiQuotaManager quotaManager;
 JsonApiQuotaRepository? quotaRepo = null;
 
 if (useFrankfurter)
 {
-    api = new FrankfurterCurrencyConverter(excludedCurrencies: currencyOptions.ExcludeCurrencies, baseUrl: currencyOptions.BaseUrl);
     quotaManager = new UnlimitedApiQuotaManager(currencyOptions.ProviderName);
 }
 else
@@ -66,7 +74,6 @@ else
             ?? throw new InvalidOperationException(
                 "CurrencyApi:ApiKey not found. Set it in appsettings.json or the CURRENCY_API_KEY environment variable.");
 
-    api = new CurrencyConverter(currencyApiKey, excludedCurrencies: currencyOptions.ExcludeCurrencies);
     quotaRepo = new JsonApiQuotaRepository("data/api_quota.json", currencyOptions.RequestsLimit, currencyOptions.SafetyMargin, currencyOptions.ProviderName);
     quotaManager = new ApiQuotaManager(quotaRepo);
 }
@@ -74,17 +81,42 @@ else
 Currencies source = Currencies.EUR;
 JsonPendingConversionRepository pendingRepo = new JsonPendingConversionRepository("data/pending_conversions.json");
 PendingConversionQueue pendingQueue = new PendingConversionQueue(pendingRepo);
-CurrencyRateService currencyRateService = new CurrencyRateService(repo, api, source, quotaManager, pendingQueue, currencyOptions.MaxTimeseriesDays, currencyOptions.ProviderName);
+
+builder.Services.AddSingleton<ICurrencyConverter>(sp =>
+{
+    IHttpClientFactory httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+
+    if (useFrankfurter)
+    {
+        return new FrankfurterCurrencyConverter(httpClientFactory.CreateClient("Frankfurter"), currencyOptions.ExcludeCurrencies, currencyOptions.BaseUrl);
+    }
+
+    string currencyApiKey = !string.IsNullOrEmpty(currencyOptions.ApiKey)
+        ? currencyOptions.ApiKey
+        : builder.Configuration["CurrencyApi:ApiKey"]
+            ?? Environment.GetEnvironmentVariable("CURRENCY_API_KEY")
+            ?? throw new InvalidOperationException(
+                "CurrencyApi:ApiKey not found. Set it in appsettings.json or the CURRENCY_API_KEY environment variable.");
+
+    return new CurrencyConverter(currencyApiKey, httpClientFactory.CreateClient("ExchangeRateHost"), currencyOptions.ExcludeCurrencies);
+});
 
 builder.Services.AddSingleton<IConversionRepository>(repo);
 if (quotaRepo != null)
 {
     builder.Services.AddSingleton<IApiQuotaRepository>(quotaRepo);
 }
+
 builder.Services.AddSingleton<IPendingConversionRepository>(pendingRepo);
 builder.Services.AddSingleton<IApiQuotaManager>(quotaManager);
 builder.Services.AddSingleton<IPendingConversionQueue>(pendingQueue);
-builder.Services.AddSingleton<ICurrencyRateService>(currencyRateService);
+builder.Services.AddSingleton<ICurrencyRateService>(sp =>
+{
+    ICurrencyConverter api = sp.GetRequiredService<ICurrencyConverter>();
+    IApiQuotaManager quota = sp.GetRequiredService<IApiQuotaManager>();
+    IPendingConversionQueue queue = sp.GetRequiredService<IPendingConversionQueue>();
+    return new CurrencyRateService(repo, api, source, quota, queue, currencyOptions.MaxTimeseriesDays, currencyOptions.ProviderName);
+});
 builder.Services.AddSingleton<ITransactionRepository>(
     new CompositeTransactionRepository("data/transactions.json"));
 builder.Services.AddSingleton<IPortfolioRepository>(
@@ -369,7 +401,9 @@ app.MapPost($"{prefix}/import/upload", async (HttpContext http, IImportService i
 {
     IFormFile? file = http.Request.Form.Files.FirstOrDefault();
     if (file is null || file.Length == 0)
+    {
         return Results.BadRequest(new { error = "No file provided" });
+    }
 
     string tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
     Directory.CreateDirectory(tempDir);
@@ -399,13 +433,17 @@ app.MapPost($"{prefix}/import/raw-csv", async (
 {
     IFormFile? file = http.Request.Form.Files.FirstOrDefault();
     if (file is null || file.Length == 0)
+    {
         return Results.BadRequest(new { error = "No file provided" });
+    }
 
     using var reader = new StreamReader(file.OpenReadStream());
     string[] lines = await reader.ReadToEndAsync().ContinueWith(t => t.Result.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 
     if (lines.Length < 2)
+    {
         return Results.BadRequest(new { error = "CSV must have a header row and at least one data row" });
+    }
 
     List<Transaction> parsed = new();
     List<string> errors = new();
@@ -635,14 +673,19 @@ app.MapPost($"{prefix}/backup", async (HttpRequest request, ITransactionReposito
     {
         var backup = JsonSerializer.Deserialize<BackupData>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         if (backup?.Transactions is null)
+        {
             return Results.BadRequest(new { error = "Invalid backup file format: 'transactions' array is required" });
+        }
 
         txRepo.Initialize(backup.Transactions);
-        pfRepo.Initialize(backup.AssetTransactions ?? []);
-        optRepo.Initialize(backup.OptionTransactions ?? []);
+        pfRepo.Initialize(backup.AssetTransactions ?? new List<AssetTransaction>());
+        optRepo.Initialize(backup.OptionTransactions ?? new List<OptionTransaction>());
 
-        logger.LogInformation("Backup restored: {Count} transactions, {Count2} asset transactions, {Count3} option transactions",
-            backup.Transactions.Count, backup.AssetTransactions?.Count ?? 0, backup.OptionTransactions?.Count ?? 0);
+        logger.LogInformation(
+            "Backup restored: {Count} transactions, {Count2} asset transactions, {Count3} option transactions",
+            backup.Transactions.Count,
+            backup.AssetTransactions?.Count ?? 0,
+            backup.OptionTransactions?.Count ?? 0);
         return Results.Ok(new { message = $"Restored {backup.Transactions.Count} transactions, {backup.AssetTransactions?.Count ?? 0} asset transactions, and {backup.OptionTransactions?.Count ?? 0} option transactions" });
     }
     catch (JsonException ex)
@@ -655,7 +698,9 @@ app.MapPost($"{prefix}/backup", async (HttpRequest request, ITransactionReposito
 app.MapGet($"{prefix}/symbol-lookup", async (string name) =>
 {
     if (string.IsNullOrWhiteSpace(name))
+    {
         return Results.BadRequest(new { error = "Company name is required" });
+    }
 
     using HttpClient client = new();
     string url = $"https://query1.finance.yahoo.com/v1/finance/search?q={Uri.EscapeDataString(name)}&quotesCount=10";
@@ -681,7 +726,7 @@ app.MapGet($"{prefix}/symbol-lookup", async (string name) =>
 
         return Results.Ok(results);
     }
-    catch (Exception ex)
+    catch (Exception)
     {
         return Results.Ok(new List<object>());
     }
@@ -694,6 +739,7 @@ _ = Task.Run(async () =>
 {
     try
     {
+        ICurrencyRateService currencyRateService = app.Services.GetRequiredService<ICurrencyRateService>();
         if (!await currencyRateService.BackfillIfEmptyAsync(currencyOptions.BackfillDaysOnFirstRun))
         {
             await currencyRateService.SyncGapAsync(currencyOptions.MaxTimeseriesDays);
@@ -708,7 +754,6 @@ _ = Task.Run(async () =>
 });
 
 app.Run();
-
 }
 catch (Exception ex)
 {
