@@ -570,6 +570,18 @@ app.MapGet($"{prefix}/conversions/quota", async (ICurrencyRateService currencyRa
     });
 });
 
+app.MapGet($"{prefix}/conversions/status", async (ICurrencyRateService currencyRateService) =>
+{
+    ConversionStatus status = await currencyRateService.GetStatusAsync();
+    return Results.Ok(new
+    {
+        provider = status.Provider,
+        cachedDays = status.CachedDays,
+        lastCachedDate = status.LastCachedDate,
+        pendingCount = status.PendingCount,
+    });
+});
+
 app.MapPost($"{prefix}/conversions/sync", async (SyncConversionsRequest? request, ICurrencyRateService currencyRateService) =>
 {
     DateOnly start = DateOnly.FromDateTime(request?.From ?? DateTime.UtcNow.AddDays(-7));
@@ -677,12 +689,16 @@ app.MapGet($"{prefix}/symbol-lookup", async (string name) =>
 
 app.MapFallbackToFile("index.html");
 
-// Currency API startup sync: backfill when empty, then process any pending conversions.
+// Currency API startup sync: backfill when empty, then fill any gap up to yesterday, then process pending.
 _ = Task.Run(async () =>
 {
     try
     {
-        await currencyRateService.BackfillIfEmptyAsync(currencyOptions.BackfillDaysOnFirstRun);
+        if (!await currencyRateService.BackfillIfEmptyAsync(currencyOptions.BackfillDaysOnFirstRun))
+        {
+            await currencyRateService.SyncGapAsync(currencyOptions.MaxTimeseriesDays);
+        }
+
         await currencyRateService.ProcessPendingAsync();
     }
     catch (Exception ex)

@@ -45,7 +45,7 @@ public class FrankfurterCurrencyConverter : ICurrencyConverter
     /// <param name="baseUrl">Optional base URL of the Frankfurter API.</param>
     public FrankfurterCurrencyConverter(HttpClient? httpClient = null, IReadOnlyCollection<string>? excludedCurrencies = null, string baseUrl = DefaultBaseUrl)
     {
-        this._httpClient = httpClient ?? new HttpClient();
+        this._httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         this._excludedCurrencies = (excludedCurrencies ?? Array.Empty<string>())
             .Append("BTC")
             .Distinct(StringComparer.OrdinalIgnoreCase)

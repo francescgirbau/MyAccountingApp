@@ -148,6 +148,11 @@ public class CurencyRateService : ICurrencyRateService
             {
                 await this._quotaManager.MarkExhaustedAsync();
             }
+            catch
+            {
+                // Provider unavailable (timeout, 5xx, network error): fall back to the
+                // pending queue and the stale conversion instead of failing the request.
+            }
         }
 
         await this._pendingQueue.EnqueueAsync(day);
@@ -252,6 +257,52 @@ public class CurencyRateService : ICurrencyRateService
         DateOnly end = DateOnly.FromDateTime(DateTime.UtcNow.Date);
         DateOnly start = end.AddDays(-(days - 1));
         return await this.SyncRangeAsync(start, end, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> SyncGapAsync(int maxDays, CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<Conversion> all = this._repository.GetAll().ToList();
+
+        if (all.Count == 0)
+        {
+            return 0;
+        }
+
+        DateOnly start = DateOnly.FromDateTime(all.Max(c => c.Date)).AddDays(1);
+        DateOnly end = DateOnly.FromDateTime(DateTime.UtcNow.Date.AddDays(-1));
+
+        if (start > end)
+        {
+            return 0;
+        }
+
+        int before = all.Count(c => c.Date.Date >= start.ToDateTime(TimeOnly.MinValue) && c.Date.Date <= end.ToDateTime(TimeOnly.MinValue));
+
+        for (DateOnly chunkStart = start; chunkStart <= end; chunkStart = chunkStart.AddDays(maxDays))
+        {
+            DateOnly chunkEnd = chunkStart.AddDays(maxDays - 1) > end ? end : chunkStart.AddDays(maxDays - 1);
+
+            if (!await this.SyncRangeAsync(chunkStart, chunkEnd, cancellationToken))
+            {
+                break;
+            }
+        }
+
+        return this._repository.GetAll().Count(c => c.Date.Date >= start.ToDateTime(TimeOnly.MinValue) && c.Date.Date <= end.ToDateTime(TimeOnly.MinValue)) - before;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ConversionStatus> GetStatusAsync(CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<Conversion> all = this._repository.GetAll().ToList();
+        int pendingCount = (await this._pendingQueue.GetPendingAsync(cancellationToken)).Count;
+
+        return new ConversionStatus(
+            this._sourceProvider,
+            all.Count,
+            all.Count > 0 ? all.Max(c => c.Date) : null,
+            pendingCount);
     }
 
     /// <inheritdoc/>
