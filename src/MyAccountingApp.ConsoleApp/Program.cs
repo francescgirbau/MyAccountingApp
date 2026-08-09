@@ -3,9 +3,10 @@ using Microsoft.Extensions.Logging;
 using MyAccountingApp.Application.Interfaces;
 using MyAccountingApp.Application.Options;
 using MyAccountingApp.Application.Services;
-using MyAccountingApp.Core.Agents;
-using MyAccountingApp.Core.Repositories;
-using MyAccountingApp.Core.Services;
+using MyAccountingApp.Core.Http.Currency;
+using MyAccountingApp.Core.Http.Market;
+using MyAccountingApp.Core.Imports.IBKR;
+using MyAccountingApp.Core.Persistence;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
@@ -50,11 +51,20 @@ else
 Currencies source = Currencies.EUR;
 JsonPendingConversionRepository pendingRepo = new JsonPendingConversionRepository("pending_conversions.json");
 PendingConversionQueue pendingQueue = new PendingConversionQueue(pendingRepo);
-CurrencyRateService service = new CurrencyRateService(repo, api, source, quotaManager, pendingQueue, currencyOptions.MaxTimeseriesDays, currencyOptions.ProviderName);
+
+ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
+CurrencyRateService service = new CurrencyRateService(
+    repo,
+    api,
+    source,
+    quotaManager,
+    pendingQueue,
+    currencyOptions.MaxTimeseriesDays,
+    currencyOptions.ProviderName,
+    loggerFactory.CreateLogger<CurrencyRateService>());
 
 DateTime targetDate = new DateTime(2024, 12, 1);
 
-ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
 ILogger<InteractiveBrokersImportService> logger = loggerFactory.CreateLogger<InteractiveBrokersImportService>();
 
 ICsvParser csvParser = new InteractiveBrokersCsvParser();

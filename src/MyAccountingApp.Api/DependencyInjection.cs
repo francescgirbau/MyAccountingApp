@@ -4,10 +4,14 @@ using MyAccountingApp.Api.Services;
 using MyAccountingApp.Application.Interfaces;
 using MyAccountingApp.Application.Options;
 using MyAccountingApp.Application.Services;
-using MyAccountingApp.Core.Agents;
-using MyAccountingApp.Core.Agents.IBKR;
-using MyAccountingApp.Core.Repositories;
-using MyAccountingApp.Core.Services;
+using MyAccountingApp.Core.Http.Currency;
+using MyAccountingApp.Core.Http.Market;
+using MyAccountingApp.Core.Imports.AbnAmro;
+using MyAccountingApp.Core.Imports.Common;
+using MyAccountingApp.Core.Imports.Degiro;
+using MyAccountingApp.Core.Imports.IBKR;
+using MyAccountingApp.Core.Imports.Revolut;
+using MyAccountingApp.Core.Persistence;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
 using Serilog;
@@ -104,7 +108,15 @@ public static class DependencyInjection
             ICurrencyConverter api = sp.GetRequiredService<ICurrencyConverter>();
             IApiQuotaManager quota = sp.GetRequiredService<IApiQuotaManager>();
             IPendingConversionQueue queue = sp.GetRequiredService<IPendingConversionQueue>();
-            return new CurrencyRateService(repo, api, source, quota, queue, currencyOptions.MaxTimeseriesDays, currencyOptions.ProviderName);
+            return new CurrencyRateService(
+                repo,
+                api,
+                source,
+                quota,
+                queue,
+                currencyOptions.MaxTimeseriesDays,
+                currencyOptions.ProviderName,
+                sp.GetRequiredService<ILogger<CurrencyRateService>>());
         });
         builder.Services.AddSingleton<ITransactionRepository>(
             new CompositeTransactionRepository("data/transactions.json"));

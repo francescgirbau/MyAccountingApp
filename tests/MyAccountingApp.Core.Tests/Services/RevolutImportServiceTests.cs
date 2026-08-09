@@ -1,4 +1,4 @@
-using MyAccountingApp.Core.Services;
+using MyAccountingApp.Core.Imports.Revolut;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 

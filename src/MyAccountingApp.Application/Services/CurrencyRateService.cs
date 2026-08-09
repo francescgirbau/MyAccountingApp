@@ -1,4 +1,6 @@
-﻿using MyAccountingApp.Application.DTOs;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using MyAccountingApp.Application.DTOs;
 using MyAccountingApp.Application.Interfaces;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
@@ -21,6 +23,7 @@ public class CurrencyRateService : ICurrencyRateService
     private readonly IPendingConversionQueue _pendingQueue;
     private readonly int _maxTimeseriesDays;
     private readonly string _sourceProvider;
+    private readonly ILogger<CurrencyRateService> _logger;
 
     private static Conversion CloneForStale(Conversion fallback)
     {
@@ -79,6 +82,7 @@ public class CurrencyRateService : ICurrencyRateService
     /// <param name="pendingQueue">Queue for dates that could not be fetched immediately.</param>
     /// <param name="maxTimeseriesDays">Maximum number of days a single timeseries request may cover.</param>
     /// <param name="sourceProvider">Name of the provider that supplies the rates.</param>
+    /// <param name="logger">Logger for structured observability of the currency cache and fetch paths.</param>
     /// <exception cref="ArgumentException">Thrown if the source currency is not EUR.</exception>
     public CurrencyRateService(
         IConversionRepository repository,
@@ -87,7 +91,8 @@ public class CurrencyRateService : ICurrencyRateService
         IApiQuotaManager quotaManager,
         IPendingConversionQueue pendingQueue,
         int maxTimeseriesDays = 365,
-        string sourceProvider = "frankfurter")
+        string sourceProvider = "frankfurter",
+        ILogger<CurrencyRateService>? logger = null)
     {
         this._repository = repository;
         this._api = api;
@@ -96,6 +101,7 @@ public class CurrencyRateService : ICurrencyRateService
         this._pendingQueue = pendingQueue;
         this._maxTimeseriesDays = maxTimeseriesDays;
         this._sourceProvider = sourceProvider;
+        this._logger = logger ?? NullLogger<CurrencyRateService>.Instance;
         this.Validate();
     }
 
@@ -129,6 +135,7 @@ public class CurrencyRateService : ICurrencyRateService
 
         if (existing != null)
         {
+            this._logger.LogDebug("Conversion cache hit for {RequestedDate} ({Provider})", date.ToString("yyyy-MM-dd"), this._sourceProvider);
             return existing;
         }
 
@@ -140,29 +147,40 @@ public class CurrencyRateService : ICurrencyRateService
         {
             try
             {
+                DateTime startedAt = DateTime.UtcNow;
                 Dictionary<string, decimal> rates = await this._api.FetchAllRatesAsync(this._source, date);
                 await this._quotaManager.TryConsumeAsync(1);
                 Conversion conversion = this.BuildConversion(day, rates);
                 this._repository.AddOrUpdate(conversion);
+                this._logger.LogInformation(
+                    "Conversion fetched for {RequestedDate} in {DurationMs}ms ({Provider})",
+                    day.ToString("yyyy-MM-dd"),
+                    (long)(DateTime.UtcNow - startedAt).TotalMilliseconds,
+                    this._sourceProvider);
                 return conversion;
             }
             catch (CurrencyApiQuotaExceededException)
             {
+                this._logger.LogWarning("Currency API quota exhausted for {Provider}", this._sourceProvider);
                 await this._quotaManager.MarkExhaustedAsync();
             }
-            catch
+            catch (Exception ex)
             {
-                // Provider unavailable (timeout, 5xx, network error): no quota consumed.
-                // Fall back to the pending queue and the stale conversion instead of failing the request.
+                this._logger.LogError(ex, "Failed to fetch conversion for {RequestedDate}", day.ToString("yyyy-MM-dd"));
             }
         }
 
         await this._pendingQueue.EnqueueAsync(day);
+        this._logger.LogInformation("Enqueued {RequestedDate} for pending conversion ({Provider})", day.ToString("yyyy-MM-dd"), this._sourceProvider);
 
         Conversion? fallback = this.FindFallback(day);
 
         if (fallback != null)
         {
+            this._logger.LogWarning(
+                "Using stale conversion {FallbackDate} for requested {RequestedDate}",
+                fallback.Date.ToString("yyyy-MM-dd"),
+                day.ToString("yyyy-MM-dd"));
             return CloneForStale(fallback);
         }
 
@@ -176,6 +194,7 @@ public class CurrencyRateService : ICurrencyRateService
 
         if (!await this.CanConsumeAsync(cancellationToken))
         {
+            this._logger.LogWarning("No API quota available to sync {Start}..{End}", start.ToString("yyyy-MM-dd"), end.ToString("yyyy-MM-dd"));
             return false;
         }
 
@@ -189,10 +208,17 @@ public class CurrencyRateService : ICurrencyRateService
                 this._repository.AddOrUpdate(this.BuildConversion(kv.Key, kv.Value));
             }
 
+            this._logger.LogInformation(
+                "Synced conversions {Start}..{End}: {DayCount} days ({Provider})",
+                start.ToString("yyyy-MM-dd"),
+                end.ToString("yyyy-MM-dd"),
+                rates.Count,
+                this._sourceProvider);
             return true;
         }
         catch (CurrencyApiQuotaExceededException)
         {
+            this._logger.LogWarning("Currency API quota exhausted for {Provider}", this._sourceProvider);
             await this._quotaManager.MarkExhaustedAsync(cancellationToken);
             return false;
         }
@@ -232,11 +258,14 @@ public class CurrencyRateService : ICurrencyRateService
             }
             catch (CurrencyApiQuotaExceededException)
             {
+                this._logger.LogWarning("Currency API quota exhausted for {Provider}", this._sourceProvider);
                 await this._quotaManager.MarkExhaustedAsync(cancellationToken);
                 break;
             }
-            catch
+            catch (Exception ex)
             {
+                this._logger.LogError(ex, "Failed to fetch pending range {Start}..{End}", start.ToString("yyyy-MM-dd"), end.ToString("yyyy-MM-dd"));
+
                 foreach (DateOnly day in pendingDays.Where(d => d >= start && d <= end))
                 {
                     await this._pendingQueue.MarkFailedAsync(day, "Range fetch failed.", cancellationToken);
@@ -246,6 +275,11 @@ public class CurrencyRateService : ICurrencyRateService
             }
         }
 
+        this._logger.LogInformation(
+            "Processed pending conversions: {ProcessedDays} days, {RequestsSpent} requests, {Failures} failures",
+            processedDays,
+            requestsSpent,
+            failures);
         return new PendingProcessingResult(processedDays, requestsSpent, failures);
     }
 
@@ -254,11 +288,13 @@ public class CurrencyRateService : ICurrencyRateService
     {
         if (this._repository.GetAll().Any())
         {
+            this._logger.LogDebug("Backfill skipped: cache already contains conversions ({Provider})", this._sourceProvider);
             return false;
         }
 
         DateOnly end = DateOnly.FromDateTime(DateTime.UtcNow.Date);
         DateOnly start = end.AddDays(-(days - 1));
+        this._logger.LogInformation("Backfilling {Days} days of conversions ({Provider})", days, this._sourceProvider);
         return await this.SyncRangeAsync(start, end, cancellationToken);
     }
 
@@ -281,6 +317,7 @@ public class CurrencyRateService : ICurrencyRateService
         }
 
         int before = all.Count(c => c.Date.Date >= start.ToDateTime(TimeOnly.MinValue) && c.Date.Date <= end.ToDateTime(TimeOnly.MinValue));
+        this._logger.LogInformation("Syncing gap {Start}..{End} ({Provider})", start.ToString("yyyy-MM-dd"), end.ToString("yyyy-MM-dd"), this._sourceProvider);
 
         for (DateOnly chunkStart = start; chunkStart <= end; chunkStart = chunkStart.AddDays(maxDays))
         {

@@ -1,8 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Moq;
-using MyAccountingApp.Core.Agents;
+using MyAccountingApp.Core.Imports.IBKR;
 using MyAccountingApp.Core.Models;
-using MyAccountingApp.Core.Services;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.ValueObjects;
 

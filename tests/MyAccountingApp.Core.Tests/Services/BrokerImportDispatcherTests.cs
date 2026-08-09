@@ -1,11 +1,12 @@
 namespace MyAccountingApp.Core.Tests.Services;
-
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using MyAccountingApp.Core.Agents;
-using MyAccountingApp.Core.Agents.IBKR;
-using MyAccountingApp.Core.Services;
+using MyAccountingApp.Core.Imports.AbnAmro;
+using MyAccountingApp.Core.Imports.Common;
+using MyAccountingApp.Core.Imports.Degiro;
+using MyAccountingApp.Core.Imports.IBKR;
+using MyAccountingApp.Core.Imports.Revolut;
 using Xunit;
 
 public class BrokerImportDispatcherTests

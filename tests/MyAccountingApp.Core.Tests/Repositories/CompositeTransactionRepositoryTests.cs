@@ -1,8 +1,9 @@
-﻿using MyAccountingApp.Core.Repositories;
+﻿using MyAccountingApp.Core.Persistence;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.ValueObjects;
 using MyAccountingApp.TestUtilities.ObjectMothers;
+
 namespace MyAccountingApp.Core.Tests.Repositories;
 
 public class CompositeTransactionRepositoryTests : IDisposable
