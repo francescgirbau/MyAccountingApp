@@ -135,11 +135,12 @@ public class CurencyRateService : ICurrencyRateService
 
         await this._quotaManager.EnsurePeriodAsync();
 
-        if (await this._quotaManager.TryConsumeAsync(1))
+        if (await this.CanConsumeAsync())
         {
             try
             {
                 Dictionary<string, decimal> rates = await this._api.FetchAllRatesAsync(this._source, date);
+                await this._quotaManager.TryConsumeAsync(1);
                 Conversion conversion = this.BuildConversion(day, rates);
                 this._repository.AddOrUpdate(conversion);
                 return conversion;
@@ -150,8 +151,8 @@ public class CurencyRateService : ICurrencyRateService
             }
             catch
             {
-                // Provider unavailable (timeout, 5xx, network error): fall back to the
-                // pending queue and the stale conversion instead of failing the request.
+                // Provider unavailable (timeout, 5xx, network error): no quota consumed.
+                // Fall back to the pending queue and the stale conversion instead of failing the request.
             }
         }
 
@@ -172,7 +173,7 @@ public class CurencyRateService : ICurrencyRateService
     {
         await this._quotaManager.EnsurePeriodAsync(cancellationToken);
 
-        if (!await this._quotaManager.TryConsumeAsync(1, cancellationToken))
+        if (!await this.CanConsumeAsync(cancellationToken))
         {
             return false;
         }
@@ -180,6 +181,7 @@ public class CurencyRateService : ICurrencyRateService
         try
         {
             IReadOnlyDictionary<DateOnly, Dictionary<string, decimal>> rates = await this._api.FetchRangeAsync(this._source, start, end, null, cancellationToken);
+            await this._quotaManager.TryConsumeAsync(1, cancellationToken);
 
             foreach (KeyValuePair<DateOnly, Dictionary<string, decimal>> kv in rates)
             {
@@ -209,16 +211,16 @@ public class CurencyRateService : ICurrencyRateService
 
         foreach ((DateOnly start, DateOnly end) in GroupIntoRanges(pendingDays, this._maxTimeseriesDays))
         {
-            if (!await this._quotaManager.TryConsumeAsync(1, cancellationToken))
+            if (!await this.CanConsumeAsync(cancellationToken))
             {
                 break;
             }
 
-            requestsSpent++;
-
             try
             {
                 IReadOnlyDictionary<DateOnly, Dictionary<string, decimal>> rates = await this._api.FetchRangeAsync(this._source, start, end, null, cancellationToken);
+                await this._quotaManager.TryConsumeAsync(1, cancellationToken);
+                requestsSpent++;
 
                 foreach (KeyValuePair<DateOnly, Dictionary<string, decimal>> kv in rates)
                 {
@@ -309,6 +311,17 @@ public class CurencyRateService : ICurrencyRateService
     public Task<ApiUsageQuota> GetQuotaAsync(CancellationToken cancellationToken = default)
     {
         return this._quotaManager.GetQuotaAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Checks whether the quota can absorb a request without consuming it.
+    /// </summary>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>True if the quota can absorb the request; otherwise, false.</returns>
+    private async Task<bool> CanConsumeAsync(CancellationToken cancellationToken = default)
+    {
+        ApiUsageQuota quota = await this._quotaManager.GetQuotaAsync(cancellationToken);
+        return quota.CanConsume(1);
     }
 
     private Conversion BuildConversion(DateOnly day, Dictionary<string, decimal> rates)

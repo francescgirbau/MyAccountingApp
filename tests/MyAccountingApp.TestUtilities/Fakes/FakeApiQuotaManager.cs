@@ -32,7 +32,9 @@ public class FakeApiQuotaManager : IApiQuotaManager
     public Task<ApiUsageQuota> GetQuotaAsync(CancellationToken cancellationToken = default)
     {
         DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
-        ApiUsageQuota quota = new("test", today, today.AddMonths(1).AddDays(-1), this.Consumed, 100, 10, DateTime.UtcNow);
+        bool canConsume = this.CanConsumeResult && (!this.MaxConsumptions.HasValue || this.Consumed < this.MaxConsumptions.Value);
+        int requestsUsed = canConsume ? this.Consumed : 100;
+        ApiUsageQuota quota = new("test", today, today.AddMonths(1).AddDays(-1), requestsUsed, 100, 10, DateTime.UtcNow);
         return Task.FromResult(quota);
     }
 
