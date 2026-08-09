@@ -1,5 +1,6 @@
 using MyAccountingApp.Application.DTOs;
 using MyAccountingApp.Application.Interfaces;
+using MyAccountingApp.Application.Options;
 using MyAccountingApp.Application.Services;
 using MyAccountingApp.Core.Agents;
 using MyAccountingApp.Core.Agents.IBKR;
@@ -10,6 +11,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics;
 using MyAccountingApp.Domain.Enums;
+using MyAccountingApp.Domain.Exceptions;
 using MyAccountingApp.Domain.Interfaces;
 using MyAccountingApp.Domain.ValueObjects;
 using System.Globalization;
@@ -40,17 +42,29 @@ builder.Services.AddCors(options =>
     });
 });
 
-string currencyApiKey = builder.Configuration["CurrencyApi:ApiKey"]
-    ?? Environment.GetEnvironmentVariable("CURRENCY_API_KEY")
-    ?? throw new InvalidOperationException(
-        "CurrencyApi:ApiKey not found. Set it in appsettings.json or the CURRENCY_API_KEY environment variable.");
+CurrencyApiOptions currencyOptions = builder.Configuration.GetSection("CurrencyApi").Get<CurrencyApiOptions>() ?? new CurrencyApiOptions();
+
+string currencyApiKey = !string.IsNullOrEmpty(currencyOptions.ApiKey)
+    ? currencyOptions.ApiKey
+    : builder.Configuration["CurrencyApi:ApiKey"]
+        ?? Environment.GetEnvironmentVariable("CURRENCY_API_KEY")
+        ?? throw new InvalidOperationException(
+            "CurrencyApi:ApiKey not found. Set it in appsettings.json or the CURRENCY_API_KEY environment variable.");
 
 CompositeConversionRepository repo = new CompositeConversionRepository("data/conversions.json");
-CurrencyConverter api = new CurrencyConverter(currencyApiKey);
+CurrencyConverter api = new CurrencyConverter(currencyApiKey, excludedCurrencies: currencyOptions.ExcludeCurrencies);
 Currencies source = Currencies.EUR;
-CurencyRateService currencyRateService = new CurencyRateService(repo, api, source);
+JsonApiQuotaRepository quotaRepo = new JsonApiQuotaRepository("data/api_quota.json", currencyOptions.RequestsLimit, currencyOptions.SafetyMargin, currencyOptions.ProviderName);
+JsonPendingConversionRepository pendingRepo = new JsonPendingConversionRepository("data/pending_conversions.json");
+ApiQuotaManager quotaManager = new ApiQuotaManager(quotaRepo);
+PendingConversionQueue pendingQueue = new PendingConversionQueue(pendingRepo);
+CurencyRateService currencyRateService = new CurencyRateService(repo, api, source, quotaManager, pendingQueue, currencyOptions.MaxTimeseriesDays);
 
 builder.Services.AddSingleton<IConversionRepository>(repo);
+builder.Services.AddSingleton<IApiQuotaRepository>(quotaRepo);
+builder.Services.AddSingleton<IPendingConversionRepository>(pendingRepo);
+builder.Services.AddSingleton<IApiQuotaManager>(quotaManager);
+builder.Services.AddSingleton<IPendingConversionQueue>(pendingQueue);
 builder.Services.AddSingleton<ICurrencyRateService>(currencyRateService);
 builder.Services.AddSingleton<ITransactionRepository>(
     new CompositeTransactionRepository("data/transactions.json"));
@@ -501,16 +515,62 @@ app.MapGet($"{prefix}/validate", (IValidationQuery validationQuery) =>
     });
 });
 
-app.MapGet($"{prefix}/conversions", (IConversionRepository repo, DateTime? date) =>
+app.MapGet($"{prefix}/conversions", async (IConversionRepository repo, ICurrencyRateService currencyRateService, DateTime? date) =>
 {
     if (date.HasValue)
     {
-        var conversion = repo.GetByDate(date.Value);
-        return conversion is not null ? Results.Ok(conversion.ToDto()) : Results.NotFound();
+        try
+        {
+            Conversion conversion = await currencyRateService.GetConversionAsync(date.Value);
+            return Results.Ok(conversion.ToDto());
+        }
+        catch (ConversionNotAvailableException)
+        {
+            return Results.NotFound(new { date = date.Value, message = "No conversion available for this date" });
+        }
     }
 
     List<ConversionDto> conversions = repo.GetAll().Select(c => c.ToDto()).ToList();
     return Results.Ok(conversions);
+});
+
+app.MapGet($"{prefix}/conversions/quota", async (ICurrencyRateService currencyRateService, IPendingConversionQueue pendingQueue) =>
+{
+    ApiUsageQuota quota = await currencyRateService.GetQuotaAsync();
+    IReadOnlyList<PendingConversionRequest> pending = await pendingQueue.GetPendingAsync();
+    return Results.Ok(new
+    {
+        provider = quota.Provider,
+        requestsUsed = quota.RequestsUsed,
+        requestsLimit = quota.RequestsLimit,
+        safetyMargin = quota.SafetyMargin,
+        available = quota.Available,
+        periodStart = quota.PeriodStart,
+        periodEnd = quota.PeriodEnd,
+        pendingCount = pending.Count,
+    });
+});
+
+app.MapPost($"{prefix}/conversions/sync", async (SyncConversionsRequest? request, ICurrencyRateService currencyRateService) =>
+{
+    DateOnly start = DateOnly.FromDateTime(request?.From ?? DateTime.UtcNow.AddDays(-7));
+    DateOnly end = DateOnly.FromDateTime(request?.To ?? DateTime.UtcNow.Date);
+
+    if (end < start)
+    {
+        return Results.BadRequest(new { message = "'to' must be greater than or equal to 'from'" });
+    }
+
+    bool synced = await currencyRateService.SyncRangeAsync(start, end);
+    return synced
+        ? Results.Ok(new { message = "Range synced", start, end })
+        : Results.Conflict(new { message = "No API quota available to sync the range" });
+});
+
+app.MapPost($"{prefix}/conversions/process-pending", async (ICurrencyRateService currencyRateService) =>
+{
+    PendingProcessingResult result = await currencyRateService.ProcessPendingAsync();
+    return Results.Ok(new { processedDays = result.ProcessedDays, requestsSpent = result.RequestsSpent, failures = result.Failures });
 });
 
 app.MapGet($"{prefix}/summary", (IAnnualSummaryService summaryService) =>
@@ -598,6 +658,20 @@ app.MapGet($"{prefix}/symbol-lookup", async (string name) =>
 
 app.MapFallbackToFile("index.html");
 
+// Currency API startup sync: backfill when empty, then process any pending conversions.
+_ = Task.Run(async () =>
+{
+    try
+    {
+        await currencyRateService.BackfillIfEmptyAsync(currencyOptions.BackfillDaysOnFirstRun);
+        await currencyRateService.ProcessPendingAsync();
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Currency API startup sync failed");
+    }
+});
+
 app.Run();
 
 }
@@ -615,3 +689,4 @@ record CreateTransactionRequest(DateTime Date, string Description, decimal Amoun
 record CreateAssetTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, decimal Quantity, string Type);
 record UpdateOptionTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, string Isin, decimal Quantity, string Type);
 record BackupData(List<Transaction> Transactions, List<AssetTransaction>? AssetTransactions, List<OptionTransaction>? OptionTransactions);
+record SyncConversionsRequest(DateTime? From, DateTime? To);

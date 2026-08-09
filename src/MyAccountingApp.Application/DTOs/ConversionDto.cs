@@ -3,4 +3,7 @@ namespace MyAccountingApp.Application.DTOs;
 public record ConversionDto(
     DateTime Date,
     string Source,
-    Dictionary<string, decimal> Quotes);
+    Dictionary<string, decimal> Quotes,
+    bool IsStale,
+    DateTime RetrievedAtUtc,
+    string SourceProvider);

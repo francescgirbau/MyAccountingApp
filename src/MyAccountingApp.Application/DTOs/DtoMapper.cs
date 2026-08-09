@@ -29,7 +29,10 @@ public static class DtoMapper
         new(
             conversion.Date,
             conversion.Source.ToString(),
-            conversion.Quotes.ToDictionary(kvp => kvp.Key.ToString(), kvp => kvp.Value));
+            conversion.Quotes.ToDictionary(kvp => kvp.Key.ToString(), kvp => kvp.Value),
+            conversion.IsStale,
+            conversion.RetrievedAtUtc,
+            conversion.SourceProvider);
 
     public static OptionTransactionDto ToDto(this OptionTransaction optionTransaction) =>
         new(

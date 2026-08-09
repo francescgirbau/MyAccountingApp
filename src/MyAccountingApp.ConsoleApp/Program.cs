@@ -21,7 +21,11 @@ string currencyApiKey = config["CurrencyApi:ApiKey"]
 CompositeConversionRepository repo = new CompositeConversionRepository("conversions.json");
 CurrencyConverter api = new CurrencyConverter(currencyApiKey);
 Currencies source = Currencies.EUR;
-CurencyRateService service = new CurencyRateService(repo, api, source);
+JsonApiQuotaRepository quotaRepo = new JsonApiQuotaRepository("api_quota.json");
+JsonPendingConversionRepository pendingRepo = new JsonPendingConversionRepository("pending_conversions.json");
+ApiQuotaManager quotaManager = new ApiQuotaManager(quotaRepo);
+PendingConversionQueue pendingQueue = new PendingConversionQueue(pendingRepo);
+CurencyRateService service = new CurencyRateService(repo, api, source, quotaManager, pendingQueue);
 
 DateTime targetDate = new DateTime(2024, 12, 1);
 

@@ -23,17 +23,44 @@ public class Conversion
     public Dictionary<Currencies, decimal> Quotes { get; }
 
     /// <summary>
+    /// Gets the UTC timestamp when the conversion was retrieved from the external API.
+    /// </summary>
+    public DateTime RetrievedAtUtc { get; private set; }
+
+    /// <summary>
+    /// Gets a value indicating whether this conversion was served without a fresh refresh (no API quota available).
+    /// </summary>
+    public bool IsStale { get; private set; }
+
+    /// <summary>
+    /// Gets the name of the provider that supplied the rates.
+    /// </summary>
+    public string SourceProvider { get; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="Conversion"/> class.
     /// </summary>
     /// <param name="date">The date of the conversion.</param>
     /// <param name="source">The base currency.</param>
     /// <param name="quotes">Optional dictionary of conversion quotes.</param>
+    /// <param name="retrievedAtUtc">Optional UTC timestamp of retrieval; defaults to the conversion date.</param>
+    /// <param name="isStale">Indicates whether the conversion is stale (served without refresh).</param>
+    /// <param name="sourceProvider">The name of the provider that supplied the rates.</param>
     /// <exception cref="ArgumentException">Thrown if the source currency is not EUR.</exception>
-    public Conversion(DateTime date, Currencies source, Dictionary<Currencies, decimal>? quotes = null)
+    public Conversion(
+        DateTime date,
+        Currencies source,
+        Dictionary<Currencies, decimal>? quotes = null,
+        DateTime retrievedAtUtc = default,
+        bool isStale = false,
+        string sourceProvider = "exchangerate.host")
     {
         this.Date = date.Date;
         this.Source = source;
         this.Quotes = quotes ?? new Dictionary<Currencies, decimal>();
+        this.RetrievedAtUtc = retrievedAtUtc == default ? date.Date : retrievedAtUtc;
+        this.IsStale = isStale;
+        this.SourceProvider = sourceProvider ?? throw new ArgumentNullException(nameof(sourceProvider));
 
         this.Validate();
     }
@@ -87,5 +114,23 @@ public class Conversion
     public bool MatchesDate(DateTime date)
     {
         return this.Date.Date == date.Date;
+    }
+
+    /// <summary>
+    /// Marks this conversion as stale because it was served without a fresh API refresh.
+    /// </summary>
+    public void MarkStale()
+    {
+        this.IsStale = true;
+    }
+
+    /// <summary>
+    /// Marks this conversion as fresh after being retrieved from the API.
+    /// </summary>
+    /// <param name="retrievedAtUtc">The UTC timestamp of the retrieval.</param>
+    public void MarkFresh(DateTime retrievedAtUtc)
+    {
+        this.RetrievedAtUtc = retrievedAtUtc;
+        this.IsStale = false;
     }
 }

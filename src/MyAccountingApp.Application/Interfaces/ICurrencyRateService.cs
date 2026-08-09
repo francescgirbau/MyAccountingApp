@@ -1,4 +1,6 @@
-﻿using MyAccountingApp.Domain.Enums;
+﻿using MyAccountingApp.Application.Services;
+using MyAccountingApp.Domain.Entities;
+using MyAccountingApp.Domain.Enums;
 
 namespace MyAccountingApp.Application.Interfaces;
 
@@ -16,4 +18,43 @@ public interface ICurrencyRateService
     /// mapping currencies to their conversion rates.
     /// </returns>
     Task<Dictionary<Currencies, decimal>> GetQuotes(DateTime date);
+
+    /// <summary>
+    /// Asynchronously retrieves the conversion for the specified date, fetching from the API when
+    /// the date is missing and quota allows, and falling back to a stale conversion otherwise.
+    /// </summary>
+    /// <param name="date">The date for which to retrieve the conversion.</param>
+    /// <returns>The conversion for the requested date, which may be marked as stale.</returns>
+    Task<Conversion> GetConversionAsync(DateTime date);
+
+    /// <summary>
+    /// Fetches and persists conversions for a range of dates using a single timeseries request.
+    /// </summary>
+    /// <param name="start">The first date of the range (inclusive).</param>
+    /// <param name="end">The last date of the range (inclusive).</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>True if the range was fetched; false if there was no quota available.</returns>
+    Task<bool> SyncRangeAsync(DateOnly start, DateOnly end, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Processes the pending conversion queue, grouping dates into timeseries ranges.
+    /// </summary>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A summary of the processing run.</returns>
+    Task<PendingProcessingResult> ProcessPendingAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Backfills conversions from the start of the current period if the repository is empty.
+    /// </summary>
+    /// <param name="days">The number of days to backfill.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>True if the backfill was performed; otherwise, false.</returns>
+    Task<bool> BackfillIfEmptyAsync(int days, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the current currency API quota.
+    /// </summary>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The current quota.</returns>
+    Task<ApiUsageQuota> GetQuotaAsync(CancellationToken cancellationToken = default);
 }
