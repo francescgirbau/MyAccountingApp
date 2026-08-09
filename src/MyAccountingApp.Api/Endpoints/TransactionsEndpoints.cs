@@ -1,0 +1,218 @@
+using Microsoft.AspNetCore.Builder;
+using MyAccountingApp.Application.DTOs;
+using MyAccountingApp.Application.Interfaces;
+using MyAccountingApp.Domain.Entities;
+using MyAccountingApp.Domain.Enums;
+using MyAccountingApp.Domain.Interfaces;
+using MyAccountingApp.Domain.ValueObjects;
+
+namespace MyAccountingApp.Api.Endpoints;
+
+public static class TransactionsEndpoints
+{
+    public static void MapTransactionsEndpoints(this WebApplication app)
+    {
+        const string prefix = ApiEndpoints.ApiPrefix;
+
+        app.MapGet($"{prefix}/transactions", (ITransactionRepository repo) =>
+        {
+            List<TransactionDto> transactions = repo.GetAll().Select(t => t.ToDto()).ToList();
+            return Results.Ok(transactions);
+        });
+
+        app.MapPost($"{prefix}/transactions", (CreateTransactionRequest request, ITransactionRepository repo, ITransactionValidator validator) =>
+        {
+            Money money = new(request.Amount, request.Currency);
+            TransactionCategory category = Enum.Parse<TransactionCategory>(request.Category);
+            Transaction transaction = new(request.Date, request.Description, money, category);
+
+            ValidationResult validation = validator.Validate(transaction);
+            if (!validation.IsValid)
+            {
+                return Results.BadRequest(validation.Errors);
+            }
+
+            repo.AddOrUpdate(transaction);
+            return Results.Created($"/api/transactions/{transaction.Id}", transaction.ToDto());
+        });
+
+        app.MapPut($"{prefix}/transactions/{{id:guid}}", (Guid id, CreateTransactionRequest request, ITransactionRepository repo, ITransactionValidator validator) =>
+        {
+            Transaction? existing = repo.GetAll().FirstOrDefault(t => t.Id == id);
+            if (existing is null)
+            {
+                return Results.NotFound(new { id, message = "Transaction not found" });
+            }
+
+            Money money = new(request.Amount, request.Currency);
+            TransactionCategory category = Enum.Parse<TransactionCategory>(request.Category);
+            Transaction transaction = new(id, request.Date, request.Description, money, category);
+
+            ValidationResult validation = validator.Validate(transaction);
+            if (!validation.IsValid)
+            {
+                return Results.BadRequest(validation.Errors);
+            }
+
+            repo.AddOrUpdate(transaction);
+            return Results.Ok(transaction.ToDto());
+        });
+
+        app.MapDelete($"{prefix}/transactions/{{id:guid}}", (Guid id, ITransactionRepository repo) =>
+        {
+            Transaction? existing = repo.GetAll().FirstOrDefault(t => t.Id == id);
+            if (existing is null)
+            {
+                return Results.NotFound(new { id, message = "Transaction not found" });
+            }
+
+            repo.Delete(existing);
+            return Results.NoContent();
+        });
+
+        app.MapDelete($"{prefix}/transactions/year/{{year:int}}", (int year, ITransactionRepository repo, IPortfolioRepository portfolioRepo, IOptionTransactionRepository optionRepo) =>
+        {
+            int transactionsRemoved = repo.DeleteByYear(year);
+            int assetsRemoved = portfolioRepo.DeleteByYear(year);
+            int optionsRemoved = optionRepo.DeleteByYear(year);
+            return Results.Ok(new { year, deletedTransactions = transactionsRemoved, deletedAssets = assetsRemoved, deletedOptions = optionsRemoved });
+        });
+
+        app.MapGet($"{prefix}/transactions/year/{{year:int}}/count", (int year, ITransactionRepository repo, IPortfolioRepository portfolioRepo, IOptionTransactionRepository optionRepo) =>
+        {
+            int transactions = repo.GetAll().Count(t => t.Date.Year == year);
+            int assets = portfolioRepo.GetAllTransactions().Count(a => a.Transaction.Date.Year == year);
+            int options = optionRepo.GetAll().Count(o => o.Transaction.Date.Year == year);
+            return Results.Ok(new { year, transactions, assets, options });
+        });
+
+        app.MapGet($"{prefix}/asset-transactions", (IPortfolioRepository repo) =>
+        {
+            List<AssetTransactionDto> transactions = repo.GetAllTransactions().Select(t => t.ToDto()).ToList();
+            return Results.Ok(transactions);
+        });
+
+        app.MapGet($"{prefix}/asset-transactions/{{symbol}}", (string symbol, IPortfolioRepository repo) =>
+        {
+            List<AssetTransactionDto> transactions = repo.GetAssetTransactions(symbol).Select(t => t.ToDto()).ToList();
+            return Results.Ok(transactions);
+        });
+
+        app.MapPost($"{prefix}/asset-transactions", (CreateAssetTransactionRequest request, IPortfolioRepository repo, ITransactionValidator validator) =>
+        {
+            Money money = new(request.Amount, request.Currency);
+            TransactionCategory category = Enum.Parse<TransactionCategory>(request.Category);
+            Transaction transaction = new(request.Date, request.Description, money, category);
+
+            ValidationResult validation = validator.Validate(transaction);
+            if (!validation.IsValid)
+            {
+                return Results.BadRequest(validation.Errors);
+            }
+
+            AssetTransactionType type = Enum.Parse<AssetTransactionType>(request.Type);
+            AssetTransaction assetTx = new(transaction, request.Symbol, request.Quantity, type);
+            repo.AddOrUpdate(assetTx);
+            return Results.Created($"/api/asset-transactions/{transaction.Id}", assetTx.ToDto());
+        });
+
+        app.MapPut($"{prefix}/asset-transactions/{{id:guid}}", (Guid id, CreateAssetTransactionRequest request, IPortfolioRepository repo, ITransactionValidator validator) =>
+        {
+            AssetTransaction? existing = repo.GetAllTransactions().FirstOrDefault(t => t.Transaction.Id == id);
+            if (existing is null)
+            {
+                return Results.NotFound(new { id, message = "Asset transaction not found" });
+            }
+
+            Money money = new(request.Amount, request.Currency);
+            TransactionCategory category = Enum.Parse<TransactionCategory>(request.Category);
+            Transaction transaction = new(id, request.Date, request.Description, money, category);
+
+            ValidationResult validation = validator.Validate(transaction);
+            if (!validation.IsValid)
+            {
+                return Results.BadRequest(validation.Errors);
+            }
+
+            AssetTransactionType type = Enum.Parse<AssetTransactionType>(request.Type);
+            AssetTransaction assetTx = new(transaction, request.Symbol, request.Quantity, type);
+            repo.AddOrUpdate(assetTx);
+            return Results.Ok(assetTx.ToDto());
+        });
+
+        app.MapDelete($"{prefix}/asset-transactions/{{id:guid}}", (Guid id, IPortfolioRepository repo) =>
+        {
+            AssetTransaction? existing = repo.GetAllTransactions().FirstOrDefault(t => t.Transaction.Id == id);
+            if (existing is null)
+            {
+                return Results.NotFound(new { id, message = "Asset transaction not found" });
+            }
+
+            repo.Delete(id);
+            return Results.NoContent();
+        });
+
+        app.MapDelete($"{prefix}/asset-transactions/year/{{year:int}}", (int year, IPortfolioRepository portfolioRepo) =>
+        {
+            int removed = portfolioRepo.DeleteByYear(year);
+            return Results.Ok(new { year, deletedAssets = removed });
+        });
+
+        app.MapGet($"{prefix}/asset-transactions/year/{{year:int}}/count", (int year, IPortfolioRepository portfolioRepo) =>
+        {
+            int assets = portfolioRepo.GetAllTransactions().Count(a => a.Transaction.Date.Year == year);
+            return Results.Ok(new { year, assets });
+        });
+
+        app.MapGet($"{prefix}/option-transactions", (IOptionTransactionRepository repo) =>
+        {
+            List<OptionTransactionDto> transactions = repo.GetAll().Select(t => t.ToDto()).ToList();
+            return Results.Ok(transactions);
+        });
+
+        app.MapGet($"{prefix}/option-transactions/{{symbol}}", (string symbol, IOptionTransactionRepository repo) =>
+        {
+            List<OptionTransactionDto> transactions = repo.GetAll().Where(t => t.Symbol == symbol).Select(t => t.ToDto()).ToList();
+            return Results.Ok(transactions);
+        });
+
+        app.MapPut($"{prefix}/option-transactions/{{id:guid}}", (Guid id, UpdateOptionTransactionRequest request, IOptionTransactionRepository repo) =>
+        {
+            OptionTransaction? existing = repo.GetAll().FirstOrDefault(t => t.Transaction.Id == id);
+            if (existing is null)
+            {
+                return Results.NotFound(new { id, message = "Option transaction not found" });
+            }
+
+            Money money = new(request.Amount, request.Currency);
+            TransactionCategory category = Enum.Parse<TransactionCategory>(request.Category);
+            Transaction transaction = new(id, request.Date, request.Description, money, category);
+            AssetTransactionType type = Enum.Parse<AssetTransactionType>(request.Type);
+            OptionTransaction updated = new(transaction, request.Symbol, request.Isin, request.Quantity, type);
+            repo.Update(updated);
+            return Results.Ok(updated.ToDto());
+        });
+
+        app.MapDelete($"{prefix}/option-transactions/{{id:guid}}", (Guid id, IOptionTransactionRepository repo) =>
+        {
+            bool deleted = repo.Delete(id);
+            return deleted ? Results.NoContent() : Results.NotFound(new { id, message = "Option transaction not found" });
+        });
+
+        app.MapDelete($"{prefix}/option-transactions/year/{{year:int}}", (int year, IOptionTransactionRepository repo) =>
+        {
+            int removed = repo.DeleteByYear(year);
+            return Results.Ok(new { year, deletedOptions = removed });
+        });
+
+        app.MapGet($"{prefix}/option-transactions/year/{{year:int}}/count", (int year, IOptionTransactionRepository repo) =>
+        {
+            int count = repo.GetAll().Count(t => t.Transaction.Date.Year == year);
+            return Results.Ok(new { year, options = count });
+        });
+    }
+}
+
+record CreateTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category);
+record CreateAssetTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, decimal Quantity, string Type);
+record UpdateOptionTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, string Isin, decimal Quantity, string Type);
