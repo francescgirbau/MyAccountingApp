@@ -107,7 +107,15 @@ public static class DependencyInjection
             ICurrencyConverter api = sp.GetRequiredService<ICurrencyConverter>();
             IApiQuotaManager quota = sp.GetRequiredService<IApiQuotaManager>();
             IPendingConversionQueue queue = sp.GetRequiredService<IPendingConversionQueue>();
-            return new CurrencyRateService(repo, api, source, quota, queue, currencyOptions.MaxTimeseriesDays, currencyOptions.ProviderName);
+            return new CurrencyRateService(
+                repo,
+                api,
+                source,
+                quota,
+                queue,
+                currencyOptions.MaxTimeseriesDays,
+                currencyOptions.ProviderName,
+                sp.GetRequiredService<ILogger<CurrencyRateService>>());
         });
         builder.Services.AddSingleton<ITransactionRepository>(
             new CompositeTransactionRepository("data/transactions.json"));
