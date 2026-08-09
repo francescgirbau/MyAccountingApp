@@ -1,32 +1,17 @@
 using MyAccountingApp.Application.Services;
-using MyAccountingApp.Core.Persistence;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
+using MyAccountingApp.TestUtilities.Fakes;
 
 namespace MyAccountingApp.Application.Tests.Services;
 
-public class PendingConversionQueueTests : IDisposable
+public class PendingConversionQueueTests
 {
-    private readonly string _tempFile;
-
-    public PendingConversionQueueTests()
-    {
-        this._tempFile = Path.GetTempFileName();
-    }
-
-    public void Dispose()
-    {
-        if (File.Exists(this._tempFile))
-        {
-            File.Delete(this._tempFile);
-        }
-    }
-
     [Fact]
     public async Task EnqueueAsync_AddsRequest_WhenNewDate()
     {
         // Arrange
-        JsonPendingConversionRepository repo = new(this._tempFile);
+        FakePendingConversionRepository repo = new();
         PendingConversionQueue queue = new(repo);
 
         // Act
@@ -43,7 +28,7 @@ public class PendingConversionQueueTests : IDisposable
     public async Task EnqueueAsync_DoesNotDuplicate_WhenSameDate()
     {
         // Arrange
-        JsonPendingConversionRepository repo = new(this._tempFile);
+        FakePendingConversionRepository repo = new();
         PendingConversionQueue queue = new(repo);
 
         // Act
@@ -59,7 +44,7 @@ public class PendingConversionQueueTests : IDisposable
     public async Task MarkProcessedAsync_RemovesFromPending()
     {
         // Arrange
-        JsonPendingConversionRepository repo = new(this._tempFile);
+        FakePendingConversionRepository repo = new();
         PendingConversionQueue queue = new(repo);
         await queue.EnqueueAsync(new DateOnly(2026, 7, 1));
 
@@ -75,7 +60,7 @@ public class PendingConversionQueueTests : IDisposable
     public async Task MarkFailedAsync_RecordsError()
     {
         // Arrange
-        JsonPendingConversionRepository repo = new(this._tempFile);
+        FakePendingConversionRepository repo = new();
         PendingConversionQueue queue = new(repo);
         await queue.EnqueueAsync(new DateOnly(2026, 7, 1));
 

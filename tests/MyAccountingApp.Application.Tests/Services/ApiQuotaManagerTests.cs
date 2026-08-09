@@ -1,31 +1,16 @@
 using MyAccountingApp.Application.Services;
-using MyAccountingApp.Core.Persistence;
 using MyAccountingApp.Domain.Entities;
+using MyAccountingApp.TestUtilities.Fakes;
 
 namespace MyAccountingApp.Application.Tests.Services;
 
-public class ApiQuotaManagerTests : IDisposable
+public class ApiQuotaManagerTests
 {
-    private readonly string _tempFile;
-
-    public ApiQuotaManagerTests()
-    {
-        this._tempFile = Path.GetTempFileName();
-    }
-
-    public void Dispose()
-    {
-        if (File.Exists(this._tempFile))
-        {
-            File.Delete(this._tempFile);
-        }
-    }
-
     [Fact]
     public async Task TryConsumeAsync_ReturnsTrue_AndSaves_WhenQuotaAvailable()
     {
         // Arrange
-        JsonApiQuotaRepository repo = new(this._tempFile);
+        FakeApiQuotaRepository repo = new();
         ApiQuotaManager manager = new(repo);
 
         // Act
@@ -40,7 +25,7 @@ public class ApiQuotaManagerTests : IDisposable
     public async Task TryConsumeAsync_ReturnsFalse_WhenQuotaExhausted()
     {
         // Arrange
-        JsonApiQuotaRepository repo = new(this._tempFile);
+        FakeApiQuotaRepository repo = new();
         ApiQuotaManager manager = new(repo);
         ApiUsageQuota exhausted = repo.Get();
         exhausted.MarkExhausted();
@@ -58,7 +43,7 @@ public class ApiQuotaManagerTests : IDisposable
     public async Task MarkExhaustedAsync_SavesQuotaAtLimit()
     {
         // Arrange
-        JsonApiQuotaRepository repo = new(this._tempFile);
+        FakeApiQuotaRepository repo = new();
         ApiQuotaManager manager = new(repo);
 
         // Act
@@ -73,7 +58,7 @@ public class ApiQuotaManagerTests : IDisposable
     public async Task GetQuotaAsync_ReturnsCurrentQuota()
     {
         // Arrange
-        JsonApiQuotaRepository repo = new(this._tempFile);
+        FakeApiQuotaRepository repo = new();
         ApiQuotaManager manager = new(repo);
 
         // Act
