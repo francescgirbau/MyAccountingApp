@@ -52,6 +52,22 @@ public interface ICurrencyRateService
     Task<bool> BackfillIfEmptyAsync(int days, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Fetches and persists conversions for any gap between the last cached day and yesterday,
+    /// chunked into timeseries ranges of the configured maximum size.
+    /// </summary>
+    /// <param name="maxDays">The maximum number of days a single timeseries request may cover.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The number of new conversion days persisted.</returns>
+    Task<int> SyncGapAsync(int maxDays, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the current conversion store status.
+    /// </summary>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The current status.</returns>
+    Task<ConversionStatus> GetStatusAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the current currency API quota.
     /// </summary>
     /// <param name="cancellationToken">A token to cancel the operation.</param>

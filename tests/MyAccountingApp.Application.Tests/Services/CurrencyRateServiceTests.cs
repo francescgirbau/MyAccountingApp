@@ -2,6 +2,7 @@ using MyAccountingApp.Application.Services;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Exceptions;
+using MyAccountingApp.Domain.Interfaces;
 using MyAccountingApp.TestUtilities.Fakes;
 
 namespace MyAccountingApp.Application.Tests.Services;
@@ -237,11 +238,125 @@ public class CurrencyRateServiceTests
         Assert.Equal(90, result.Available);
     }
 
+    [Fact]
+    public async Task GetConversionAsync_FallsBackToStale_WhenApiFails()
+    {
+        // Arrange
+        FakeConversionRepository repo = new();
+        FakeApiQuotaManager quota = new();
+        FakePendingConversionQueue queue = new();
+        CurencyRateService service = new(repo, new FailingCurrencyConverter(), Currencies.EUR, quota, queue);
+
+        // Act
+        Conversion result = await service.GetConversionAsync(new DateTime(2023, 12, 1));
+
+        // Assert
+        Assert.True(result.IsStale);
+        Assert.Equal(1, quota.Consumed);
+        Assert.Contains(new DateOnly(2023, 12, 1), queue.Enqueued);
+        Assert.Equal(new DateTime(2005, 12, 1), result.Date);
+    }
+
+    [Fact]
+    public async Task SyncGapAsync_FillsGapFromLastCachedToYesterday()
+    {
+        // Arrange
+        DateTime seedDate = DateTime.UtcNow.Date.AddDays(-3);
+        FakeConversionRepository repo = new();
+        repo.Initialize(new[] { new Conversion(seedDate, Currencies.EUR, new Dictionary<Currencies, decimal> { { Currencies.USD, 1.1m } }) });
+        FakeApiQuotaManager quota = new();
+        FakePendingConversionQueue queue = new();
+        CurencyRateService service = CreateService(repo, quota, queue);
+
+        // Act
+        int synced = await service.SyncGapAsync(365);
+
+        // Assert
+        Assert.Equal(2, synced);
+        Assert.Equal(1, quota.Consumed);
+        Assert.Equal(3, repo.GetAll().Count());
+    }
+
+    [Fact]
+    public async Task SyncGapAsync_ReturnsZero_WhenRepositoryEmpty()
+    {
+        // Arrange
+        FakeConversionRepository repo = new();
+        repo.Initialize(Array.Empty<Conversion>());
+        FakeApiQuotaManager quota = new();
+        FakePendingConversionQueue queue = new();
+        CurencyRateService service = CreateService(repo, quota, queue);
+
+        // Act
+        int synced = await service.SyncGapAsync(365);
+
+        // Assert
+        Assert.Equal(0, synced);
+        Assert.Equal(0, quota.Consumed);
+    }
+
+    [Fact]
+    public async Task SyncGapAsync_ReturnsZero_WhenCacheIsUpToDate()
+    {
+        // Arrange
+        DateTime seedDate = DateTime.UtcNow.Date.AddDays(-1);
+        FakeConversionRepository repo = new();
+        repo.Initialize(new[] { new Conversion(seedDate, Currencies.EUR, new Dictionary<Currencies, decimal> { { Currencies.USD, 1.1m } }) });
+        FakeApiQuotaManager quota = new();
+        FakePendingConversionQueue queue = new();
+        CurencyRateService service = CreateService(repo, quota, queue);
+
+        // Act
+        int synced = await service.SyncGapAsync(365);
+
+        // Assert
+        Assert.Equal(0, synced);
+        Assert.Equal(0, quota.Consumed);
+    }
+
+    [Fact]
+    public async Task GetStatusAsync_ReturnsProviderCachedDaysLastSyncAndPending()
+    {
+        // Arrange
+        FakeConversionRepository repo = new();
+        FakeApiQuotaManager quota = new();
+        FakePendingConversionQueue queue = new();
+        CurencyRateService service = CreateService(repo, quota, queue);
+        await queue.EnqueueAsync(new DateOnly(2023, 12, 1));
+
+        // Act
+        ConversionStatus status = await service.GetStatusAsync();
+
+        // Assert
+        Assert.Equal("frankfurter", status.Provider);
+        Assert.Equal(1, status.CachedDays);
+        Assert.Equal(new DateTime(2005, 12, 1), status.LastCachedDate);
+        Assert.Equal(1, status.PendingCount);
+    }
+
     private static CurencyRateService CreateService(
         FakeConversionRepository repo,
         FakeApiQuotaManager quota,
         FakePendingConversionQueue queue)
     {
         return new CurencyRateService(repo, new FakeCurrencyConverter(), Currencies.EUR, quota, queue);
+    }
+
+    private sealed class FailingCurrencyConverter : ICurrencyConverter
+    {
+        public Task<Dictionary<string, decimal>> FetchAllRatesAsync(Currencies source, DateTime date)
+        {
+            throw new HttpRequestException("provider unavailable");
+        }
+
+        public Task<IReadOnlyDictionary<DateOnly, Dictionary<string, decimal>>> FetchRangeAsync(
+            Currencies source,
+            DateOnly start,
+            DateOnly end,
+            IReadOnlyCollection<Currencies>? targets = null,
+            CancellationToken cancellationToken = default)
+        {
+            throw new HttpRequestException("provider unavailable");
+        }
     }
 }
