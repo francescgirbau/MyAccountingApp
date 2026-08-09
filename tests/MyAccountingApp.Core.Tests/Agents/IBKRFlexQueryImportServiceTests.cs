@@ -27,16 +27,16 @@ public class IBKRFlexQueryImportServiceTests : IDisposable
         RecordingAgent recording = new("My Section");
         IBKRFlexQueryImportService service = new(new[] { recording });
 
-        File.WriteAllText(
-            this._tempFile,
-            string.Join("\n", new[]
-            {
-                "My Section,Header,,Column1,Column2",
-                "My Section,Data,,value1,value2",
-                "My Section,Data,,value3,value4",
-                "Other Section,Header,,x,y",
-                string.Empty,
-            }));
+        string[] csvLines =
+        {
+            "My Section,Header,,Column1,Column2",
+            "My Section,Data,,value1,value2",
+            "My Section,Data,,value3,value4",
+            "Other Section,Header,,x,y",
+            string.Empty,
+        };
+
+        File.WriteAllText(this._tempFile, string.Join("\n", csvLines));
 
         (IEnumerable<Transaction> tx, IEnumerable<AssetTransaction> assets, IEnumerable<OptionTransaction> options) =
             await service.ParseAllAsync(this._tempFile);
@@ -53,13 +53,13 @@ public class IBKRFlexQueryImportServiceTests : IDisposable
         TradeAgent tradeAgent = new();
         IBKRFlexQueryImportService service = new(new IIBKRStatementAgent[] { tradeAgent });
 
-        File.WriteAllText(
-            this._tempFile,
-            string.Join("\n", new[]
-            {
-                "Trades,Header,,,,,,,,",
-                "Trades,Data,Order,Stocks,USD,AAPL,\"2024-12-19, 10:00:00\",100,,,-15000.00,,,,,,",
-            }));
+        string[] csvLines =
+        {
+            "Trades,Header,,,,,,,,",
+            "Trades,Data,Order,Stocks,USD,AAPL,\"2024-12-19, 10:00:00\",100,,,-15000.00,,,,,,",
+        };
+
+        File.WriteAllText(this._tempFile, string.Join("\n", csvLines));
 
         (IEnumerable<Transaction> tx, IEnumerable<AssetTransaction> assets, IEnumerable<OptionTransaction> options) =
             await service.ParseAllAsync(this._tempFile);

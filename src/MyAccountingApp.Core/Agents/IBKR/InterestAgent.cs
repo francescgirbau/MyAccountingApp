@@ -15,16 +15,30 @@ public class InterestAgent : IIBKRStatementAgent
     {
         foreach (string[] fields in rows)
         {
-            if (fields.Length < 5) continue;
-            if (fields[1] != "Data") continue;
+            if (fields.Length < 5)
+            {
+                continue;
+            }
+
+            if (fields[1] != "Data")
+            {
+                continue;
+            }
 
             string currency = fields[2];
             string dateStr = fields[3];
             string description = fields[4];
             string amountStr = fields[5];
 
-            if (!TryParseDate(dateStr, out DateTime date)) continue;
-            if (!TryParseDecimal(amountStr, out decimal amount) || amount == 0) continue;
+            if (!TryParseDate(dateStr, out DateTime date))
+            {
+                continue;
+            }
+
+            if (!TryParseDecimal(amountStr, out decimal amount) || amount == 0)
+            {
+                continue;
+            }
 
             bool isIncome = amount > 0;
             TransactionCategory category = isIncome ? TransactionCategory.INCOME : TransactionCategory.EXPENSE;
@@ -42,7 +56,11 @@ public class InterestAgent : IIBKRStatementAgent
     private static bool TryParseDecimal(string value, out decimal result)
     {
         result = 0;
-        if (string.IsNullOrWhiteSpace(value)) return false;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
         string cleaned = value.Replace(",", string.Empty).Replace("\"", string.Empty);
         return decimal.TryParse(cleaned, NumberStyles.Any, CultureInfo.InvariantCulture, out result);
     }

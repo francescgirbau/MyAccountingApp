@@ -15,8 +15,15 @@ public class CorporateActionAgent : IIBKRStatementAgent
     {
         foreach (string[] fields in rows)
         {
-            if (fields.Length < 10) continue;
-            if (fields[1] != "Data") continue;
+            if (fields.Length < 10)
+            {
+                continue;
+            }
+
+            if (fields[1] != "Data")
+            {
+                continue;
+            }
 
             string assetCategory = fields[2];
             string currency = fields[3];
@@ -25,9 +32,20 @@ public class CorporateActionAgent : IIBKRStatementAgent
             string qtyStr = fields[7];
             string proceedsStr = fields[8];
 
-            if (!TryParseDateTime(dateStr, out DateTime date)) continue;
-            if (!TryParseDecimal(qtyStr, out decimal rawQuantity) || rawQuantity == 0) continue;
-            if (!TryParseDecimal(proceedsStr, out decimal proceeds)) continue;
+            if (!TryParseDateTime(dateStr, out DateTime date))
+            {
+                continue;
+            }
+
+            if (!TryParseDecimal(qtyStr, out decimal rawQuantity) || rawQuantity == 0)
+            {
+                continue;
+            }
+
+            if (!TryParseDecimal(proceedsStr, out decimal proceeds))
+            {
+                continue;
+            }
 
             int quantity = (int)Math.Abs(rawQuantity);
             bool hasCash = Math.Abs(proceeds) > 0.01m;
@@ -58,16 +76,32 @@ public class CorporateActionAgent : IIBKRStatementAgent
     private static bool TryParseDateTime(string value, out DateTime date)
     {
         date = default;
-        if (string.IsNullOrWhiteSpace(value)) return false;
-        if (DateTime.TryParseExact(value, "yyyy-MM-dd, HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out date)) return true;
-        if (DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out date)) return true;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        if (DateTime.TryParseExact(value, "yyyy-MM-dd, HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out date))
+        {
+            return true;
+        }
+
+        if (DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out date))
+        {
+            return true;
+        }
+
         return false;
     }
 
     private static bool TryParseDecimal(string value, out decimal result)
     {
         result = 0;
-        if (string.IsNullOrWhiteSpace(value)) return false;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
         string cleaned = value.Replace(",", string.Empty).Replace("\"", string.Empty);
         return decimal.TryParse(cleaned, NumberStyles.Any, CultureInfo.InvariantCulture, out result);
     }

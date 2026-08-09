@@ -13,6 +13,21 @@ public class InteractiveBrokersImportServiceExtraTests
     private readonly Mock<ICsvParser> parserMock = new();
     private readonly InteractiveBrokersImportService agent;
 
+    private static IBKRTransactionRecord Record(string type, string description, string symbol, string quantity, string currency, string amount)
+    {
+        return new IBKRTransactionRecord
+        {
+            Date = "2024-12-19",
+            Description = description,
+            TransactionType = type,
+            Symbol = symbol,
+            Quantity = quantity,
+            PriceCurrency = currency,
+            GrossAmount = amount,
+            NetAmount = amount,
+        };
+    }
+
     public InteractiveBrokersImportServiceExtraTests()
     {
         Mock<ILogger<InteractiveBrokersImportService>> loggerMock = new();
@@ -235,20 +250,5 @@ public class InteractiveBrokersImportServiceExtraTests
         this.parserMock
             .Setup(p => p.ParseIBKRAsync(It.IsAny<string>()))
             .ReturnsAsync(records);
-    }
-
-    private static IBKRTransactionRecord Record(string type, string description, string symbol, string quantity, string currency, string amount)
-    {
-        return new IBKRTransactionRecord
-        {
-            Date = "2024-12-19",
-            Description = description,
-            TransactionType = type,
-            Symbol = symbol,
-            Quantity = quantity,
-            PriceCurrency = currency,
-            GrossAmount = amount,
-            NetAmount = amount,
-        };
     }
 }

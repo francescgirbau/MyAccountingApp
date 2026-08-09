@@ -21,6 +21,53 @@ public class CurencyRateService : ICurrencyRateService
     private readonly int _maxTimeseriesDays;
     private readonly string _sourceProvider;
 
+    private static Conversion CloneForStale(Conversion fallback)
+    {
+        Conversion clone = new(
+            fallback.Date,
+            fallback.Source,
+            new Dictionary<Currencies, decimal>(fallback.Quotes),
+            fallback.RetrievedAtUtc,
+            fallback.IsStale,
+            fallback.SourceProvider);
+        clone.MarkStale();
+        return clone;
+    }
+
+    private static List<(DateOnly Start, DateOnly End)> GroupIntoRanges(List<DateOnly> dates, int maxDays)
+    {
+        List<(DateOnly, DateOnly)> ranges = new();
+
+        if (dates.Count == 0)
+        {
+            return ranges;
+        }
+
+        DateOnly rangeStart = dates[0];
+        DateOnly rangeEnd = dates[0];
+
+        for (int i = 1; i < dates.Count; i++)
+        {
+            DateOnly day = dates[i];
+            bool consecutive = day.AddDays(-1) <= rangeEnd;
+            bool fits = day.DayNumber - rangeStart.DayNumber < maxDays;
+
+            if (consecutive && fits)
+            {
+                rangeEnd = day;
+            }
+            else
+            {
+                ranges.Add((rangeStart, rangeEnd));
+                rangeStart = day;
+                rangeEnd = day;
+            }
+        }
+
+        ranges.Add((rangeStart, rangeEnd));
+        return ranges;
+    }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="CurencyRateService"/> class.
     /// </summary>
@@ -238,52 +285,5 @@ public class CurencyRateService : ICurrencyRateService
         return this._repository.GetAll()
             .OrderByDescending(c => c.Date)
             .FirstOrDefault(c => c.Date.Date <= date);
-    }
-
-    private static Conversion CloneForStale(Conversion fallback)
-    {
-        Conversion clone = new(
-            fallback.Date,
-            fallback.Source,
-            new Dictionary<Currencies, decimal>(fallback.Quotes),
-            fallback.RetrievedAtUtc,
-            fallback.IsStale,
-            fallback.SourceProvider);
-        clone.MarkStale();
-        return clone;
-    }
-
-    private static List<(DateOnly Start, DateOnly End)> GroupIntoRanges(List<DateOnly> dates, int maxDays)
-    {
-        List<(DateOnly, DateOnly)> ranges = new();
-
-        if (dates.Count == 0)
-        {
-            return ranges;
-        }
-
-        DateOnly rangeStart = dates[0];
-        DateOnly rangeEnd = dates[0];
-
-        for (int i = 1; i < dates.Count; i++)
-        {
-            DateOnly day = dates[i];
-            bool consecutive = day.AddDays(-1) <= rangeEnd;
-            bool fits = day.DayNumber - rangeStart.DayNumber < maxDays;
-
-            if (consecutive && fits)
-            {
-                rangeEnd = day;
-            }
-            else
-            {
-                ranges.Add((rangeStart, rangeEnd));
-                rangeStart = day;
-                rangeEnd = day;
-            }
-        }
-
-        ranges.Add((rangeStart, rangeEnd));
-        return ranges;
     }
 }
