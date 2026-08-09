@@ -347,8 +347,6 @@ public class CurrencyRateService : ICurrencyRateService
     private Conversion? FindFallback(DateOnly day)
     {
         DateTime date = day.ToDateTime(TimeOnly.MinValue);
-        return this._repository.GetAll()
-            .OrderByDescending(c => c.Date)
-            .FirstOrDefault(c => c.Date.Date <= date);
+        return this._repository.GetLatestOnOrBefore(date);
     }
 }

@@ -52,4 +52,65 @@ public class InMemoryConversionRepositoryTests
         // Assert
         Assert.Null(result);
     }
+
+    [Fact]
+    public void GetLatestOnOrBefore_ShouldReturnNull_WhenRepositoryEmpty()
+    {
+        // Arrange
+        InMemoryConversionRepository repo = new InMemoryConversionRepository();
+
+        // Act
+        Conversion? result = repo.GetLatestOnOrBefore(DateTime.Today);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void GetLatestOnOrBefore_ShouldReturnMostRecentConversion_OnOrBeforeDate()
+    {
+        // Arrange
+        InMemoryConversionRepository repo = new InMemoryConversionRepository();
+        repo.AddOrUpdate(new Conversion(new DateTime(2026, 7, 1), Currencies.EUR));
+        repo.AddOrUpdate(new Conversion(new DateTime(2026, 7, 15), Currencies.EUR));
+        repo.AddOrUpdate(new Conversion(new DateTime(2026, 8, 1), Currencies.EUR));
+
+        // Act
+        Conversion? result = repo.GetLatestOnOrBefore(new DateTime(2026, 7, 20));
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(new DateTime(2026, 7, 15), result.Date);
+    }
+
+    [Fact]
+    public void GetLatestOnOrBefore_ShouldReturnExactDate_WhenConversionExists()
+    {
+        // Arrange
+        InMemoryConversionRepository repo = new InMemoryConversionRepository();
+        repo.AddOrUpdate(new Conversion(new DateTime(2026, 7, 15), Currencies.EUR));
+
+        // Act
+        Conversion? result = repo.GetLatestOnOrBefore(new DateTime(2026, 7, 15));
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(new DateTime(2026, 7, 15), result.Date);
+    }
+
+    [Fact]
+    public void GetLatestOnOrBefore_ShouldIgnoreConversions_AfterDate()
+    {
+        // Arrange
+        InMemoryConversionRepository repo = new InMemoryConversionRepository();
+        repo.AddOrUpdate(new Conversion(new DateTime(2026, 7, 1), Currencies.EUR));
+        repo.AddOrUpdate(new Conversion(new DateTime(2026, 8, 1), Currencies.EUR));
+
+        // Act
+        Conversion? result = repo.GetLatestOnOrBefore(new DateTime(2026, 7, 31));
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(new DateTime(2026, 7, 1), result.Date);
+    }
 }

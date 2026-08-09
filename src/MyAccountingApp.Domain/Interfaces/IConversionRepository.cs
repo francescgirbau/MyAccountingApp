@@ -21,6 +21,13 @@ public interface IConversionRepository
     public Conversion? GetByDate(DateTime date);
 
     /// <summary>
+    /// Gets the most recent conversion on or before the specified date, or null if none exists.
+    /// </summary>
+    /// <param name="date">The upper bound for the conversion date.</param>
+    /// <returns>The latest conversion on or before the date; otherwise, null.</returns>
+    public Conversion? GetLatestOnOrBefore(DateTime date);
+
+    /// <summary>
     /// Initializes the repository with a collection of conversions.
     /// </summary>
     /// <param name="conversions">The transaction to add.</param>

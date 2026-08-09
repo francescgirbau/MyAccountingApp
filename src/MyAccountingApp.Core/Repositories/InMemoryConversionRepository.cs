@@ -42,6 +42,16 @@ public class InMemoryConversionRepository : IConversionRepository
     }
 
     /// <summary>
+    /// Gets the most recent conversion on or before the specified date, or null if none exists.
+    /// </summary>
+    /// <param name="date">The upper bound for the conversion date.</param>
+    /// <returns>The latest conversion on or before the date; otherwise, null.</returns>
+    public Conversion? GetLatestOnOrBefore(DateTime date)
+    {
+        return this._conversions.Where(c => c.Date.Date <= date).MaxBy(c => c.Date);
+    }
+
+    /// <summary>
     /// Initializes the repository with a collection of conversions, replacing any existing data.
     /// </summary>
     /// <param name="conversions">The list of conversions.</param>

@@ -56,6 +56,16 @@ public class CompositeConversionRepository : IConversionRepository
     }
 
     /// <summary>
+    /// Gets the most recent conversion on or before the specified date from the in-memory repository.
+    /// </summary>
+    /// <param name="date">The upper bound for the conversion date.</param>
+    /// <returns>The latest conversion on or before the date; otherwise, null.</returns>
+    public Conversion? GetLatestOnOrBefore(DateTime date)
+    {
+        return this._memoryRepo.GetLatestOnOrBefore(date);
+    }
+
+    /// <summary>
     /// Initializes the repositories with the provided collection of conversions.
     /// <param name="conversions">The list of conversions.</param>
     /// </summary>

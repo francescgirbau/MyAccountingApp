@@ -42,6 +42,11 @@ public class FakeConversionRepository : IConversionRepository
         return this._conversions.FirstOrDefault(c => c.Date.Date == date.Date);
     }
 
+    public Conversion? GetLatestOnOrBefore(DateTime date)
+    {
+        return this._conversions.Where(c => c.Date.Date <= date).MaxBy(c => c.Date);
+    }
+
     public void Initialize(IEnumerable<Conversion> conversions)
     {
         this._conversions.Clear();
