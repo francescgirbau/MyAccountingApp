@@ -50,11 +50,20 @@ else
 Currencies source = Currencies.EUR;
 JsonPendingConversionRepository pendingRepo = new JsonPendingConversionRepository("pending_conversions.json");
 PendingConversionQueue pendingQueue = new PendingConversionQueue(pendingRepo);
-CurrencyRateService service = new CurrencyRateService(repo, api, source, quotaManager, pendingQueue, currencyOptions.MaxTimeseriesDays, currencyOptions.ProviderName);
+
+ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
+CurrencyRateService service = new CurrencyRateService(
+    repo,
+    api,
+    source,
+    quotaManager,
+    pendingQueue,
+    currencyOptions.MaxTimeseriesDays,
+    currencyOptions.ProviderName,
+    loggerFactory.CreateLogger<CurrencyRateService>());
 
 DateTime targetDate = new DateTime(2024, 12, 1);
 
-ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
 ILogger<InteractiveBrokersImportService> logger = loggerFactory.CreateLogger<InteractiveBrokersImportService>();
 
 ICsvParser csvParser = new InteractiveBrokersCsvParser();
