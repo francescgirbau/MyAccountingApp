@@ -38,6 +38,43 @@ public class JsonConversionRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void GetLatestOnOrBefore_ShouldReturnMostRecentConversion_OnOrBeforeDate()
+    {
+        // Arrange
+        JsonConversionRepository repo = new JsonConversionRepository(this._tempFile);
+        repo.Initialize(new[]
+        {
+            new Conversion(new DateTime(2026, 7, 1), Currencies.EUR),
+            new Conversion(new DateTime(2026, 7, 15), Currencies.EUR),
+            new Conversion(new DateTime(2026, 8, 1), Currencies.EUR),
+        });
+
+        // Act
+        Conversion? result = repo.GetLatestOnOrBefore(new DateTime(2026, 7, 20));
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(new DateTime(2026, 7, 15), result.Date);
+    }
+
+    [Fact]
+    public void GetLatestOnOrBefore_ShouldReturnNull_WhenAllConversionsAfterDate()
+    {
+        // Arrange
+        JsonConversionRepository repo = new JsonConversionRepository(this._tempFile);
+        repo.Initialize(new[]
+        {
+            new Conversion(new DateTime(2026, 8, 1), Currencies.EUR),
+        });
+
+        // Act
+        Conversion? result = repo.GetLatestOnOrBefore(new DateTime(2026, 7, 31));
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
     public void GetAll_ShouldReturnEmpty_WhenFileDoesNotExist()
     {
         // Arrange

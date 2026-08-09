@@ -68,6 +68,18 @@ public class JsonConversionRepository : IConversionRepository
         return conversions.FirstOrDefault(c => c.MatchesDate(date));
     }
 
+    /// <summary>
+    /// Gets the most recent conversion on or before the specified date, or null if none exists.
+    /// </summary>
+    /// <param name="date">The upper bound for the conversion date.</param>
+    /// <returns>The latest conversion on or before the date; otherwise, null.</returns>
+    public Conversion? GetLatestOnOrBefore(DateTime date)
+    {
+        List<Conversion> conversions = this.GetAll().ToList();
+
+        return conversions.Where(c => c.Date.Date <= date).MaxBy(c => c.Date);
+    }
+
     public void Initialize(IEnumerable<Conversion> conversions)
     {
         JsonSerializerOptions options = new()
