@@ -1,4 +1,5 @@
-﻿using MyAccountingApp.Application.Interfaces;
+﻿using MyAccountingApp.Application.DTOs;
+using MyAccountingApp.Application.Interfaces;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Exceptions;

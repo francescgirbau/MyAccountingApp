@@ -1,4 +1,4 @@
-namespace MyAccountingApp.Application.Services;
+namespace MyAccountingApp.Application.DTOs;
 
 /// <summary>
 /// Describes the current state of the local conversion store.

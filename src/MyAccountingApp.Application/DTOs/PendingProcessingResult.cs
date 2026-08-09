@@ -1,4 +1,4 @@
-namespace MyAccountingApp.Application.Services;
+namespace MyAccountingApp.Application.DTOs;
 
 /// <summary>
 /// Summarizes the result of processing the pending conversion queue.
