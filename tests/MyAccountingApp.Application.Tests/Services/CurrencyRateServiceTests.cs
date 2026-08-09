@@ -16,7 +16,7 @@ public class CurrencyRateServiceTests
         FakeConversionRepository repo = new();
         FakeApiQuotaManager quota = new();
         FakePendingConversionQueue queue = new();
-        CurencyRateService service = CreateService(repo, quota, queue);
+        CurrencyRateService service = CreateService(repo, quota, queue);
 
         // Act
         Conversion result = await service.GetConversionAsync(new DateTime(2005, 12, 1));
@@ -34,7 +34,7 @@ public class CurrencyRateServiceTests
         FakeConversionRepository repo = new();
         FakeApiQuotaManager quota = new();
         FakePendingConversionQueue queue = new();
-        CurencyRateService service = CreateService(repo, quota, queue);
+        CurrencyRateService service = CreateService(repo, quota, queue);
 
         // Act
         Conversion result = await service.GetConversionAsync(new DateTime(2023, 12, 1));
@@ -54,7 +54,7 @@ public class CurrencyRateServiceTests
         FakeApiQuotaManager quota = new() { CanConsumeResult = false };
         FakePendingConversionQueue queue = new();
         FakeCurrencyConverter converter = new();
-        CurencyRateService service = new(repo, converter, Currencies.EUR, quota, queue);
+        CurrencyRateService service = new(repo, converter, Currencies.EUR, quota, queue);
 
         // Act
         Conversion result = await service.GetConversionAsync(new DateTime(2023, 12, 1));
@@ -76,7 +76,7 @@ public class CurrencyRateServiceTests
         repo.Initialize(Array.Empty<Conversion>());
         FakeApiQuotaManager quota = new() { CanConsumeResult = false };
         FakePendingConversionQueue queue = new();
-        CurencyRateService service = CreateService(repo, quota, queue);
+        CurrencyRateService service = CreateService(repo, quota, queue);
 
         // Act & Assert
         await Assert.ThrowsAsync<ConversionNotAvailableException>(() => service.GetConversionAsync(new DateTime(2023, 12, 1)));
@@ -90,7 +90,7 @@ public class CurrencyRateServiceTests
         repo.Initialize(Array.Empty<Conversion>());
         FakeApiQuotaManager quota = new();
         FakePendingConversionQueue queue = new();
-        CurencyRateService service = CreateService(repo, quota, queue);
+        CurrencyRateService service = CreateService(repo, quota, queue);
 
         // Act
         bool result = await service.SyncRangeAsync(new DateOnly(2023, 12, 1), new DateOnly(2023, 12, 5));
@@ -109,7 +109,7 @@ public class CurrencyRateServiceTests
         FakeApiQuotaManager quota = new() { CanConsumeResult = false };
         FakePendingConversionQueue queue = new();
         FakeCurrencyConverter converter = new();
-        CurencyRateService service = new(repo, converter, Currencies.EUR, quota, queue);
+        CurrencyRateService service = new(repo, converter, Currencies.EUR, quota, queue);
 
         // Act
         bool result = await service.SyncRangeAsync(new DateOnly(2023, 12, 1), new DateOnly(2023, 12, 5));
@@ -128,7 +128,7 @@ public class CurrencyRateServiceTests
         repo.Initialize(Array.Empty<Conversion>());
         FakeApiQuotaManager quota = new();
         FakePendingConversionQueue queue = new();
-        CurencyRateService service = new(repo, new FailingCurrencyConverter(), Currencies.EUR, quota, queue);
+        CurrencyRateService service = new(repo, new FailingCurrencyConverter(), Currencies.EUR, quota, queue);
 
         // Act & Assert
         await Assert.ThrowsAsync<HttpRequestException>(() => service.SyncRangeAsync(new DateOnly(2023, 12, 1), new DateOnly(2023, 12, 5)));
@@ -144,7 +144,7 @@ public class CurrencyRateServiceTests
         FakeConversionRepository repo = new();
         FakeApiQuotaManager quota = new();
         FakePendingConversionQueue queue = new();
-        CurencyRateService service = new(repo, new FailingCurrencyConverter(), Currencies.EUR, quota, queue);
+        CurrencyRateService service = new(repo, new FailingCurrencyConverter(), Currencies.EUR, quota, queue);
 
         await queue.EnqueueAsync(new DateOnly(2023, 12, 1));
         await queue.EnqueueAsync(new DateOnly(2023, 12, 2));
@@ -168,7 +168,7 @@ public class CurrencyRateServiceTests
         repo.Initialize(Array.Empty<Conversion>());
         FakeApiQuotaManager quota = new();
         FakePendingConversionQueue queue = new();
-        CurencyRateService service = CreateService(repo, quota, queue);
+        CurrencyRateService service = CreateService(repo, quota, queue);
 
         for (int day = 1; day <= 5; day++)
         {
@@ -192,7 +192,7 @@ public class CurrencyRateServiceTests
         repo.Initialize(Array.Empty<Conversion>());
         FakeApiQuotaManager quota = new();
         FakePendingConversionQueue queue = new();
-        CurencyRateService service = CreateService(repo, quota, queue);
+        CurrencyRateService service = CreateService(repo, quota, queue);
 
         await queue.EnqueueAsync(new DateOnly(2023, 12, 1));
         await queue.EnqueueAsync(new DateOnly(2023, 12, 2));
@@ -215,7 +215,7 @@ public class CurrencyRateServiceTests
         repo.Initialize(Array.Empty<Conversion>());
         FakeApiQuotaManager quota = new() { MaxConsumptions = 1 };
         FakePendingConversionQueue queue = new();
-        CurencyRateService service = CreateService(repo, quota, queue);
+        CurrencyRateService service = CreateService(repo, quota, queue);
 
         await queue.EnqueueAsync(new DateOnly(2023, 12, 1));
         await queue.EnqueueAsync(new DateOnly(2023, 12, 10));
@@ -240,7 +240,7 @@ public class CurrencyRateServiceTests
         repo.Initialize(Array.Empty<Conversion>());
         FakeApiQuotaManager quota = new();
         FakePendingConversionQueue queue = new();
-        CurencyRateService service = CreateService(repo, quota, queue);
+        CurrencyRateService service = CreateService(repo, quota, queue);
 
         // Act
         bool result = await service.BackfillIfEmptyAsync(3);
@@ -257,7 +257,7 @@ public class CurrencyRateServiceTests
         // Arrange
         FakeApiQuotaManager quota = new();
         FakePendingConversionQueue queue = new();
-        CurencyRateService service = CreateService(new FakeConversionRepository(), quota, queue);
+        CurrencyRateService service = CreateService(new FakeConversionRepository(), quota, queue);
 
         // Act
         bool result = await service.BackfillIfEmptyAsync(3);
@@ -272,7 +272,7 @@ public class CurrencyRateServiceTests
     {
         // Arrange
         FakeApiQuotaManager quota = new();
-        CurencyRateService service = CreateService(new FakeConversionRepository(), quota, new FakePendingConversionQueue());
+        CurrencyRateService service = CreateService(new FakeConversionRepository(), quota, new FakePendingConversionQueue());
 
         // Act
         ApiUsageQuota result = await service.GetQuotaAsync();
@@ -290,7 +290,7 @@ public class CurrencyRateServiceTests
         FakeConversionRepository repo = new();
         FakeApiQuotaManager quota = new();
         FakePendingConversionQueue queue = new();
-        CurencyRateService service = new(repo, new FailingCurrencyConverter(), Currencies.EUR, quota, queue);
+        CurrencyRateService service = new(repo, new FailingCurrencyConverter(), Currencies.EUR, quota, queue);
 
         // Act
         Conversion result = await service.GetConversionAsync(new DateTime(2023, 12, 1));
@@ -310,7 +310,7 @@ public class CurrencyRateServiceTests
         FakeConversionRepository repo = new();
         FakeApiQuotaManager quota = new();
         FakePendingConversionQueue queue = new();
-        CurencyRateService service = new(repo, new QuotaExceededCurrencyConverter(), Currencies.EUR, quota, queue);
+        CurrencyRateService service = new(repo, new QuotaExceededCurrencyConverter(), Currencies.EUR, quota, queue);
 
         // Act
         Conversion result = await service.GetConversionAsync(new DateTime(2023, 12, 1));
@@ -332,7 +332,7 @@ public class CurrencyRateServiceTests
         repo.Initialize(new[] { new Conversion(seedDate, Currencies.EUR, new Dictionary<Currencies, decimal> { { Currencies.USD, 1.1m } }) });
         FakeApiQuotaManager quota = new();
         FakePendingConversionQueue queue = new();
-        CurencyRateService service = CreateService(repo, quota, queue);
+        CurrencyRateService service = CreateService(repo, quota, queue);
 
         // Act
         int synced = await service.SyncGapAsync(365);
@@ -351,7 +351,7 @@ public class CurrencyRateServiceTests
         repo.Initialize(Array.Empty<Conversion>());
         FakeApiQuotaManager quota = new();
         FakePendingConversionQueue queue = new();
-        CurencyRateService service = CreateService(repo, quota, queue);
+        CurrencyRateService service = CreateService(repo, quota, queue);
 
         // Act
         int synced = await service.SyncGapAsync(365);
@@ -370,7 +370,7 @@ public class CurrencyRateServiceTests
         repo.Initialize(new[] { new Conversion(seedDate, Currencies.EUR, new Dictionary<Currencies, decimal> { { Currencies.USD, 1.1m } }) });
         FakeApiQuotaManager quota = new();
         FakePendingConversionQueue queue = new();
-        CurencyRateService service = CreateService(repo, quota, queue);
+        CurrencyRateService service = CreateService(repo, quota, queue);
 
         // Act
         int synced = await service.SyncGapAsync(365);
@@ -387,7 +387,7 @@ public class CurrencyRateServiceTests
         FakeConversionRepository repo = new();
         FakeApiQuotaManager quota = new();
         FakePendingConversionQueue queue = new();
-        CurencyRateService service = CreateService(repo, quota, queue);
+        CurrencyRateService service = CreateService(repo, quota, queue);
         await queue.EnqueueAsync(new DateOnly(2023, 12, 1));
 
         // Act
@@ -400,12 +400,12 @@ public class CurrencyRateServiceTests
         Assert.Equal(1, status.PendingCount);
     }
 
-    private static CurencyRateService CreateService(
+    private static CurrencyRateService CreateService(
         FakeConversionRepository repo,
         FakeApiQuotaManager quota,
         FakePendingConversionQueue queue)
     {
-        return new CurencyRateService(repo, new FakeCurrencyConverter(), Currencies.EUR, quota, queue);
+        return new CurrencyRateService(repo, new FakeCurrencyConverter(), Currencies.EUR, quota, queue);
     }
 
     private sealed class FailingCurrencyConverter : ICurrencyConverter

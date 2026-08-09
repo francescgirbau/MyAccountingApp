@@ -25,7 +25,7 @@ JsonApiQuotaRepository quotaRepo = new JsonApiQuotaRepository("api_quota.json");
 JsonPendingConversionRepository pendingRepo = new JsonPendingConversionRepository("pending_conversions.json");
 ApiQuotaManager quotaManager = new ApiQuotaManager(quotaRepo);
 PendingConversionQueue pendingQueue = new PendingConversionQueue(pendingRepo);
-CurencyRateService service = new CurencyRateService(repo, api, source, quotaManager, pendingQueue);
+CurrencyRateService service = new CurrencyRateService(repo, api, source, quotaManager, pendingQueue);
 
 DateTime targetDate = new DateTime(2024, 12, 1);
 

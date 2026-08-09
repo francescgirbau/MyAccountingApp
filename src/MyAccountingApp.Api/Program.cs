@@ -74,7 +74,7 @@ else
 Currencies source = Currencies.EUR;
 JsonPendingConversionRepository pendingRepo = new JsonPendingConversionRepository("data/pending_conversions.json");
 PendingConversionQueue pendingQueue = new PendingConversionQueue(pendingRepo);
-CurencyRateService currencyRateService = new CurencyRateService(repo, api, source, quotaManager, pendingQueue, currencyOptions.MaxTimeseriesDays, currencyOptions.ProviderName);
+CurrencyRateService currencyRateService = new CurrencyRateService(repo, api, source, quotaManager, pendingQueue, currencyOptions.MaxTimeseriesDays, currencyOptions.ProviderName);
 
 builder.Services.AddSingleton<IConversionRepository>(repo);
 if (quotaRepo != null)
