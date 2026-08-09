@@ -65,6 +65,11 @@ public class FrankfurterCurrencyConverter : ICurrencyConverter
 
         foreach (FrankfurterRateRecord record in records)
         {
+            if (record.Quote == source.ToString())
+            {
+                continue;
+            }
+
             result[$"{source}{record.Quote}"] = record.Rate;
         }
 
@@ -84,14 +89,16 @@ public class FrankfurterCurrencyConverter : ICurrencyConverter
             throw new ArgumentException("The end date must be greater than or equal to the start date.", nameof(end));
         }
 
-        string quotes = string.Join(",", (targets ?? Enum.GetValues<Currencies>()).Where(this.IsRequested));
+        string quotes = string.Join(",", (targets ?? Enum.GetValues<Currencies>()).Where(currency => currency != source && this.IsRequested(currency)));
         string url = $"{this._baseUrl}/v2/rates?from={start:yyyy-MM-dd}&to={end:yyyy-MM-dd}&base={source}&quotes={quotes}";
 
         IReadOnlyList<FrankfurterRateRecord> records = await this.GetRecordsAsync(url, cancellationToken);
 
         Dictionary<DateOnly, Dictionary<string, decimal>> result = new();
 
-        foreach (IGrouping<string, FrankfurterRateRecord> group in records.GroupBy(r => r.Date, StringComparer.Ordinal))
+        foreach (IGrouping<string, FrankfurterRateRecord> group in records
+            .Where(record => record.Quote != source.ToString())
+            .GroupBy(r => r.Date, StringComparer.Ordinal))
         {
             if (DateOnly.TryParse(group.Key, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly date))
             {

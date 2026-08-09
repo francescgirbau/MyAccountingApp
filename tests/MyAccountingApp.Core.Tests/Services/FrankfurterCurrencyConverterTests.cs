@@ -116,6 +116,27 @@ public class FrankfurterCurrencyConverterTests
         Assert.Contains("to=2025-01-03", handler.LastUrl);
         Assert.Contains("base=EUR", handler.LastUrl);
         Assert.Contains("quotes=", handler.LastUrl);
+        string[] quoteCodes = handler.LastUrl.Split("quotes=")[1].Split(',');
+        Assert.DoesNotContain("EUR", quoteCodes);
+        Assert.DoesNotContain("BTC", quoteCodes);
+    }
+
+    [Fact]
+    public async Task FetchRangeAsync_IgnoresRatesWhereQuoteIsTheSource()
+    {
+        // Arrange
+        string responseContent = """[{"date":"2025-01-02","base":"EUR","quote":"EUR","rate":1},{"date":"2025-01-02","base":"EUR","quote":"USD","rate":1.07}]""";
+        HttpClient httpClient = FakeHttpClient.CreateFakeHttpClient(responseContent, HttpStatusCode.OK);
+        FrankfurterCurrencyConverter converter = new(httpClient);
+
+        // Act
+        IReadOnlyDictionary<DateOnly, Dictionary<string, decimal>> result = await converter.FetchRangeAsync(
+            Currencies.EUR, new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 2));
+
+        // Assert
+        Assert.Single(result);
+        Assert.DoesNotContain("EUREUR", result[new DateOnly(2025, 1, 2)]);
+        Assert.Equal(1.07m, result[new DateOnly(2025, 1, 2)]["EURUSD"]);
     }
 
     private sealed class CapturingHandler : HttpMessageHandler
