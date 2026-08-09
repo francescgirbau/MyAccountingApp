@@ -11,7 +11,7 @@ namespace MyAccountingApp.Application.Services;
 /// Uses a repository for local storage, a quota manager to respect API limits, and
 /// a queue for dates that could not be fetched immediately.
 /// </summary>
-public class CurencyRateService : ICurrencyRateService
+public class CurrencyRateService : ICurrencyRateService
 {
     private readonly IConversionRepository _repository;
     private readonly ICurrencyConverter _api;
@@ -69,7 +69,7 @@ public class CurencyRateService : ICurrencyRateService
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="CurencyRateService"/> class.
+    /// Initializes a new instance of the <see cref="CurrencyRateService"/> class.
     /// </summary>
     /// <param name="repository">Repository for storing currency conversions.</param>
     /// <param name="api">External API for fetching currency rates.</param>
@@ -79,7 +79,7 @@ public class CurencyRateService : ICurrencyRateService
     /// <param name="maxTimeseriesDays">Maximum number of days a single timeseries request may cover.</param>
     /// <param name="sourceProvider">Name of the provider that supplies the rates.</param>
     /// <exception cref="ArgumentException">Thrown if the source currency is not EUR.</exception>
-    public CurencyRateService(
+    public CurrencyRateService(
         IConversionRepository repository,
         ICurrencyConverter api,
         Currencies source,
@@ -105,7 +105,7 @@ public class CurencyRateService : ICurrencyRateService
     /// <exception cref="ArgumentException">Thrown if the base currency is not EUR.</exception>
     private void Validate()
     {
-        string parentType = nameof(CurencyRateService);
+        string parentType = nameof(CurrencyRateService);
 
         if (this._source != Currencies.EUR)
         {

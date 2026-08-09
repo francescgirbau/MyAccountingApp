@@ -20,7 +20,7 @@ public class CurrencyConversionServiceTests
         FakePendingConversionQueue fakeQueue = new();
 
         // Act
-        Action action = () => { new CurencyRateService(fakeRepo, fakeApi, invalidSource, fakeQuota, fakeQueue); };
+        Action action = () => { new CurrencyRateService(fakeRepo, fakeApi, invalidSource, fakeQuota, fakeQueue); };
 
         // Assert
         Assert.Throws<ArgumentException>(() => action());
@@ -36,7 +36,7 @@ public class CurrencyConversionServiceTests
         FakeApiQuotaManager fakeQuota = new();
         FakePendingConversionQueue fakeQueue = new();
 
-        CurencyRateService service = new(fakeRepo, fakeApi, source, fakeQuota, fakeQueue);
+        CurrencyRateService service = new(fakeRepo, fakeApi, source, fakeQuota, fakeQueue);
 
         DateTime date = new DateTime(2023, 12, 1); // This date does not exist
         Currencies targetCurrency = Currencies.USD;
@@ -61,7 +61,7 @@ public class CurrencyConversionServiceTests
         FakeApiQuotaManager fakeQuota = new();
         FakePendingConversionQueue fakeQueue = new();
 
-        CurencyRateService service = new CurencyRateService(fakeRepo, fakeApi, source, fakeQuota, fakeQueue);
+        CurrencyRateService service = new CurrencyRateService(fakeRepo, fakeApi, source, fakeQuota, fakeQueue);
 
         DateTime date = new DateTime(2005, 12, 1); // This date does  exist
         Currencies targetCurrency = Currencies.USD;
