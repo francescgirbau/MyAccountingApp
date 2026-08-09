@@ -1,9 +1,8 @@
 namespace MyAccountingApp.Core.Tests.Services;
-
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using MyAccountingApp.Core.Services;
+using MyAccountingApp.Core.Imports.Degiro;
 using Xunit;
 
 public class DegiroTransactionImportServiceTests

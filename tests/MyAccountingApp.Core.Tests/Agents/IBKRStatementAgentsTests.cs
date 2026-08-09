@@ -1,4 +1,4 @@
-using MyAccountingApp.Core.Agents.IBKR;
+using MyAccountingApp.Core.Imports.IBKR;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 

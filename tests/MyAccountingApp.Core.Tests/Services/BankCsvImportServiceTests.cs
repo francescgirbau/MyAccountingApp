@@ -1,9 +1,8 @@
 namespace MyAccountingApp.Core.Tests.Services;
-
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using MyAccountingApp.Core.Services;
+using MyAccountingApp.Core.Imports.Common;
 using Xunit;
 
 public class BankCsvImportServiceTests

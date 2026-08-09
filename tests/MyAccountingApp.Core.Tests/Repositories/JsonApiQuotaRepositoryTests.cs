@@ -1,4 +1,4 @@
-using MyAccountingApp.Core.Repositories;
+using MyAccountingApp.Core.Persistence;
 using MyAccountingApp.Domain.Entities;
 
 namespace MyAccountingApp.Core.Tests.Repositories;
