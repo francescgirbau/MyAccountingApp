@@ -1,11 +1,14 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using MyAccountingApp.Application.Interfaces;
+using MyAccountingApp.Application.Options;
 using MyAccountingApp.Application.Services;
 using MyAccountingApp.Core.Agents;
 using MyAccountingApp.Core.Repositories;
 using MyAccountingApp.Core.Services;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
+using MyAccountingApp.Domain.Interfaces;
 using MyAccountingApp.Domain.ValueObjects;
 
 IConfigurationRoot config = new ConfigurationBuilder()
@@ -13,19 +16,41 @@ IConfigurationRoot config = new ConfigurationBuilder()
     .AddEnvironmentVariables()
     .Build();
 
-string currencyApiKey = config["CurrencyApi:ApiKey"]
-    ?? Environment.GetEnvironmentVariable("CURRENCY_API_KEY")
-    ?? throw new InvalidOperationException(
-        "CurrencyApi:ApiKey not found. Set it in appsettings.json or the CURRENCY_API_KEY environment variable.");
+CurrencyApiOptions currencyOptions = config.GetSection("CurrencyApi").Get<CurrencyApiOptions>() ?? new CurrencyApiOptions();
+
+bool useFrankfurter = string.Equals(currencyOptions.Provider, "Frankfurter", StringComparison.OrdinalIgnoreCase);
 
 CompositeConversionRepository repo = new CompositeConversionRepository("conversions.json");
-CurrencyConverter api = new CurrencyConverter(currencyApiKey);
+
+HttpClient frankfurterClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+HttpClient exchangeRateHostClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+
+ICurrencyConverter api;
+IApiQuotaManager quotaManager;
+
+if (useFrankfurter)
+{
+    api = new FrankfurterCurrencyConverter(frankfurterClient, currencyOptions.ExcludeCurrencies, currencyOptions.BaseUrl);
+    quotaManager = new UnlimitedApiQuotaManager(currencyOptions.ProviderName);
+}
+else
+{
+    string currencyApiKey = !string.IsNullOrEmpty(currencyOptions.ApiKey)
+        ? currencyOptions.ApiKey
+        : config["CurrencyApi:ApiKey"]
+            ?? Environment.GetEnvironmentVariable("CURRENCY_API_KEY")
+            ?? throw new InvalidOperationException(
+                "CurrencyApi:ApiKey not found. Set it in appsettings.json or the CURRENCY_API_KEY environment variable.");
+
+    api = new CurrencyConverter(currencyApiKey, exchangeRateHostClient, currencyOptions.ExcludeCurrencies);
+    JsonApiQuotaRepository quotaRepo = new JsonApiQuotaRepository("api_quota.json", currencyOptions.RequestsLimit, currencyOptions.SafetyMargin, currencyOptions.ProviderName);
+    quotaManager = new ApiQuotaManager(quotaRepo);
+}
+
 Currencies source = Currencies.EUR;
-JsonApiQuotaRepository quotaRepo = new JsonApiQuotaRepository("api_quota.json");
 JsonPendingConversionRepository pendingRepo = new JsonPendingConversionRepository("pending_conversions.json");
-ApiQuotaManager quotaManager = new ApiQuotaManager(quotaRepo);
 PendingConversionQueue pendingQueue = new PendingConversionQueue(pendingRepo);
-CurrencyRateService service = new CurrencyRateService(repo, api, source, quotaManager, pendingQueue);
+CurrencyRateService service = new CurrencyRateService(repo, api, source, quotaManager, pendingQueue, currencyOptions.MaxTimeseriesDays, currencyOptions.ProviderName);
 
 DateTime targetDate = new DateTime(2024, 12, 1);
 
