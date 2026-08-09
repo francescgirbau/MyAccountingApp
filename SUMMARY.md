@@ -87,8 +87,9 @@ docker compose up --build -d
 On startup the API backfills the last 90 days if no conversions are stored; otherwise it syncs the gap between the last cached day and yesterday (`POST /api/conversions/sync` behavior, chunked by `MaxTimeseriesDays`). When the provider fails or the quota is exhausted for a requested date, the date is queued in `pending_conversions.json` and the closest cached conversion is returned marked as **stale**; `POST /api/conversions/process-pending` retries the queue once quota is available again. HTTP calls to the provider time out after 30 seconds.
 
 ## Current State (August 2026)
-- 298 tests, 83.3% combined coverage
+- 301 tests, 83.3% combined coverage
 - CI: GitHub Actions, Release build with `-warnaserror`, StyleCop gate (0 warnings enforced), coverage gate ≥ 80%
+- P0 wave done: quota consumed only after API success, repository file renames, `CurrencyRateService` typo fixed
 
 ## Known Issues
 - WASM browser cache: use Ctrl+F5 or incognito after rebuild
