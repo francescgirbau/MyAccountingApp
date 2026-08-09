@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using MyAccountingApp.Api.Tests.Fakes;
 using MyAccountingApp.Application.Interfaces;
-using MyAccountingApp.Core.Repositories;
+using MyAccountingApp.Core.Persistence;
 using MyAccountingApp.Domain.Interfaces;
 using MyAccountingApp.TestUtilities.Fakes;
 

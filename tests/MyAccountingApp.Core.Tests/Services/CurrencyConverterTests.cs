@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using MyAccountingApp.Core.Services;
+using MyAccountingApp.Core.Http.Currency;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.TestUtilities.Fakes;
 

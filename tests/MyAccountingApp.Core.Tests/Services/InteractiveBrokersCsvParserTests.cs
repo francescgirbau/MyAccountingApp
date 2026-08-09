@@ -1,5 +1,5 @@
+using MyAccountingApp.Core.Imports.IBKR;
 using MyAccountingApp.Core.Models;
-using MyAccountingApp.Core.Services;
 
 namespace MyAccountingApp.Core.Tests.Services;
 
