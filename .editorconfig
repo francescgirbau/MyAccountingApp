@@ -27,6 +27,7 @@ dotnet_diagnostic.SA1602.severity = none   # Enumeration items must be documente
 dotnet_diagnostic.SA1011.severity = none   # Closing square bracket spacing (conflicts with nullable syntax)
 dotnet_diagnostic.SA1137.severity = none   # Elements should have the same indentation (conflicts with try-wrapped top-level statements)
 dotnet_diagnostic.SA1313.severity = none   # Parameter names must begin with lower-case letter (conflicts with record primary constructors)
+dotnet_diagnostic.SA1649.severity = none   # File name must match type name (analyzer crashes on top-level records)
 
 #### Example of keeping some useful rules active ####
 dotnet_diagnostic.SA1500.severity = error  # Braces must not be on the same line as code
