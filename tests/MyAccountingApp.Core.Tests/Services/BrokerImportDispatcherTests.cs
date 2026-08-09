@@ -3,10 +3,12 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using MyAccountingApp.Core.Imports.AbnAmro;
+using MyAccountingApp.Core.Imports.Cobas;
 using MyAccountingApp.Core.Imports.Common;
 using MyAccountingApp.Core.Imports.Degiro;
 using MyAccountingApp.Core.Imports.IBKR;
 using MyAccountingApp.Core.Imports.Revolut;
+using MyAccountingApp.Domain.Entities;
 using Xunit;
 
 public class BrokerImportDispatcherTests
@@ -213,6 +215,29 @@ public class BrokerImportDispatcherTests
     }
 
     [Fact]
+    public async Task ParseAllAsync_CobasHeader_UsesCobasService()
+    {
+        string csv = "Operacion,Producto,Fecha,Tipo,Estado,Importe,Valor liquidativo,Participaciones\nO-BEC1579,Cobas Internacional FI Clase D,11/11/2025,Suscripción,Finalizada,120,00 € (Bruto),238.733905€,0.502652";
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            BrokerImportDispatcher dispatcher = CreateDispatcher();
+
+            var (txs, assets, _) = await dispatcher.ParseAllAsync(file);
+
+            Assert.Empty(txs);
+            AssetTransaction asset = Assert.Single(assets);
+            Assert.Equal("COBAS_INTERNACIONAL_D", asset.Symbol);
+            Assert.Equal(0.502652m, asset.Quantity);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
     public async Task ParseCorporateActionsAsync_DelegatesToIbkr()
     {
         string file = Path.GetTempFileName();
@@ -234,7 +259,7 @@ public class BrokerImportDispatcherTests
     {
         InteractiveBrokersImportService ibkr = new(Parser, new FakeLogger<InteractiveBrokersImportService>());
         IBKRFlexQueryImportService flexQuery = new(Array.Empty<IIBKRStatementAgent>());
-        return new BrokerImportDispatcher(ibkr, new BankCsvImportService(), new AssetTransactionCsvImportService(), new DegiroImportService(), new DegiroTransactionImportService(), flexQuery, new RevolutImportService(), new AbnAmroImportService());
+        return new BrokerImportDispatcher(ibkr, new BankCsvImportService(), new AssetTransactionCsvImportService(), new DegiroImportService(), new DegiroTransactionImportService(), flexQuery, new RevolutImportService(), new AbnAmroImportService(), new CobasImportService());
     }
 }
 
