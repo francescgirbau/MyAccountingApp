@@ -56,19 +56,25 @@ public class JsonTransactionRepository : ITransactionRepository
         {
             List<Transaction>? transactions = JsonSerializer.Deserialize<List<Transaction>>(json, options);
             if (transactions is null || transactions.Count == 0)
+            {
                 return new List<Transaction>();
+            }
 
             var seen = new HashSet<Guid>();
             var deduplicated = new List<Transaction>(transactions.Count);
             for (int i = transactions.Count - 1; i >= 0; i--)
             {
                 if (seen.Add(transactions[i].Id))
+                {
                     deduplicated.Add(transactions[i]);
+                }
             }
 
             deduplicated.Reverse();
             if (deduplicated.Count != transactions.Count)
+            {
                 this.WriteAll(deduplicated);
+            }
 
             return deduplicated;
         }

@@ -15,6 +15,19 @@ public class CurrencyConverter : ICurrencyConverter
     private readonly HttpClient _httpClient;
     private readonly IReadOnlyCollection<string> _excludedCurrencies;
 
+    private static void ThrowIfFailed(bool success, ExchangeRateResponseError? error)
+    {
+        if (!success)
+        {
+            if (error?.Code == 104 || (error?.Info is not null && error.Info.Contains("limit", StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new CurrencyApiQuotaExceededException($"Currency API quota exceeded: {error?.Info}");
+            }
+
+            throw new Exception($"Error in API response: {error?.Info}");
+        }
+    }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="CurrencyConverter"/> class.
     /// </summary>
@@ -103,18 +116,5 @@ public class CurrencyConverter : ICurrencyConverter
 
         response.EnsureSuccessStatusCode();
         return response;
-    }
-
-    private static void ThrowIfFailed(bool success, ExchangeRateResponseError? error)
-    {
-        if (!success)
-        {
-            if (error?.Code == 104 || (error?.Info is not null && error.Info.Contains("limit", StringComparison.OrdinalIgnoreCase)))
-            {
-                throw new CurrencyApiQuotaExceededException($"Currency API quota exceeded: {error?.Info}");
-            }
-
-            throw new Exception($"Error in API response: {error?.Info}");
-        }
     }
 }

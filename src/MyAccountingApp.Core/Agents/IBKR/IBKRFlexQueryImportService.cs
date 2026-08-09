@@ -58,10 +58,16 @@ public class IBKRFlexQueryImportService : IBrokerImportService
 
         foreach (string line in lines)
         {
-            if (string.IsNullOrWhiteSpace(line)) continue;
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                continue;
+            }
 
             string[] fields = SplitCsvLine(line);
-            if (fields.Length == 0) continue;
+            if (fields.Length == 0)
+            {
+                continue;
+            }
 
             string section = fields[0];
             if (fields.Length >= 2 && fields[1] == "Header")
