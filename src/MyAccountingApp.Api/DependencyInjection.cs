@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using MyAccountingApp.Api.Http;
 using MyAccountingApp.Api.Services;
 using MyAccountingApp.Application.Interfaces;
 using MyAccountingApp.Application.Options;
@@ -44,11 +45,11 @@ public static class DependencyInjection
         {
             client.BaseAddress = new Uri(currencyOptions.BaseUrl.TrimEnd('/') + "/");
             client.Timeout = TimeSpan.FromSeconds(30);
-        });
+        }).AddHttpMessageHandler<FxRetryHandler>();
         builder.Services.AddHttpClient("ExchangeRateHost", client =>
         {
             client.Timeout = TimeSpan.FromSeconds(30);
-        });
+        }).AddHttpMessageHandler<FxRetryHandler>();
 
         IApiQuotaManager quotaManager;
         JsonApiQuotaRepository? quotaRepo = null;
