@@ -44,24 +44,43 @@ builder.Services.AddCors(options =>
 
 CurrencyApiOptions currencyOptions = builder.Configuration.GetSection("CurrencyApi").Get<CurrencyApiOptions>() ?? new CurrencyApiOptions();
 
-string currencyApiKey = !string.IsNullOrEmpty(currencyOptions.ApiKey)
-    ? currencyOptions.ApiKey
-    : builder.Configuration["CurrencyApi:ApiKey"]
-        ?? Environment.GetEnvironmentVariable("CURRENCY_API_KEY")
-        ?? throw new InvalidOperationException(
-            "CurrencyApi:ApiKey not found. Set it in appsettings.json or the CURRENCY_API_KEY environment variable.");
+bool useFrankfurter = string.Equals(currencyOptions.Provider, "Frankfurter", StringComparison.OrdinalIgnoreCase);
 
 CompositeConversionRepository repo = new CompositeConversionRepository("data/conversions.json");
-CurrencyConverter api = new CurrencyConverter(currencyApiKey, excludedCurrencies: currencyOptions.ExcludeCurrencies);
+
+ICurrencyConverter api;
+IApiQuotaManager quotaManager;
+JsonApiQuotaRepository? quotaRepo = null;
+
+if (useFrankfurter)
+{
+    api = new FrankfurterCurrencyConverter(excludedCurrencies: currencyOptions.ExcludeCurrencies, baseUrl: currencyOptions.BaseUrl);
+    quotaManager = new UnlimitedApiQuotaManager(currencyOptions.ProviderName);
+}
+else
+{
+    string currencyApiKey = !string.IsNullOrEmpty(currencyOptions.ApiKey)
+        ? currencyOptions.ApiKey
+        : builder.Configuration["CurrencyApi:ApiKey"]
+            ?? Environment.GetEnvironmentVariable("CURRENCY_API_KEY")
+            ?? throw new InvalidOperationException(
+                "CurrencyApi:ApiKey not found. Set it in appsettings.json or the CURRENCY_API_KEY environment variable.");
+
+    api = new CurrencyConverter(currencyApiKey, excludedCurrencies: currencyOptions.ExcludeCurrencies);
+    quotaRepo = new JsonApiQuotaRepository("data/api_quota.json", currencyOptions.RequestsLimit, currencyOptions.SafetyMargin, currencyOptions.ProviderName);
+    quotaManager = new ApiQuotaManager(quotaRepo);
+}
+
 Currencies source = Currencies.EUR;
-JsonApiQuotaRepository quotaRepo = new JsonApiQuotaRepository("data/api_quota.json", currencyOptions.RequestsLimit, currencyOptions.SafetyMargin, currencyOptions.ProviderName);
 JsonPendingConversionRepository pendingRepo = new JsonPendingConversionRepository("data/pending_conversions.json");
-ApiQuotaManager quotaManager = new ApiQuotaManager(quotaRepo);
 PendingConversionQueue pendingQueue = new PendingConversionQueue(pendingRepo);
-CurencyRateService currencyRateService = new CurencyRateService(repo, api, source, quotaManager, pendingQueue, currencyOptions.MaxTimeseriesDays);
+CurencyRateService currencyRateService = new CurencyRateService(repo, api, source, quotaManager, pendingQueue, currencyOptions.MaxTimeseriesDays, currencyOptions.ProviderName);
 
 builder.Services.AddSingleton<IConversionRepository>(repo);
-builder.Services.AddSingleton<IApiQuotaRepository>(quotaRepo);
+if (quotaRepo != null)
+{
+    builder.Services.AddSingleton<IApiQuotaRepository>(quotaRepo);
+}
 builder.Services.AddSingleton<IPendingConversionRepository>(pendingRepo);
 builder.Services.AddSingleton<IApiQuotaManager>(quotaManager);
 builder.Services.AddSingleton<IPendingConversionQueue>(pendingQueue);

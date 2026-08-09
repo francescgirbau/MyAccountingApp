@@ -19,6 +19,7 @@ public class CurencyRateService : ICurrencyRateService
     private readonly IApiQuotaManager _quotaManager;
     private readonly IPendingConversionQueue _pendingQueue;
     private readonly int _maxTimeseriesDays;
+    private readonly string _sourceProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CurencyRateService"/> class.
@@ -29,6 +30,7 @@ public class CurencyRateService : ICurrencyRateService
     /// <param name="quotaManager">Manager for the API request quota.</param>
     /// <param name="pendingQueue">Queue for dates that could not be fetched immediately.</param>
     /// <param name="maxTimeseriesDays">Maximum number of days a single timeseries request may cover.</param>
+    /// <param name="sourceProvider">Name of the provider that supplies the rates.</param>
     /// <exception cref="ArgumentException">Thrown if the source currency is not EUR.</exception>
     public CurencyRateService(
         IConversionRepository repository,
@@ -36,7 +38,8 @@ public class CurencyRateService : ICurrencyRateService
         Currencies source,
         IApiQuotaManager quotaManager,
         IPendingConversionQueue pendingQueue,
-        int maxTimeseriesDays = 365)
+        int maxTimeseriesDays = 365,
+        string sourceProvider = "frankfurter")
     {
         this._repository = repository;
         this._api = api;
@@ -44,6 +47,7 @@ public class CurencyRateService : ICurrencyRateService
         this._quotaManager = quotaManager;
         this._pendingQueue = pendingQueue;
         this._maxTimeseriesDays = maxTimeseriesDays;
+        this._sourceProvider = sourceProvider;
         this.Validate();
     }
 
@@ -211,7 +215,7 @@ public class CurencyRateService : ICurrencyRateService
 
     private Conversion BuildConversion(DateOnly day, Dictionary<string, decimal> rates)
     {
-        Conversion conversion = new(day.ToDateTime(TimeOnly.MinValue), this._source);
+        Conversion conversion = new(day.ToDateTime(TimeOnly.MinValue), this._source, sourceProvider: this._sourceProvider);
         int prefixLength = this._source.ToString().Length;
 
         foreach (KeyValuePair<string, decimal> kv in rates)

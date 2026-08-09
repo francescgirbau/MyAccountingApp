@@ -8,7 +8,12 @@ public sealed class CurrencyApiOptions
     /// <summary>
     /// Gets or sets the base URL of the currency API.
     /// </summary>
-    public string BaseUrl { get; set; } = "https://api.exchangerate.host";
+    public string BaseUrl { get; set; } = "https://api.frankfurter.dev";
+
+    /// <summary>
+    /// Gets or sets the name of the provider to use ("Frankfurter" or "ExchangeRateHost").
+    /// </summary>
+    public string Provider { get; set; } = "Frankfurter";
 
     /// <summary>
     /// Gets or sets the API key.
@@ -38,7 +43,7 @@ public sealed class CurrencyApiOptions
     /// <summary>
     /// Gets or sets the name of the external provider.
     /// </summary>
-    public string ProviderName { get; set; } = "exchangerate.host";
+    public string ProviderName { get; set; } = "frankfurter";
 
     /// <summary>
     /// Gets or sets the list of currencies to exclude from API requests (e.g. "BTC").
