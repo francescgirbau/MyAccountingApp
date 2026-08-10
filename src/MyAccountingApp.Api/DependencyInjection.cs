@@ -7,6 +7,7 @@ using MyAccountingApp.Application.Services;
 using MyAccountingApp.Core.Http.Currency;
 using MyAccountingApp.Core.Http.Market;
 using MyAccountingApp.Core.Imports.AbnAmro;
+using MyAccountingApp.Core.Imports.Cobas;
 using MyAccountingApp.Core.Imports.Common;
 using MyAccountingApp.Core.Imports.Degiro;
 using MyAccountingApp.Core.Imports.IBKR;
@@ -148,6 +149,7 @@ public static class DependencyInjection
         builder.Services.AddSingleton<DegiroTransactionImportService>();
         builder.Services.AddSingleton<RevolutImportService>();
         builder.Services.AddSingleton<AbnAmroImportService>();
+        builder.Services.AddSingleton<CobasImportService>();
         builder.Services.AddSingleton<IBrokerImportService, BrokerImportDispatcher>();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
