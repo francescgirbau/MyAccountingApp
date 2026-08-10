@@ -140,6 +140,22 @@ public static class TransactionsEndpoints
             return Results.Ok(assetTx.ToDto());
         });
 
+        app.MapPatch($"{prefix}/asset-transactions/batch", (BatchAssetTransactionPatchRequest request, IAssetTransactionCommandService service) =>
+        {
+            if (request.Ids is null || request.Ids.Count == 0)
+            {
+                return Results.BadRequest(new { message = "ids are required." });
+            }
+
+            if (request.Patch is null || request.Patch.Symbol is null)
+            {
+                return Results.BadRequest(new { message = "patch.symbol is required." });
+            }
+
+            BatchPatchResult result = service.PatchMany(request.Ids, request.Patch);
+            return Results.Ok(result);
+        });
+
         app.MapDelete($"{prefix}/asset-transactions/{{id:guid}}", (Guid id, IPortfolioRepository repo) =>
         {
             AssetTransaction? existing = repo.GetAllTransactions().FirstOrDefault(t => t.Transaction.Id == id);
@@ -216,3 +232,4 @@ public static class TransactionsEndpoints
 record CreateTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category);
 record CreateAssetTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, decimal Quantity, string Type);
 record UpdateOptionTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, string Isin, decimal Quantity, string Type);
+record BatchAssetTransactionPatchRequest(List<Guid> Ids, AssetTransactionPatch Patch);
