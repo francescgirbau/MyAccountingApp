@@ -16,7 +16,7 @@ MyAccountingApp.Application  → Services (conversions, import, portfolio, summa
 MyAccountingApp.Core         → Infrastructure implementations
 │   Core/Persistence         → JSON + in-memory repositories (namespaces MyAccountingApp.Core.Persistence)
 │   Core/Http                → Currency (Frankfurter, ExchangeRateHost) + Market (Yahoo) clients
-│   Core/Imports             → IBKR / Degiro / Revolut / AbnAmro parsers + Common CSV helpers
+│   Core/Imports             → IBKR / Degiro / Revolut / AbnAmro / Cobas (investment funds) parsers + Common CSV helpers
 │   Core/DTOs, Core/Models   → Response DTOs and IBKR record models
 MyAccountingApp.Api          → Minimal API endpoints (Endpoints/), DI wiring, pipeline, startup sync
 MyAccountingApp.ConsoleApp   → Manual CLI entry point (imports, conversions)
@@ -27,7 +27,7 @@ tests/                       → xUnit suites: Domain.Tests, Application.Tests, 
 Rules of thumb: Domain has no external dependencies; Application depends only on Domain + interfaces; Core holds all concrete I/O and third-party calls; Api is the composition root. Tests of Application use fakes from `MyAccountingApp.TestUtilities` (no JSON repositories, no real HTTP).
 
 ## Key Features
-- **Import**: Bank CSV + broker statements via folder scan or file upload (`POST /api/import/upload`)
+- **Import**: Bank CSV + broker statements + investment fund statements (Cobas) via folder scan or file upload (`POST /api/import/upload`). Cobas funds are mapped to asset transactions: `Suscripción`/`Traspaso de entrada` → Buy, `Reembolso`/`Traspaso de salida` → Sell, quantity = fractional `Participaciones` (symbol per share class, e.g. `COBAS_INTERNACIONAL_D`)
 - **Transactions**: List with filters (year, category, search), sorting, pagination; full CRUD (create/edit/delete)
 - **Asset Transactions**: CRUD with Symbol, Quantity, Type fields
 - **Portfolio**: Positions table with expandable open lots, realized/unrealized P&L, coloring
