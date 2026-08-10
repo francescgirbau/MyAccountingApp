@@ -143,6 +143,34 @@
 </MudPaper>
 
 <MudPaper Class="pa-6 mb-4" Outlined="true">
+    <MudText Typo="Typo.h6" GutterBottom="true">Import Cobas (Investment Funds)</MudText>
+    <MudText Typo="Typo.body2" Class="mb-4">
+        Upload a CSV exported from Cobas. Fund subscriptions and transfers are detected automatically and become portfolio entries.
+    </MudText>
+    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+        <strong>Format detected automatically.</strong> Expected columns: Operacion, Producto, Fecha, Tipo, Estado, Importe, Valor liquidativo, Participaciones.<br />
+        <strong>Suscripción</strong> / <strong>Traspaso de entrada</strong> become portfolio entries. <strong>Reembolso</strong> / <strong>Traspaso de salida</strong> become sells. Cancelled (<strong>Anulada</strong>) rows are skipped. Quantity is the fractional <strong>Participaciones</strong> value.
+    </MudAlert>
+    <MudGrid>
+        <MudItem xs="12" sm="8">
+            <InputFile OnChange="@OnCobasFileSelected" accept=".csv" class="mud-input-outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="4" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Warning" Size="Size.Large"
+                       OnClick="@UploadCobasAsync" Disabled="@(_cobasFile is null || _loading)"
+                       StartIcon="@Icons.Material.Filled.FileUpload"
+                       FullWidth="true">
+                Import Cobas
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+    @if (_cobasFile is not null)
+    {
+        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">Selected: @_cobasFile.Name</MudText>
+    }
+</MudPaper>
+
+<MudPaper Class="pa-6 mb-4" Outlined="true">
     <MudText Typo="Typo.h6" GutterBottom="true">Import Raw CSV</MudText>
     <MudText Typo="Typo.body2" Class="mb-4">
         Upload a CSV with your own format. No transformations applied.
@@ -301,6 +329,7 @@
     private IBrowserFile? _ibkrFile;
     private IBrowserFile? _revolutFile;
     private IBrowserFile? _abnAmroFile;
+    private IBrowserFile? _cobasFile;
 
     private void OnFileSelected(InputFileChangeEventArgs args)
     {
@@ -329,6 +358,12 @@
     private void OnAbnAmroFileSelected(InputFileChangeEventArgs args)
     {
         _abnAmroFile = args.File;
+        _result = null;
+    }
+
+    private void OnCobasFileSelected(InputFileChangeEventArgs args)
+    {
+        _cobasFile = args.File;
         _result = null;
     }
 
@@ -476,6 +511,35 @@
         catch (Exception ex)
         {
             Snackbar.Add($"IBKR import failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task UploadCobasAsync()
+    {
+        if (_cobasFile is null) return;
+
+        _loading = true;
+        _result = null;
+        _editableSymbols = new();
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            using var stream = _cobasFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            content.Add(new StreamContent(stream), "file", _cobasFile.Name);
+
+            var response = await Http.PostAsync("/api/import/upload", content);
+            _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
+            InitEditableSymbols();
+            Snackbar.Add("Cobas import completed.", Severity.Success);
+            _cobasFile = null;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Cobas import failed: {ex.Message}", Severity.Error);
         }
         finally
         {
