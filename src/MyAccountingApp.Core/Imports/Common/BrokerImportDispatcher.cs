@@ -11,6 +11,7 @@ using MyAccountingApp.Core.Imports.Degiro;
 using MyAccountingApp.Core.Imports.IBKR;
 using MyAccountingApp.Core.Imports.MyInvestor;
 using MyAccountingApp.Core.Imports.Revolut;
+using MyAccountingApp.Core.Imports.SelfBank;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Interfaces;
 
@@ -22,7 +23,7 @@ public class BrokerImportDispatcher : IBrokerImportService
     private const string RevolutCsvHeaderPrefix = "Type,Product,Started Date";
     private const string AbnAmroCsvHeaderPrefix = "accountNumber,mutationcode";
     private const string CobasCsvHeaderPrefix = "Operacion,Producto,Fecha";
-    private const string MyInvestorAccountCsvHeaderPrefix = "Fecha de operación;Fecha de valor;Concepto";
+    private const string MyInvestorAccountCsvHeaderPrefix = "Fecha de operaci";
     private const string MyInvestorFundCsvHeaderPrefix = "Fecha de la orden;ISIN;Importe estimado";
 
     private readonly InteractiveBrokersImportService ibkrService;
@@ -36,6 +37,8 @@ public class BrokerImportDispatcher : IBrokerImportService
     private readonly CobasImportService cobasService;
     private readonly MyInvestorAccountImportService myInvestorAccountService;
     private readonly MyInvestorFundImportService myInvestorFundService;
+    private readonly SelfBankAccountImportService selfBankAccountService;
+    private readonly SelfBankFundImportService selfBankFundService;
 
     public BrokerImportDispatcher(
         InteractiveBrokersImportService ibkrService,
@@ -48,7 +51,9 @@ public class BrokerImportDispatcher : IBrokerImportService
         AbnAmroImportService abnAmroService,
         CobasImportService cobasService,
         MyInvestorAccountImportService myInvestorAccountService,
-        MyInvestorFundImportService myInvestorFundService)
+        MyInvestorFundImportService myInvestorFundService,
+        SelfBankAccountImportService selfBankAccountService,
+        SelfBankFundImportService selfBankFundService)
     {
         this.ibkrService = ibkrService ?? throw new ArgumentNullException(nameof(ibkrService));
         this.bankService = bankService ?? throw new ArgumentNullException(nameof(bankService));
@@ -61,6 +66,8 @@ public class BrokerImportDispatcher : IBrokerImportService
         this.cobasService = cobasService ?? throw new ArgumentNullException(nameof(cobasService));
         this.myInvestorAccountService = myInvestorAccountService ?? throw new ArgumentNullException(nameof(myInvestorAccountService));
         this.myInvestorFundService = myInvestorFundService ?? throw new ArgumentNullException(nameof(myInvestorFundService));
+        this.selfBankAccountService = selfBankAccountService ?? throw new ArgumentNullException(nameof(selfBankAccountService));
+        this.selfBankFundService = selfBankFundService ?? throw new ArgumentNullException(nameof(selfBankFundService));
     }
 
     public Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions, IEnumerable<OptionTransaction> OptionTransactions)> ParseAllAsync(
@@ -110,6 +117,16 @@ public class BrokerImportDispatcher : IBrokerImportService
         if (fileName.StartsWith("ABN_", StringComparison.OrdinalIgnoreCase))
         {
             return this.abnAmroService;
+        }
+
+        if (fileName.StartsWith("selfbank_found", StringComparison.OrdinalIgnoreCase))
+        {
+            return this.selfBankFundService;
+        }
+
+        if (fileName.StartsWith("selfbank", StringComparison.OrdinalIgnoreCase))
+        {
+            return this.selfBankAccountService;
         }
 
         if (fileName.EndsWith("_transactions.csv", StringComparison.OrdinalIgnoreCase))
