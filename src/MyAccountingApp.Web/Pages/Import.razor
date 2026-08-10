@@ -171,6 +171,34 @@
 </MudPaper>
 
 <MudPaper Class="pa-6 mb-4" Outlined="true">
+    <MudText Typo="Typo.h6" GutterBottom="true">Import MyInvestor (Account &amp; Funds)</MudText>
+    <MudText Typo="Typo.body2" Class="mb-4">
+        Upload a CSV exported from MyInvestor. Account statements and fund orders are detected automatically.
+    </MudText>
+    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+        <strong>Format detected automatically.</strong> Account file columns: Fecha de operación; Fecha de valor; Concepto; Importe; Divisa. Fund orders file columns: Fecha de la orden; ISIN; Importe estimado; Nº de participaciones; Estado.<br />
+        <strong>Account rows</strong> become cash entries (expenses, income and transfers). <strong>Fund orders</strong> become portfolio entries with the ISIN as symbol and fractional participations as quantity.
+    </MudAlert>
+    <MudGrid>
+        <MudItem xs="12" sm="8">
+            <InputFile OnChange="@OnMyInvestorFileSelected" accept=".csv" class="mud-input-outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="4" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Tertiary" Size="Size.Large"
+                       OnClick="@UploadMyInvestorAsync" Disabled="@(_myInvestorFile is null || _loading)"
+                       StartIcon="@Icons.Material.Filled.FileUpload"
+                       FullWidth="true">
+                Import MyInvestor
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+    @if (_myInvestorFile is not null)
+    {
+        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">Selected: @_myInvestorFile.Name</MudText>
+    }
+</MudPaper>
+
+<MudPaper Class="pa-6 mb-4" Outlined="true">
     <MudText Typo="Typo.h6" GutterBottom="true">Import Raw CSV</MudText>
     <MudText Typo="Typo.body2" Class="mb-4">
         Upload a CSV with your own format. No transformations applied.
@@ -330,6 +358,7 @@
     private IBrowserFile? _revolutFile;
     private IBrowserFile? _abnAmroFile;
     private IBrowserFile? _cobasFile;
+    private IBrowserFile? _myInvestorFile;
 
     private void OnFileSelected(InputFileChangeEventArgs args)
     {
@@ -364,6 +393,12 @@
     private void OnCobasFileSelected(InputFileChangeEventArgs args)
     {
         _cobasFile = args.File;
+        _result = null;
+    }
+
+    private void OnMyInvestorFileSelected(InputFileChangeEventArgs args)
+    {
+        _myInvestorFile = args.File;
         _result = null;
     }
 
@@ -540,6 +575,35 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Cobas import failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task UploadMyInvestorAsync()
+    {
+        if (_myInvestorFile is null) return;
+
+        _loading = true;
+        _result = null;
+        _editableSymbols = new();
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            using var stream = _myInvestorFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            content.Add(new StreamContent(stream), "file", _myInvestorFile.Name);
+
+            var response = await Http.PostAsync("/api/import/upload", content);
+            _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
+            InitEditableSymbols();
+            Snackbar.Add("MyInvestor import completed.", Severity.Success);
+            _myInvestorFile = null;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"MyInvestor import failed: {ex.Message}", Severity.Error);
         }
         finally
         {
