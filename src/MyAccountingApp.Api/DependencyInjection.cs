@@ -13,6 +13,7 @@ using MyAccountingApp.Core.Imports.Degiro;
 using MyAccountingApp.Core.Imports.IBKR;
 using MyAccountingApp.Core.Imports.MyInvestor;
 using MyAccountingApp.Core.Imports.Revolut;
+using MyAccountingApp.Core.Imports.SelfBank;
 using MyAccountingApp.Core.Persistence;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
@@ -154,6 +155,8 @@ public static class DependencyInjection
         builder.Services.AddSingleton<CobasImportService>();
         builder.Services.AddSingleton<MyInvestorAccountImportService>();
         builder.Services.AddSingleton<MyInvestorFundImportService>();
+        builder.Services.AddSingleton<SelfBankAccountImportService>();
+        builder.Services.AddSingleton<SelfBankFundImportService>();
         builder.Services.AddSingleton<IBrokerImportService, BrokerImportDispatcher>();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
