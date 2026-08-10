@@ -47,6 +47,7 @@ Rules of thumb: Domain has no external dependencies; Application depends only on
 | POST | `/api/asset-transactions` | Create asset transaction |
 | PUT | `/api/asset-transactions/{id}` | Update asset transaction |
 | DELETE | `/api/asset-transactions/{id}` | Delete asset transaction |
+| PATCH | `/api/asset-transactions/batch` | Bulk update: `{ids: [...], patch: {symbol}}` → `{requested, updated, failures}` (best-effort) |
 | GET | `/api/portfolio` | Portfolio positions |
 | GET | `/api/conversions` | Currency conversions (timeseries lookups) |
 | GET | `/api/conversions?date=YYYY-MM-DD` | Single conversion, fetched on demand and cached (stale fallback when the provider fails or quota is exhausted) |

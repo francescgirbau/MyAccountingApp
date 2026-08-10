@@ -44,6 +44,30 @@ public class AssetTransactionTests
     }
 
     [Fact]
+    public void UpdateSymbol_ShouldChangeSymbol_WhenValid()
+    {
+        DateTime date = new DateTime(2025, 8, 27);
+        Money money = new Money(-1500, "EUR");
+        Transaction transaction = new Transaction(date, "AAPL", money, TransactionCategory.EXPENSE);
+        AssetTransaction assetTransaction = new AssetTransaction(transaction, "AAPL", 10, AssetTransactionType.Buy);
+
+        assetTransaction.UpdateSymbol("COBAS_INTERNACIONAL_D");
+
+        Assert.Equal("COBAS_INTERNACIONAL_D", assetTransaction.Symbol);
+    }
+
+    [Fact]
+    public void UpdateSymbol_ShouldThrow_WhenSymbolIsEmpty()
+    {
+        DateTime date = new DateTime(2025, 8, 27);
+        Money money = new Money(-1500, "EUR");
+        Transaction transaction = new Transaction(date, "AAPL", money, TransactionCategory.EXPENSE);
+        AssetTransaction assetTransaction = new AssetTransaction(transaction, "AAPL", 10, AssetTransactionType.Buy);
+
+        Assert.Throws<ArgumentException>(() => assetTransaction.UpdateSymbol(string.Empty));
+    }
+
+    [Fact]
     public void UnitaryCost_ShouldCalculateCorrectly()
     {
         DateTime date = new DateTime(2025, 8, 27);

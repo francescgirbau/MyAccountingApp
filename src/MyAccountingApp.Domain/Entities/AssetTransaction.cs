@@ -36,6 +36,16 @@ public class AssetTransaction
         }
     }
 
+    public void UpdateSymbol(string symbol)
+    {
+        if (string.IsNullOrWhiteSpace(symbol))
+        {
+            throw new ArgumentException("Symbol cannot be null or empty.");
+        }
+
+        this.Symbol = symbol;
+    }
+
     public Money UnitaryCost()
     {
         if (Quantity == 0)
