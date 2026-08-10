@@ -72,3 +72,16 @@ public class ValidationError
     public string Message { get; set; } = string.Empty;
     public string Severity { get; set; } = string.Empty;
 }
+
+public class BatchPatchFailureDto
+{
+    public Guid Id { get; set; }
+    public string Error { get; set; } = string.Empty;
+}
+
+public class BatchPatchResultDto
+{
+    public int Requested { get; set; }
+    public int Updated { get; set; }
+    public List<BatchPatchFailureDto> Failures { get; set; } = new();
+}
