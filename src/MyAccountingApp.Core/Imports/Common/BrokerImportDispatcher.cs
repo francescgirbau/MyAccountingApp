@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MyAccountingApp.Core.Imports.AbnAmro;
+using MyAccountingApp.Core.Imports.Cobas;
 using MyAccountingApp.Core.Imports.Degiro;
 using MyAccountingApp.Core.Imports.IBKR;
 using MyAccountingApp.Core.Imports.Revolut;
@@ -19,6 +20,7 @@ public class BrokerImportDispatcher : IBrokerImportService
     private const string DegiroTransactionCsvHeaderPrefix = "Fecha,Hora,Producto,ISIN,Bolsa";
     private const string RevolutCsvHeaderPrefix = "Type,Product,Started Date";
     private const string AbnAmroCsvHeaderPrefix = "accountNumber,mutationcode";
+    private const string CobasCsvHeaderPrefix = "Operacion,Producto,Fecha";
 
     private readonly InteractiveBrokersImportService ibkrService;
     private readonly BankCsvImportService bankService;
@@ -28,6 +30,7 @@ public class BrokerImportDispatcher : IBrokerImportService
     private readonly IBKRFlexQueryImportService flexQueryService;
     private readonly RevolutImportService revolutService;
     private readonly AbnAmroImportService abnAmroService;
+    private readonly CobasImportService cobasService;
 
     public BrokerImportDispatcher(
         InteractiveBrokersImportService ibkrService,
@@ -37,7 +40,8 @@ public class BrokerImportDispatcher : IBrokerImportService
         DegiroTransactionImportService degiroTransactionService,
         IBKRFlexQueryImportService flexQueryService,
         RevolutImportService revolutService,
-        AbnAmroImportService abnAmroService)
+        AbnAmroImportService abnAmroService,
+        CobasImportService cobasService)
     {
         this.ibkrService = ibkrService ?? throw new ArgumentNullException(nameof(ibkrService));
         this.bankService = bankService ?? throw new ArgumentNullException(nameof(bankService));
@@ -47,6 +51,7 @@ public class BrokerImportDispatcher : IBrokerImportService
         this.flexQueryService = flexQueryService ?? throw new ArgumentNullException(nameof(flexQueryService));
         this.revolutService = revolutService ?? throw new ArgumentNullException(nameof(revolutService));
         this.abnAmroService = abnAmroService ?? throw new ArgumentNullException(nameof(abnAmroService));
+        this.cobasService = cobasService ?? throw new ArgumentNullException(nameof(cobasService));
     }
 
     public Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions, IEnumerable<OptionTransaction> OptionTransactions)> ParseAllAsync(
@@ -134,6 +139,11 @@ public class BrokerImportDispatcher : IBrokerImportService
             if (header.StartsWith(DegiroCsvHeaderPrefix, StringComparison.OrdinalIgnoreCase))
             {
                 return this.degiroService;
+            }
+
+            if (header.StartsWith(CobasCsvHeaderPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return this.cobasService;
             }
         }
 
