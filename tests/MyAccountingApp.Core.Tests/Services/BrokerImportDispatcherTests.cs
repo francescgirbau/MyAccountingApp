@@ -7,6 +7,7 @@ using MyAccountingApp.Core.Imports.Cobas;
 using MyAccountingApp.Core.Imports.Common;
 using MyAccountingApp.Core.Imports.Degiro;
 using MyAccountingApp.Core.Imports.IBKR;
+using MyAccountingApp.Core.Imports.MyInvestor;
 using MyAccountingApp.Core.Imports.Revolut;
 using MyAccountingApp.Domain.Entities;
 using Xunit;
@@ -238,6 +239,51 @@ public class BrokerImportDispatcherTests
     }
 
     [Fact]
+    public async Task ParseAllAsync_MyInvestorAccountHeader_UsesMyInvestorAccountService()
+    {
+        string csv = "Fecha de operación;Fecha de valor;Concepto;Importe;Divisa\n21/12/2023;21/12/2023;PAYPAL EUROPE SARL ET CIE SCA;-12,99;EUR";
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            BrokerImportDispatcher dispatcher = CreateDispatcher();
+
+            var (txs, assets, _) = await dispatcher.ParseAllAsync(file);
+
+            Transaction transaction = Assert.Single(txs);
+            Assert.Equal(12.99m, transaction.Money.Amount);
+            Assert.Empty(assets);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_MyInvestorFundHeader_UsesMyInvestorFundService()
+    {
+        string csv = "Fecha de la orden;ISIN;Importe estimado;Nº de participaciones;Estado\n22/12/2023;ES0165243017;250 EUR;234,913;Finalizada";
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            BrokerImportDispatcher dispatcher = CreateDispatcher();
+
+            var (txs, assets, _) = await dispatcher.ParseAllAsync(file);
+
+            Assert.Empty(txs);
+            AssetTransaction asset = Assert.Single(assets);
+            Assert.Equal("ES0165243017", asset.Symbol);
+            Assert.Equal(234.913m, asset.Quantity);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
     public async Task ParseCorporateActionsAsync_DelegatesToIbkr()
     {
         string file = Path.GetTempFileName();
@@ -259,7 +305,7 @@ public class BrokerImportDispatcherTests
     {
         InteractiveBrokersImportService ibkr = new(Parser, new FakeLogger<InteractiveBrokersImportService>());
         IBKRFlexQueryImportService flexQuery = new(Array.Empty<IIBKRStatementAgent>());
-        return new BrokerImportDispatcher(ibkr, new BankCsvImportService(), new AssetTransactionCsvImportService(), new DegiroImportService(), new DegiroTransactionImportService(), flexQuery, new RevolutImportService(), new AbnAmroImportService(), new CobasImportService());
+        return new BrokerImportDispatcher(ibkr, new BankCsvImportService(), new AssetTransactionCsvImportService(), new DegiroImportService(), new DegiroTransactionImportService(), flexQuery, new RevolutImportService(), new AbnAmroImportService(), new CobasImportService(), new MyInvestorAccountImportService(), new MyInvestorFundImportService());
     }
 }
 

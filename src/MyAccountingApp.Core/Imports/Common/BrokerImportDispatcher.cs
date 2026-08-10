@@ -9,6 +9,7 @@ using MyAccountingApp.Core.Imports.AbnAmro;
 using MyAccountingApp.Core.Imports.Cobas;
 using MyAccountingApp.Core.Imports.Degiro;
 using MyAccountingApp.Core.Imports.IBKR;
+using MyAccountingApp.Core.Imports.MyInvestor;
 using MyAccountingApp.Core.Imports.Revolut;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Interfaces;
@@ -21,6 +22,8 @@ public class BrokerImportDispatcher : IBrokerImportService
     private const string RevolutCsvHeaderPrefix = "Type,Product,Started Date";
     private const string AbnAmroCsvHeaderPrefix = "accountNumber,mutationcode";
     private const string CobasCsvHeaderPrefix = "Operacion,Producto,Fecha";
+    private const string MyInvestorAccountCsvHeaderPrefix = "Fecha de operación;Fecha de valor;Concepto";
+    private const string MyInvestorFundCsvHeaderPrefix = "Fecha de la orden;ISIN;Importe estimado";
 
     private readonly InteractiveBrokersImportService ibkrService;
     private readonly BankCsvImportService bankService;
@@ -31,6 +34,8 @@ public class BrokerImportDispatcher : IBrokerImportService
     private readonly RevolutImportService revolutService;
     private readonly AbnAmroImportService abnAmroService;
     private readonly CobasImportService cobasService;
+    private readonly MyInvestorAccountImportService myInvestorAccountService;
+    private readonly MyInvestorFundImportService myInvestorFundService;
 
     public BrokerImportDispatcher(
         InteractiveBrokersImportService ibkrService,
@@ -41,7 +46,9 @@ public class BrokerImportDispatcher : IBrokerImportService
         IBKRFlexQueryImportService flexQueryService,
         RevolutImportService revolutService,
         AbnAmroImportService abnAmroService,
-        CobasImportService cobasService)
+        CobasImportService cobasService,
+        MyInvestorAccountImportService myInvestorAccountService,
+        MyInvestorFundImportService myInvestorFundService)
     {
         this.ibkrService = ibkrService ?? throw new ArgumentNullException(nameof(ibkrService));
         this.bankService = bankService ?? throw new ArgumentNullException(nameof(bankService));
@@ -52,6 +59,8 @@ public class BrokerImportDispatcher : IBrokerImportService
         this.revolutService = revolutService ?? throw new ArgumentNullException(nameof(revolutService));
         this.abnAmroService = abnAmroService ?? throw new ArgumentNullException(nameof(abnAmroService));
         this.cobasService = cobasService ?? throw new ArgumentNullException(nameof(cobasService));
+        this.myInvestorAccountService = myInvestorAccountService ?? throw new ArgumentNullException(nameof(myInvestorAccountService));
+        this.myInvestorFundService = myInvestorFundService ?? throw new ArgumentNullException(nameof(myInvestorFundService));
     }
 
     public Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions, IEnumerable<OptionTransaction> OptionTransactions)> ParseAllAsync(
@@ -144,6 +153,16 @@ public class BrokerImportDispatcher : IBrokerImportService
             if (header.StartsWith(CobasCsvHeaderPrefix, StringComparison.OrdinalIgnoreCase))
             {
                 return this.cobasService;
+            }
+
+            if (header.StartsWith(MyInvestorFundCsvHeaderPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return this.myInvestorFundService;
+            }
+
+            if (header.StartsWith(MyInvestorAccountCsvHeaderPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return this.myInvestorAccountService;
             }
         }
 
