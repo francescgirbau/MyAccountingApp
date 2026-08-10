@@ -51,6 +51,7 @@ public static class DependencyInjection
         {
             client.Timeout = TimeSpan.FromSeconds(30);
         }).AddHttpMessageHandler<FxRetryHandler>();
+        builder.Services.AddTransient<FxRetryHandler>();
 
         IApiQuotaManager quotaManager;
         JsonApiQuotaRepository? quotaRepo = null;
