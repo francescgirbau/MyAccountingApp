@@ -5,8 +5,8 @@ namespace MyAccountingApp.Application.Services;
 
 public sealed class FifoPosition
 {
-    public required IReadOnlyList<FifoLot> OpenLots { get; init; }
-    public required IReadOnlyList<FifoSale> Sales { get; init; }
+    required public IReadOnlyList<FifoLot> OpenLots { get; init; }
+    required public IReadOnlyList<FifoSale> Sales { get; init; }
     public decimal RealizedGainLoss { get; init; }
     public decimal NetQuantity { get; init; }
     public decimal TotalCostBasis { get; init; }

@@ -11,6 +11,18 @@ public class YahooMarketPriceService : IMarketPriceService
 
     public Task<Money?> RefreshPriceAsync(string symbol) => this.FetchAsync(symbol, useCache: false);
 
+    public Task<Money?> GetCachedPriceAsync(string symbol)
+    {
+        if (!LooksLikeListedEquity(symbol))
+        {
+            return Task.FromResult<Money?>(null);
+        }
+
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        Money? cached = this._cache.TryGetFresh(symbol, now, out Money? price) ? price : null;
+        return Task.FromResult(cached);
+    }
+
     private async Task<Money?> FetchAsync(string symbol, bool useCache)
     {
         if (!LooksLikeListedEquity(symbol))
@@ -38,7 +50,7 @@ public class YahooMarketPriceService : IMarketPriceService
     /// <summary>
     /// Heuristic to detect fund symbols (e.g. COBAS_*, SIGMA_*) that are not listed on Yahoo.
     /// </summary>
-    public static bool LooksLikeListedEquity(string symbol) =>
+    public static bool LooksLikeListedEquity(string? symbol) =>
         !string.IsNullOrWhiteSpace(symbol) && !symbol.Contains('_');
 
     private static async Task<Money?> FetchFromYahooAsync(string symbol)

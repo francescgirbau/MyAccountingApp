@@ -235,6 +235,8 @@ public class PositionEngineTests
         public Task<Money?> GetPriceAsync(string symbol) => throw new InvalidOperationException("Price service should not be called");
 
         public Task<Money?> RefreshPriceAsync(string symbol) => throw new InvalidOperationException("Price service should not be called");
+
+        public Task<Money?> GetCachedPriceAsync(string symbol) => throw new InvalidOperationException("Price service should not be called");
     }
 
     private sealed class FakePortfolioRepo : IPortfolioRepository

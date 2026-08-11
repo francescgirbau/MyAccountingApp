@@ -16,4 +16,11 @@ public interface IMarketPriceService
     /// <param name="symbol">Ticker</param>
     /// <returns>Price</returns>
     Task<Money?> RefreshPriceAsync(string symbol);
+
+    /// <summary>
+    /// Return el price of asset from the in-memory cache only, without fetching
+    /// </summary>
+    /// <param name="symbol">Ticker</param>
+    /// <returns>Cached price, or null if not cached</returns>
+    Task<Money?> GetCachedPriceAsync(string symbol);
 }

@@ -4,6 +4,7 @@ using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
 using MyAccountingApp.Domain.ValueObjects;
+using MyAccountingApp.TestUtilities.Fakes;
 
 namespace MyAccountingApp.Application.Tests.Services;
 
@@ -15,7 +16,7 @@ public class ValidationQueryTests
         FakeTxRepo txRepo = new();
         FakePfRepo pfRepo = new();
         TransactionValidator validator = new();
-        ValidationQuery query = new(txRepo, pfRepo, validator);
+        ValidationQuery query = new(txRepo, pfRepo, validator, new FakeConversionRepo(), new FakeMarketPriceService());
 
         ValidationResult result = query.ValidateAll();
 
@@ -48,12 +49,130 @@ public class ValidationQueryTests
         pfRepo.AddOrUpdate(assetTx);
 
         TransactionValidator validator = new();
-        ValidationQuery query = new(txRepo, pfRepo, validator);
+        ValidationQuery query = new(txRepo, pfRepo, validator, new FakeConversionRepo(), new FakeMarketPriceService());
 
         ValidationResult result = query.ValidateAll();
 
         Assert.False(result.IsValid);
         Assert.Equal(4, result.Errors.Count);
+    }
+
+    [Fact]
+    public void ValidateAll_FlagsFifoShortfall_AsWarning()
+    {
+        FakeTxRepo txRepo = new();
+        FakePfRepo pfRepo = new();
+        pfRepo.AddOrUpdate(new AssetTransaction(
+            new Transaction(Guid.NewGuid(), new DateTime(2024, 1, 15), "Buy AAPL", new Money(1000m, "USD"), TransactionCategory.INVESTMENT),
+            "AAPL",
+            10,
+            AssetTransactionType.Buy));
+        pfRepo.AddOrUpdate(new AssetTransaction(
+            new Transaction(Guid.NewGuid(), new DateTime(2024, 6, 1), "Sell AAPL", new Money(1500m, "USD"), TransactionCategory.INCOME),
+            "AAPL",
+            15,
+            AssetTransactionType.Sell));
+        ValidationQuery query = new(txRepo, pfRepo, new TransactionValidator(), new FakeConversionRepo(), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        ValidationError warning = Assert.Single(result.Warnings);
+        Assert.Equal("FIFO_SHORTFALL", warning.Field);
+        Assert.Equal("warning", warning.Severity);
+    }
+
+    [Fact]
+    public void ValidateAll_FlagsUnmatchedTransfer_AsWarning()
+    {
+        FakeTxRepo txRepo = new();
+        txRepo.AddOrUpdate(new Transaction(Guid.NewGuid(), new DateTime(2025, 1, 10), "Transfer to bank", new Money(500m, "EUR"), TransactionCategory.TRANSFER));
+        FakePfRepo pfRepo = new();
+        ValidationQuery query = new(txRepo, pfRepo, new TransactionValidator(), new FakeConversionRepo(), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        ValidationError warning = Assert.Single(result.Warnings);
+        Assert.Equal("UNMATCHED_TRANSFER", warning.Field);
+    }
+
+    [Fact]
+    public void ValidateAll_DoesNotFlagTransfer_WhenPairExists()
+    {
+        FakeTxRepo txRepo = new();
+        DateTime date = new(2025, 1, 10);
+        txRepo.AddOrUpdate(new Transaction(Guid.NewGuid(), date, "Transfer A", new Money(500m, "EUR"), TransactionCategory.TRANSFER));
+        txRepo.AddOrUpdate(new Transaction(Guid.NewGuid(), date.AddDays(1), "Transfer B", new Money(500m, "EUR"), TransactionCategory.TRANSFER));
+        FakePfRepo pfRepo = new();
+        ValidationQuery query = new(txRepo, pfRepo, new TransactionValidator(), new FakeConversionRepo(), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        Assert.DoesNotContain(result.Warnings, w => w.Field == "UNMATCHED_TRANSFER");
+    }
+
+    [Fact]
+    public void ValidateAll_FlagsDuplicateFingerprint_AsError()
+    {
+        FakeTxRepo txRepo = new();
+        Transaction tx = new(Guid.NewGuid(), new DateTime(2025, 1, 10), "Salary", new Money(1000m, "EUR"), TransactionCategory.INCOME);
+        txRepo.AddOrUpdate(tx);
+        txRepo.AddOrUpdate(new Transaction(Guid.NewGuid(), tx.Date, tx.Description, tx.Money, tx.Category));
+        FakePfRepo pfRepo = new();
+        ValidationQuery query = new(txRepo, pfRepo, new TransactionValidator(), new FakeConversionRepo(), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        ValidationError error = Assert.Single(result.Errors);
+        Assert.Equal("DUPLICATE_FINGERPRINT", error.Field);
+        Assert.Equal("error", error.Severity);
+    }
+
+    [Fact]
+    public void ValidateAll_FlagsMissingFx_WhenNoConversionForDate()
+    {
+        FakeTxRepo txRepo = new();
+        txRepo.AddOrUpdate(new Transaction(Guid.NewGuid(), new DateTime(2025, 1, 10), "Buy in USD", new Money(100m, "USD"), TransactionCategory.EXPENSE));
+        FakePfRepo pfRepo = new();
+        ValidationQuery query = new(txRepo, pfRepo, new TransactionValidator(), new FakeConversionRepo(), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        ValidationError warning = Assert.Single(result.Warnings);
+        Assert.Equal("MISSING_FX", warning.Field);
+    }
+
+    [Fact]
+    public void ValidateAll_DoesNotFlagMissingFx_WhenConversionExists()
+    {
+        FakeTxRepo txRepo = new();
+        DateTime date = new(2025, 1, 10);
+        txRepo.AddOrUpdate(new Transaction(Guid.NewGuid(), date, "Buy in USD", new Money(100m, "USD"), TransactionCategory.EXPENSE));
+        FakePfRepo pfRepo = new();
+        Conversion conversion = new(date, Currencies.EUR, new Dictionary<Currencies, decimal> { { Currencies.USD, 1.08m } });
+        ValidationQuery query = new(txRepo, pfRepo, new TransactionValidator(), new FakeConversionRepo(conversion), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        Assert.DoesNotContain(result.Warnings, w => w.Field == "MISSING_FX");
+    }
+
+    [Fact]
+    public void ValidateAll_FlagsSymbolWithoutCachedPrice_AsInfo()
+    {
+        FakeTxRepo txRepo = new();
+        FakePfRepo pfRepo = new();
+        pfRepo.AddOrUpdate(new AssetTransaction(
+            new Transaction(Guid.NewGuid(), new DateTime(2025, 1, 15), "Buy UNKN", new Money(100m, "USD"), TransactionCategory.INVESTMENT),
+            "UNKN",
+            5,
+            AssetTransactionType.Buy));
+        ValidationQuery query = new(txRepo, pfRepo, new TransactionValidator(), new FakeConversionRepo(), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        ValidationError warning = Assert.Single(result.Warnings);
+        Assert.Equal("SYMBOL_NO_PRICE", warning.Field);
+        Assert.Equal("info", warning.Severity);
     }
 
     private sealed class FakeTxRepo : ITransactionRepository
@@ -88,5 +207,29 @@ public class ValidationQueryTests
 
         public bool Delete(Guid transactionId) => true;
         public int DeleteByYear(int year) => this._transactions.RemoveAll(t => t.Transaction.Date.Year == year);
+    }
+
+    private sealed class FakeConversionRepo : IConversionRepository
+    {
+        private readonly Conversion? _conversion;
+
+        public FakeConversionRepo(Conversion? conversion = null)
+        {
+            this._conversion = conversion;
+        }
+
+        public void AddOrUpdate(Conversion conversion)
+        {
+        }
+
+        public Conversion? GetByDate(DateTime date) => this._conversion;
+
+        public Conversion? GetLatestOnOrBefore(DateTime date) => this._conversion;
+
+        public void Initialize(IEnumerable<Conversion> conversions)
+        {
+        }
+
+        public IEnumerable<Conversion> GetAll() => this._conversion is null ? Array.Empty<Conversion>() : new[] { this._conversion };
     }
 }
