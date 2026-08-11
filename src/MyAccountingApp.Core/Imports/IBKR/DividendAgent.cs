@@ -40,7 +40,7 @@ public class DividendAgent : IIBKRStatementAgent
             }
 
             Money money = new Money(Math.Abs(amount), currency);
-            Transaction transaction = new Transaction(date, description, money, TransactionCategory.INCOME);
+            Transaction transaction = new Transaction(date, description, money, TransactionCategory.DIVIDEND);
             transactions.Add(transaction);
         }
     }

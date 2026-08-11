@@ -40,7 +40,7 @@ public class WithholdingTaxAgent : IIBKRStatementAgent
             }
 
             Money money = new Money(Math.Abs(amount), currency);
-            Transaction transaction = new Transaction(date, description, money, TransactionCategory.EXPENSE);
+            Transaction transaction = new Transaction(date, description, money, TransactionCategory.WITHHOLDING_TAX);
             transactions.Add(transaction);
         }
     }

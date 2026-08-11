@@ -68,7 +68,7 @@ public class SelfBankFundImportService : IBrokerImportService
                 }
 
                 string symbol = BuildSymbol(fundName);
-                TransactionCategory category = type == AssetTransactionType.Buy ? TransactionCategory.EXPENSE : TransactionCategory.INCOME;
+                TransactionCategory category = type == AssetTransactionType.Buy ? TransactionCategory.INVESTMENT : TransactionCategory.INCOME;
 
                 Money money = new Money(amount, "EUR");
                 Transaction transaction = new Transaction(date, fundName, money, category);

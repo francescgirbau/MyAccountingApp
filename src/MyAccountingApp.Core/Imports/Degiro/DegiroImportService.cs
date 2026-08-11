@@ -161,27 +161,27 @@ public class DegiroImportService : IBrokerImportService
 
         if (upper.Contains("DIVIDENDO") || upper.Contains("DIVIDEND"))
         {
-            return amount >= 0 ? TransactionCategory.INCOME : TransactionCategory.EXPENSE;
+            return amount >= 0 ? TransactionCategory.DIVIDEND : TransactionCategory.EXPENSE;
         }
 
         if (upper.Contains("RETENCI") || upper.Contains("WITHHOLDING"))
         {
-            return TransactionCategory.EXPENSE;
+            return TransactionCategory.WITHHOLDING_TAX;
         }
 
         if (upper.Contains("COSTES") || upper.Contains("COST") || upper.Contains("COMISI"))
         {
-            return TransactionCategory.EXPENSE;
+            return TransactionCategory.FEE;
         }
 
         if (upper.Contains("TAX") || upper.Contains("IMPUESTO"))
         {
-            return TransactionCategory.EXPENSE;
+            return TransactionCategory.WITHHOLDING_TAX;
         }
 
         if (upper.Contains("INTEREST") || upper.Contains("INTERES"))
         {
-            return amount >= 0 ? TransactionCategory.INCOME : TransactionCategory.EXPENSE;
+            return amount >= 0 ? TransactionCategory.INTEREST : TransactionCategory.EXPENSE;
         }
 
         if (upper.Contains("PRESTAMO") || upper.Contains("PRÉSTAMO") || upper.Contains("LENDING"))
@@ -191,7 +191,7 @@ public class DegiroImportService : IBrokerImportService
 
         if (upper.Contains("PASS-THROUGH") || upper.Contains("PASS THROUGH") || upper.Contains("PASSTHROUGH"))
         {
-            return TransactionCategory.EXPENSE;
+            return TransactionCategory.FEE;
         }
 
         if (upper.Contains("FLATEX") || upper.Contains("DEPOSIT"))

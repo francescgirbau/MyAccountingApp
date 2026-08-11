@@ -40,7 +40,7 @@ public class InterestAgent : IIBKRStatementAgent
             }
 
             bool isIncome = amount > 0;
-            TransactionCategory category = isIncome ? TransactionCategory.INCOME : TransactionCategory.EXPENSE;
+            TransactionCategory category = isIncome ? TransactionCategory.INTEREST : TransactionCategory.EXPENSE;
             Money money = new Money(Math.Abs(amount), currency);
             Transaction transaction = new Transaction(date, description, money, category);
             transactions.Add(transaction);

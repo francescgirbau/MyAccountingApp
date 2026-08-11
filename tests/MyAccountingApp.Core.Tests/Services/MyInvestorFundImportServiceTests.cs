@@ -28,7 +28,7 @@ public class MyInvestorFundImportServiceTests
             Assert.Empty(options);
             AssetTransaction asset = Assert.Single(assets);
             Assert.Equal(AssetTransactionType.Buy, asset.Type);
-            Assert.Equal(TransactionCategory.EXPENSE, asset.Transaction.Category);
+            Assert.Equal(TransactionCategory.INVESTMENT, asset.Transaction.Category);
             Assert.Equal("ES0165243017", asset.Symbol);
             Assert.Equal(234.913m, asset.Quantity);
             Assert.Equal(250.00m, asset.Transaction.Money.Amount);
