@@ -99,8 +99,64 @@ public class DashboardQueryTests
         public int DeleteByYear(int year) => this._transactions.RemoveAll(t => t.Transaction.Date.Year == year);
     }
 
+    [Fact]
+    public async Task GetAsync_ShouldAddDataQualityAlert_WhenValidationHasErrors()
+    {
+        FakeTxRepo txRepo = new();
+        FakeValidationQuery validation = new(1, 0);
+
+        DashboardQuery query = new(txRepo, new FakePfRepo(), validation);
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        DashboardAlertDto alert = Assert.Single(dashboard.Alerts);
+        Assert.Equal("error", alert.Severity);
+        Assert.Equal("DATA_QUALITY", alert.Code);
+        Assert.Equal("/data-quality", alert.Link);
+    }
+
+    [Fact]
+    public async Task GetAsync_ShouldAddDataQualityAlert_WhenValidationHasWarnings()
+    {
+        FakeTxRepo txRepo = new();
+        FakeValidationQuery validation = new(0, 2);
+
+        DashboardQuery query = new(txRepo, new FakePfRepo(), validation);
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        DashboardAlertDto alert = Assert.Single(dashboard.Alerts);
+        Assert.Equal("warning", alert.Severity);
+        Assert.Equal("DATA_QUALITY", alert.Code);
+    }
+
+    [Fact]
+    public async Task GetAsync_ShouldNotAddDataQualityAlert_WhenValidationClean()
+    {
+        FakeTxRepo txRepo = new();
+        FakeValidationQuery validation = new(0, 0);
+
+        DashboardQuery query = new(txRepo, new FakePfRepo(), validation);
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        Assert.DoesNotContain(dashboard.Alerts, a => a.Code == "DATA_QUALITY");
+    }
+
     private sealed class FakeValidationQuery : IValidationQuery
     {
-        public ValidationResult ValidateAll() => new ValidationResult(true, new List<ValidationError>(), new List<ValidationError>());
+        private readonly int _errorCount;
+        private readonly int _warningCount;
+
+        public FakeValidationQuery(int errorCount = 0, int warningCount = 0)
+        {
+            this._errorCount = errorCount;
+            this._warningCount = warningCount;
+        }
+
+        public ValidationResult ValidateAll() => new ValidationResult(
+            this._errorCount == 0,
+            Enumerable.Range(0, this._errorCount).Select(_ => new ValidationError("FIELD", "error", "error")).ToList(),
+            Enumerable.Range(0, this._warningCount).Select(_ => new ValidationError("FIELD", "warning", "warning")).ToList());
     }
 }

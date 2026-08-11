@@ -1,0 +1,104 @@
+@page "/data-quality"
+@inject HttpClient Http
+
+<PageTitle>Data quality</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Data quality</MudText>
+
+<MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+           OnClick="@LoadDataAsync" Disabled="@_loading" Class="mb-4">
+    Re-check
+</MudButton>
+
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    @if (_result is { IsValid: true } && _result.Warnings.Count == 0)
+    {
+        <MudAlert Severity="Severity.Success" Class="mb-4">No data quality issues found.</MudAlert>
+    }
+    else
+    {
+        <MudPaper Class="pa-4 mb-4" Outlined="true">
+            <MudGrid>
+                <MudItem xs="4" md="3">
+                    <MudChip T="string" Color="Color.Error" Size="Size.Medium">
+                        @_result?.ErrorCount errors
+                    </MudChip>
+                </MudItem>
+                <MudItem xs="4" md="3">
+                    <MudChip T="string" Color="Color.Warning" Size="Size.Medium">
+                        @WarningCount warnings
+                    </MudChip>
+                </MudItem>
+                <MudItem xs="4" md="3">
+                    <MudChip T="string" Color="Color.Info" Size="Size.Medium">
+                        @InfoCount info
+                    </MudChip>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <MudTable Items="@_issues" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true">
+            <HeaderContent>
+                <MudTh>Severity</MudTh>
+                <MudTh>Code</MudTh>
+                <MudTh>Message</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Severity">
+                    <MudChip T="string" Size="Size.Small" Color="@MapSeverityColor(context.Severity)">@context.Severity</MudChip>
+                </MudTd>
+                <MudTd DataLabel="Code"><MudText Typo="Typo.body2" Style="font-family: monospace">@context.Field</MudText></MudTd>
+                <MudTd DataLabel="Message">@context.Message</MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText Class="pa-4">No issues.</MudText>
+            </NoRecordsContent>
+        </MudTable>
+    }
+}
+
+@code {
+    private ValidationResponseDto? _result;
+    private List<ValidationError> _issues = new();
+    private bool _loading = true;
+
+    private int WarningCount => _result?.Warnings.Count(w => w.Severity != "info") ?? 0;
+    private int InfoCount => _result?.Warnings.Count(w => w.Severity == "info") ?? 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            _result = await Http.GetFromJsonAsync<ValidationResponseDto>("/api/validate");
+            _issues = new List<ValidationError>();
+            if (_result is not null)
+            {
+                _issues.AddRange(_result.Errors);
+                _issues.AddRange(_result.Warnings);
+            }
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static Color MapSeverityColor(string severity) => severity switch
+    {
+        "error" => Color.Error,
+        "warning" => Color.Warning,
+        "info" => Color.Info,
+        _ => Color.Default,
+    };
+}

@@ -57,7 +57,11 @@ public class DashboardEndpointsTests
         Assert.Equal(0, portfolio.GetProperty("realizedGainLossYtdEur").GetDecimal());
         Assert.Equal(1, portfolio.GetProperty("openPositionCount").GetInt32());
 
-        Assert.Empty(root.GetProperty("alerts").EnumerateArray());
+        JsonElement alerts = root.GetProperty("alerts");
+        Assert.Contains(alerts.EnumerateArray(), a =>
+            a.GetProperty("code").GetString() == "DATA_QUALITY"
+            && a.GetProperty("severity").GetString() == "warning"
+            && a.GetProperty("link").GetString() == "/data-quality");
     }
 
     [Fact]
