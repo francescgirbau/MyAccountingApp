@@ -37,6 +37,13 @@ else
                 {
                     <strong>—</strong>
                 }
+                @if (_hasValuations)
+                {
+                    <text>&nbsp;|&nbsp; Value in EUR: <strong>@_totalValueEur.ToString("N2")</strong></text>
+                    <text>&nbsp;|&nbsp; Unrealized P&amp;L EUR:
+                        <strong class="@(_totalUnrealizedEur >= 0 ? "green--text" : "red--text")">@(_totalUnrealizedEur >= 0 ? "+" : "")@_totalUnrealizedEur.ToString("N2")</strong>
+                    </text>
+                }
             </MudText>
         </ToolBarContent>
         <ColGroup>
@@ -59,6 +66,15 @@ else
             <MudTh>Mkt Price</MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.UnrealizedGainLoss ?? 0)">Unrealized P&amp;L</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.RealizedGainLoss)">Realized P&amp;L</MudTableSortLabel></MudTh>
+            @if (_hasValuations)
+            {
+                <MudTh>
+                    <MudTooltip Placement="Placement.Top">
+                        <ChildContent><span>Value in EUR (FX rate date in tooltip)</span></ChildContent>
+                        <TooltipContent><span>Market value converted to EUR using the rate for the selected date</span></TooltipContent>
+                    </MudTooltip>
+                </MudTh>
+            }
             <MudTh></MudTh>
         </HeaderContent>
         <RowTemplate>
@@ -100,6 +116,37 @@ else
                     @(context.RealizedGainLoss >= 0 ? "+" : "")@context.RealizedGainLoss.ToString("N2")
                 </span>
             </MudTd>
+            @if (_hasValuations)
+            {
+                <MudTd DataLabel="Value EUR">
+                    @{ PositionValuationDto? val = GetValuation(context.Symbol); }
+                    @if (val?.ValueEur is not null)
+                    {
+                        <MudTooltip Placement="Placement.Top">
+                            <ChildContent>
+                                <span class="px-1">@val.ValueEur.Value.ToString("N2") EUR</span>
+                            </ChildContent>
+                            <TooltipContent>
+                                <span>@context.NetQuantity.ToString("G") × @(context.MarketPrice?.ToString("N4")) @context.Currency
+                                    × @(val.Rate?.ToString("N4")) (@(val.RateDate?.ToString("yyyy-MM-dd"))) = @val.ValueEur.Value.ToString("N2") EUR</span>
+                            </TooltipContent>
+                        </MudTooltip>
+                        @if (val.IsStale)
+                        {
+                            <MudTooltip Placement="Placement.Top">
+                                <ChildContent>
+                                    <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Warning" Size="Size.Small" Class="ml-1" />
+                                </ChildContent>
+                                <TooltipContent><span>Stale rate applied from @(val.RateDate?.ToString("yyyy-MM-dd"))</span></TooltipContent>
+                            </MudTooltip>
+                        }
+                    }
+                    else
+                    {
+                        <span>—</span>
+                    }
+                </MudTd>
+            }
             <MudTd>
                 <MudIconButton Icon="@(GetExpanded(context) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
                                OnClick="@(() => ToggleExpanded(context))"
@@ -149,14 +196,18 @@ else
 
 @code {
     private List<PortfolioPositionDto> _positions = new();
+    private Dictionary<string, PositionValuationDto> _valuations = new();
     private bool _loading = true;
     private bool _refreshing;
     private bool _hasPrices;
+    private bool _hasValuations;
     private readonly HashSet<string> _expanded = new();
 
     private decimal _totalCostBasis;
     private decimal _totalRealized;
     private decimal _totalUnrealized;
+    private decimal _totalValueEur;
+    private decimal _totalUnrealizedEur;
 
     protected override async Task OnInitializedAsync()
     {
@@ -186,6 +237,7 @@ else
             HttpResponseMessage response = await Http.PostAsync("/api/portfolio/refresh-prices", null);
             _positions = await response.Content.ReadFromJsonAsync<List<PortfolioPositionDto>>() ?? new();
             _hasPrices = true;
+            await LoadValuationsAsync();
             ComputeTotals();
         }
         finally
@@ -194,11 +246,22 @@ else
         }
     }
 
+    private async Task LoadValuationsAsync()
+    {
+        PositionValuationResponse? valuation = await Http.GetFromJsonAsync<PositionValuationResponse>("/api/portfolio/valuation");
+        _valuations = valuation?.Positions.ToDictionary(p => p.Symbol) ?? new();
+        _hasValuations = true;
+    }
+
+    private PositionValuationDto? GetValuation(string symbol) => _valuations.GetValueOrDefault(symbol);
+
     private void ComputeTotals()
     {
         _totalCostBasis = _positions.Sum(p => p.TotalCostBasis);
         _totalRealized = _positions.Sum(p => p.RealizedGainLoss);
         _totalUnrealized = _positions.Sum(p => p.UnrealizedGainLoss ?? 0);
+        _totalValueEur = _valuations.Values.Sum(v => v.ValueEur ?? 0);
+        _totalUnrealizedEur = _valuations.Values.Sum(v => v.UnrealizedGainLossEur ?? 0);
     }
 
     private bool GetExpanded(PortfolioPositionDto pos) => _expanded.Contains(pos.Symbol);

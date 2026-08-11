@@ -68,6 +68,27 @@ public class ImportResultDto
     public int FilesProcessed { get; set; }
 }
 
+public class PositionValuationDto
+{
+    public string Symbol { get; set; } = string.Empty;
+    public string Currency { get; set; } = string.Empty;
+    public decimal NetQuantity { get; set; }
+    public decimal? MarketPrice { get; set; }
+    public decimal? UnrealizedGainLoss { get; set; }
+    public decimal? ValueEur { get; set; }
+    public decimal? UnrealizedGainLossEur { get; set; }
+    public decimal? Rate { get; set; }
+    public DateOnly? RateDate { get; set; }
+    public bool IsStale { get; set; }
+    public string? Provider { get; set; }
+}
+
+public class PositionValuationResponse
+{
+    public DateOnly AsOf { get; set; }
+    public List<PositionValuationDto> Positions { get; set; } = new();
+}
+
 public class ValidationError
 {
     public string Field { get; set; } = string.Empty;

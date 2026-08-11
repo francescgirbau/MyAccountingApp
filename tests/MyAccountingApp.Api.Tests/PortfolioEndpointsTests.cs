@@ -183,14 +183,55 @@ public class PortfolioEndpointsTests
         Assert.Equal(100m, position.GetProperty("marketPrice").GetDecimal());
     }
 
-    private static async Task SeedBuyAsync(HttpClient client)
+    [Fact]
+    public async Task Valuation_ShouldConvertNonEurPosition_WithRateAndRateDate()
+    {
+        CountingMarketPriceService.Reset();
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        await SeedBuyAsync(client, currency: "USD");
+
+        HttpResponseMessage response = await client.GetAsync("/api/portfolio/valuation?asOf=2026-08-11");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("2026-08-11", document.RootElement.GetProperty("asOf").GetString());
+        JsonElement position = Assert.Single(document.RootElement.GetProperty("positions").EnumerateArray());
+        Assert.Equal("USD", position.GetProperty("currency").GetString());
+        Assert.Equal(100m, position.GetProperty("marketPrice").GetDecimal());
+        Assert.Equal(181.82m, position.GetProperty("valueEur").GetDecimal());
+        Assert.Equal(45.45m, position.GetProperty("unrealizedGainLossEur").GetDecimal());
+        Assert.Equal(1.1m, position.GetProperty("rate").GetDecimal());
+        Assert.Equal("2026-08-11", position.GetProperty("rateDate").GetString());
+        Assert.False(position.GetProperty("isStale").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Valuation_ShouldUseIdentityRate_ForEurPosition()
+    {
+        CountingMarketPriceService.Reset();
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        await SeedBuyAsync(client);
+
+        HttpResponseMessage response = await client.GetAsync("/api/portfolio/valuation?asOf=2026-08-11");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        JsonElement position = Assert.Single(document.RootElement.GetProperty("positions").EnumerateArray());
+        Assert.Equal("EUR", position.GetProperty("currency").GetString());
+        Assert.Equal(200m, position.GetProperty("valueEur").GetDecimal());
+        Assert.Equal(1m, position.GetProperty("rate").GetDecimal());
+    }
+
+    private static async Task SeedBuyAsync(HttpClient client, string currency = "EUR")
     {
         HttpResponseMessage response = await client.PostAsJsonAsync("/api/asset-transactions", new
         {
             date = new DateTime(2026, 1, 5),
             description = "Buy AAPL",
             amount = 150m,
-            currency = "EUR",
+            currency,
             category = "EXPENSE",
             symbol = "AAPL",
             quantity = 2m,
