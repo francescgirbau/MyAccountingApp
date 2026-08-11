@@ -126,3 +126,43 @@ public class DashboardAlertDto
     public string Message { get; set; } = string.Empty;
     public string? Link { get; set; }
 }
+
+public class RealizedGainsReportDto
+{
+    public int Year { get; set; }
+    public decimal TotalRealizedGainLoss { get; set; }
+    public List<SymbolRealizedGainsDto> Symbols { get; set; } = new();
+}
+
+public class SymbolRealizedGainsDto
+{
+    public string Symbol { get; set; } = string.Empty;
+    public string Currency { get; set; } = string.Empty;
+    public decimal SoldQuantity { get; set; }
+    public decimal Proceeds { get; set; }
+    public decimal CostBasis { get; set; }
+    public decimal RealizedGainLoss { get; set; }
+    public List<RealizedSaleDto> Sales { get; set; } = new();
+}
+
+public class RealizedSaleDto
+{
+    public DateTime Date { get; set; }
+    public decimal Quantity { get; set; }
+    public decimal Proceeds { get; set; }
+    public decimal CostBasis { get; set; }
+    public decimal RealizedGainLoss { get; set; }
+}
+
+public class WithholdingReportDto
+{
+    public int Year { get; set; }
+    public List<WithholdingTotalDto> Totals { get; set; } = new();
+}
+
+public class WithholdingTotalDto
+{
+    public string Currency { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public int TransactionCount { get; set; }
+}

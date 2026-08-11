@@ -1,0 +1,179 @@
+@page "/reports"
+@page "/reports/{Year:int}"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Reports</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Reports</MudText>
+
+<MudPaper Class="pa-4 mb-6" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12" md="3">
+            <MudSelect T="int" Label="Year" Variant="Variant.Outlined" FullWidth="true"
+                       Value="Year ?? DateTime.Today.Year" ValueChanged="@(y => NavigateToYear(y))">
+                @for (int y = DateTime.Today.Year; y >= DateTime.Today.Year - 10; y--)
+                {
+                    <MudSelectItem T="int" Value="@y">@y</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudText Typo="Typo.subtitle1" Class="mb-2 mud-text-secondary">Realized gains (FIFO)</MudText>
+    <MudTable Items="@(_report?.Symbols ?? new List<SymbolRealizedGainsDto>())" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true">
+        <ToolBarContent>
+            <MudText Typo="Typo.subtitle1">@(Year ?? DateTime.Today.Year)</MudText>
+            <MudSpacer />
+            <MudText Typo="Typo.body2">
+                Total realized:
+                <strong class="@(_report?.TotalRealizedGainLoss >= 0 ? "green--text" : "red--text")">
+                    @(_report?.TotalRealizedGainLoss >= 0 ? "+" : "")@_report?.TotalRealizedGainLoss.ToString("N2")
+                </strong>
+            </MudText>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Symbol</MudTh>
+            <MudTh>Curr.</MudTh>
+            <MudTh>Sold Qty</MudTh>
+            <MudTh>Proceeds</MudTh>
+            <MudTh>Cost Basis</MudTh>
+            <MudTh>Realized P&amp;L</MudTh>
+            <MudTh></MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Symbol"><MudChip T="string" Size="Size.Small" Color="Color.Primary">@context.Symbol</MudChip></MudTd>
+            <MudTd DataLabel="Curr.">@context.Currency</MudTd>
+            <MudTd DataLabel="Sold Qty">@context.SoldQuantity.ToString("G")</MudTd>
+            <MudTd DataLabel="Proceeds">@context.Proceeds.ToString("N2")</MudTd>
+            <MudTd DataLabel="Cost Basis">@context.CostBasis.ToString("N2")</MudTd>
+            <MudTd DataLabel="Realized P&amp;L">
+                <span class="@(context.RealizedGainLoss >= 0 ? "green--text" : "red--text")">
+                    @(context.RealizedGainLoss >= 0 ? "+" : "")@context.RealizedGainLoss.ToString("N2")
+                </span>
+            </MudTd>
+            <MudTd>
+                <MudIconButton Icon="@(GetExpanded(context) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                               OnClick="@(() => ToggleExpanded(context))" Size="Size.Small" />
+            </MudTd>
+        </RowTemplate>
+        <ChildRowContent>
+            @if (GetExpanded(context))
+            {
+                <MudTd colspan="7">
+                    <MudPaper Class="pa-4 mb-2 mt-2" Outlined="true">
+                        <MudText Typo="Typo.subtitle2" GutterBottom="true">Sales (@context.Sales.Count)</MudText>
+                        <MudSimpleTable>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Quantity</th>
+                                    <th>Proceeds</th>
+                                    <th>Cost Basis</th>
+                                    <th>Realized P&amp;L</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var sale in context.Sales)
+                                {
+                                    <tr>
+                                        <td>@sale.Date.ToString("yyyy-MM-dd")</td>
+                                        <td>@sale.Quantity.ToString("G")</td>
+                                        <td>@sale.Proceeds.ToString("N2")</td>
+                                        <td>@sale.CostBasis.ToString("N2")</td>
+                                        <td class="@(sale.RealizedGainLoss >= 0 ? "green--text" : "red--text")">@(sale.RealizedGainLoss >= 0 ? "+" : "")@sale.RealizedGainLoss.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+                    </MudPaper>
+                </MudTd>
+            }
+        </ChildRowContent>
+        <NoRecordsContent>
+            <MudText Class="pa-4">No sales in @(Year ?? DateTime.Today.Year).</MudText>
+        </NoRecordsContent>
+    </MudTable>
+
+    @if (_withholding?.Totals is { Count: > 0 })
+    {
+        <MudText Typo="Typo.subtitle1" Class="mt-8 mb-2 mud-text-secondary">Withholding tax</MudText>
+        <MudTable Items="@_withholding.Totals" Hover="true" Elevation="0" Outlined="true" Striped="true">
+            <HeaderContent>
+                <MudTh>Currency</MudTh>
+                <MudTh>Amount</MudTh>
+                <MudTh>Transactions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Currency">@context.Currency</MudTd>
+                <MudTd DataLabel="Amount">@context.Amount.ToString("N2")</MudTd>
+                <MudTd DataLabel="Transactions">@context.TransactionCount</MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+}
+
+@code {
+    [Parameter] public int? Year { get; set; }
+
+    private RealizedGainsReportDto? _report;
+    private WithholdingReportDto? _withholding;
+    private bool _loading = true;
+    private readonly HashSet<string> _expanded = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!_loading)
+        {
+            await LoadDataAsync();
+        }
+    }
+
+    private int EffectiveYear => Year ?? DateTime.Today.Year;
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            int year = this.EffectiveYear;
+            _report = await Http.GetFromJsonAsync<RealizedGainsReportDto>($"/api/reports/realized-gains?year={year}");
+            _withholding = await Http.GetFromJsonAsync<WithholdingReportDto>($"/api/reports/withholding?year={year}");
+            _expanded.Clear();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void NavigateToYear(int year)
+    {
+        if (year != this.EffectiveYear)
+        {
+            Navigation.NavigateTo($"/reports/{year}");
+        }
+    }
+
+    private bool GetExpanded(SymbolRealizedGainsDto symbol) => _expanded.Contains(symbol.Symbol);
+
+    private void ToggleExpanded(SymbolRealizedGainsDto symbol)
+    {
+        if (!_expanded.Remove(symbol.Symbol))
+        {
+            _expanded.Add(symbol.Symbol);
+        }
+    }
+}
