@@ -4,5 +4,5 @@ namespace MyAccountingApp.Application.Interfaces;
 
 public interface IPositionEngine
 {
-    Task<PortfolioPositionDto?> GetPosition(string symbol);
+    Task<PortfolioPositionDto?> GetPosition(string symbol, bool includePrice = true);
 }

@@ -30,6 +30,8 @@ public class ApiWebApplicationFactory : WebApplicationFactory<Program>
             services.AddSingleton<IOptionTransactionRepository>(new JsonOptionTransactionRepository(Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.json")));
             services.RemoveAll<IPendingConversionQueue>();
             services.AddSingleton<IPendingConversionQueue>(new FakePendingConversionQueue());
+            services.RemoveAll<IMarketPriceService>();
+            services.AddSingleton<IMarketPriceService>(new CountingMarketPriceService());
         });
     }
 }
