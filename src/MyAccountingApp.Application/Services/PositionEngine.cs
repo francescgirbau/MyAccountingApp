@@ -1,6 +1,5 @@
 using MyAccountingApp.Application.DTOs;
 using MyAccountingApp.Application.Interfaces;
-using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
 using MyAccountingApp.Domain.ValueObjects;
 
@@ -19,78 +18,33 @@ public class PositionEngine : IPositionEngine
 
     public async Task<PortfolioPositionDto?> GetPosition(string symbol, bool includePrice = true)
     {
-        var transactions = this._portfolioRepo.GetAssetTransactions(symbol)
-            .OrderBy(t => t.Transaction.Date)
-            .ToList();
+        var transactions = this._portfolioRepo.GetAssetTransactions(symbol).ToList();
 
         if (transactions.Count == 0)
         {
             return null;
         }
 
-        var lots = new List<FifoLot>();
-        decimal realizedGainLoss = 0;
+        FifoPosition position = FifoCalculator.Compute(transactions);
         string currency = transactions[0].Transaction.Money.Currency;
-        decimal totalCost = 0;
-        decimal netQuantity = 0;
-        decimal unmatchedSellQuantity = 0;
 
-        foreach (var tx in transactions)
-        {
-            if (tx.Type == AssetTransactionType.Buy)
-            {
-                var lot = new FifoLot(tx.Transaction.Date, tx.Quantity, tx.Transaction.Money.Amount);
-                lots.Add(lot);
-                netQuantity += tx.Quantity;
-                totalCost += tx.Transaction.Money.Amount;
-            }
-            else
-            {
-                decimal sellQty = tx.Quantity;
+        decimal avgCost = position.NetQuantity > 0 ? Math.Round(position.TotalCostBasis / position.NetQuantity, 4) : 0;
 
-                foreach (var lot in lots.Where(l => l.RemainingQuantity > 0).OrderBy(l => l.PurchaseDate))
-                {
-                    if (sellQty <= 0)
-                    {
-                        break;
-                    }
+        Money? marketPrice = includePrice && position.NetQuantity > 0 ? await this._marketPriceService.GetPriceAsync(symbol) : null;
 
-                    decimal consumed = Math.Min(sellQty, lot.RemainingQuantity);
-                    decimal costBasis = consumed * lot.UnitaryCost;
-                    decimal proceeds = (consumed / tx.Quantity) * tx.Transaction.Money.Amount;
-
-                    realizedGainLoss += proceeds - costBasis;
-                    totalCost -= costBasis;
-                    netQuantity -= consumed;
-
-                    lot.RemainingQuantity -= consumed;
-                    sellQty -= consumed;
-                }
-
-                if (sellQty > 0)
-                {
-                    unmatchedSellQuantity += sellQty;
-                }
-            }
-        }
-
-        decimal avgCost = netQuantity > 0 ? Math.Round(totalCost / netQuantity, 4) : 0;
-
-        Money? marketPrice = includePrice && netQuantity > 0 ? await this._marketPriceService.GetPriceAsync(symbol) : null;
-
-        decimal? unrealizedGainLoss = marketPrice is not null && netQuantity > 0
-            ? Math.Round((marketPrice.Amount - avgCost) * netQuantity, 2)
+        decimal? unrealizedGainLoss = marketPrice is not null && position.NetQuantity > 0
+            ? Math.Round((marketPrice.Amount - avgCost) * position.NetQuantity, 2)
             : null;
 
         return new PortfolioPositionDto(
             symbol,
-            netQuantity,
+            position.NetQuantity,
             avgCost,
-            Math.Round(totalCost, 2),
+            Math.Round(position.TotalCostBasis, 2),
             currency,
-            transactions.Count,
-            Math.Round(realizedGainLoss, 2),
-            lots.Where(l => l.RemainingQuantity > 0)
+            position.TransactionCount,
+            Math.Round(position.RealizedGainLoss, 2),
+            position.OpenLots
                 .Select(l => new TaxLotDto(
                     l.PurchaseDate,
                     l.RemainingQuantity,
@@ -99,24 +53,7 @@ public class PositionEngine : IPositionEngine
                 .ToList(),
             marketPrice?.Amount,
             unrealizedGainLoss,
-            unmatchedSellQuantity > 0,
-            Math.Round(unmatchedSellQuantity, 4));
-    }
-
-    private sealed class FifoLot
-    {
-        public DateTime PurchaseDate { get; }
-        public decimal TotalQuantity { get; }
-        public decimal TotalCost { get; }
-        public decimal UnitaryCost => this.TotalCost / this.TotalQuantity;
-        public decimal RemainingQuantity { get; set; }
-
-        public FifoLot(DateTime purchaseDate, decimal quantity, decimal totalCost)
-        {
-            this.PurchaseDate = purchaseDate;
-            this.TotalQuantity = quantity;
-            this.TotalCost = totalCost;
-            this.RemainingQuantity = quantity;
-        }
+            position.UnmatchedSellQuantity > 0,
+            Math.Round(position.UnmatchedSellQuantity, 4));
     }
 }
