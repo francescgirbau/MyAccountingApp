@@ -28,5 +28,7 @@ namespace MyAccountingApp.TestUtilities.Fakes
 
             return null;
         }
+
+        public Task<Money?> RefreshPriceAsync(string symbol) => this.GetPriceAsync(symbol);
     }
 }

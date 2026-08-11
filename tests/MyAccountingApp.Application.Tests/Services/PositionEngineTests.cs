@@ -214,6 +214,29 @@ public class PositionEngineTests
         Assert.Equal(0, result.NetQuantity);
     }
 
+    [Fact]
+    public async Task GetPosition_WithoutPrice_SkipsPriceService()
+    {
+        FakePortfolioRepo repo = new();
+        repo.AddOrUpdate(Buy("AAPL", 150, 10, new DateTime(2024, 1, 15)));
+        ThrowingMarketPriceService priceService = new();
+        PositionEngine engine = new(repo, priceService);
+
+        var result = await engine.GetPosition("AAPL", includePrice: false);
+
+        Assert.NotNull(result);
+        Assert.Null(result.MarketPrice);
+        Assert.Null(result.UnrealizedGainLoss);
+        Assert.Equal(10, result.NetQuantity);
+    }
+
+    private sealed class ThrowingMarketPriceService : IMarketPriceService
+    {
+        public Task<Money?> GetPriceAsync(string symbol) => throw new InvalidOperationException("Price service should not be called");
+
+        public Task<Money?> RefreshPriceAsync(string symbol) => throw new InvalidOperationException("Price service should not be called");
+    }
+
     private sealed class FakePortfolioRepo : IPortfolioRepository
     {
         private readonly List<AssetTransaction> _transactions = new();

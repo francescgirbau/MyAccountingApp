@@ -11,17 +11,25 @@ public static class PortfolioEndpoints
     {
         const string prefix = ApiEndpoints.ApiPrefix;
 
-        app.MapGet($"{prefix}/portfolio", async (IPortfolioRepository repo, IPositionEngine positionEngine) =>
+        app.MapGet($"{prefix}/portfolio", async (IPortfolioRepository repo, IPositionEngine positionEngine, bool includePrices = false) =>
         {
             string[] symbols = repo.GetAllTransactions().Select(t => t.Symbol).Distinct().ToArray();
-            PortfolioPositionDto?[] positions = await Task.WhenAll(symbols.Select(s => positionEngine.GetPosition(s)));
+            PortfolioPositionDto?[] positions = await Task.WhenAll(symbols.Select(s => positionEngine.GetPosition(s, includePrices)));
             return Results.Ok(positions.Where(p => p is not null).ToList());
         });
 
-        app.MapGet($"{prefix}/portfolio/{{symbol}}", async (string symbol, IPositionEngine positionEngine) =>
+        app.MapGet($"{prefix}/portfolio/{{symbol}}", async (string symbol, IPositionEngine positionEngine, bool includePrices = true) =>
         {
-            PortfolioPositionDto? position = await positionEngine.GetPosition(symbol);
+            PortfolioPositionDto? position = await positionEngine.GetPosition(symbol, includePrices);
             return position is not null ? Results.Ok(position) : Results.NotFound(new { symbol, message = "No transactions found for this symbol" });
+        });
+
+        app.MapPost($"{prefix}/portfolio/refresh-prices", async (IPortfolioRepository repo, IPositionEngine positionEngine, IMarketPriceService priceService) =>
+        {
+            string[] symbols = repo.GetAllTransactions().Select(t => t.Symbol).Distinct().ToArray();
+            await Task.WhenAll(symbols.Select(s => priceService.RefreshPriceAsync(s)));
+            PortfolioPositionDto?[] positions = await Task.WhenAll(symbols.Select(s => positionEngine.GetPosition(s, true)));
+            return Results.Ok(positions.Where(p => p is not null).ToList());
         });
 
         app.MapGet($"{prefix}/validate", (IValidationQuery validationQuery) =>
