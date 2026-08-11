@@ -35,21 +35,28 @@ public class Transaction
     public TransactionCategory Category { get; private set; }
 
     /// <summary>
+    /// Gets the provenance of the transaction (e.g. the imported file name), or null.
+    /// </summary>
+    public string? Source { get; private set; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="Transaction"/> class.
     /// </summary>
     /// <param name="date">The date of the transaction.</param>
     /// <param name="description">The description of the transaction.</param>
     /// <param name="money">The monetary value of the transaction.</param>
     /// <param name="category">The category of the transaction.</param>
+    /// <param name="source">The provenance of the transaction.</param>
     /// <exception cref="ArgumentException">
     /// Thrown if the amount is zero, or if the amount does not match the expected sign for the category.
     /// </exception>
-    public Transaction(DateTime date, string description, Money money, TransactionCategory category)
+    public Transaction(DateTime date, string description, Money money, TransactionCategory category, string? source = null)
     {
         this.Id = Guid.NewGuid();
         this.Date = date;
         this.Description = description;
         this.Category = category;
+        this.Source = source;
 
         this.Money = new Money(Math.Abs(money.Amount), money.Currency);
 
@@ -64,14 +71,16 @@ public class Transaction
     /// <param name="description">The description of the transaction.</param>
     /// <param name="money">The monetary value of the transaction.</param>
     /// <param name="category">The category of the transaction.</param>
+    /// <param name="source">The provenance of the transaction.</param>
     [JsonConstructor]
-    public Transaction(Guid id, DateTime date, string description, Money money, TransactionCategory category)
+    public Transaction(Guid id, DateTime date, string description, Money money, TransactionCategory category, string? source = null)
     {
         this.Id = id;
         this.Date = date;
         this.Description = description;
         this.Money = money;
         this.Category = category;
+        this.Source = source;
     }
 
     /// <summary>
@@ -96,6 +105,11 @@ public class Transaction
     public void UpdateCategory(TransactionCategory category)
     {
         this.Category = category;
+    }
+
+    public void SetSource(string? source)
+    {
+        this.Source = source;
     }
 
     public TransactionFingerprint GetFingerprint() => new TransactionFingerprint(

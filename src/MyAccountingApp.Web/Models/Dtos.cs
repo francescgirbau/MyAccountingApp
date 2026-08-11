@@ -13,6 +13,7 @@ public class TransactionDto
     public string Description { get; set; } = string.Empty;
     public MoneyDto Money { get; set; } = new();
     public string Category { get; set; } = string.Empty;
+    public string? Source { get; set; }
 }
 
 public class AssetTransactionDto
@@ -22,6 +23,7 @@ public class AssetTransactionDto
     public decimal Quantity { get; set; }
     public string Type { get; set; } = string.Empty;
     public MoneyDto UnitaryCost { get; set; } = new();
+    public string? Source { get; set; }
 }
 
 public class OptionTransactionDto

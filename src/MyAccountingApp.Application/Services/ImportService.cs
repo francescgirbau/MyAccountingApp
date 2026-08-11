@@ -59,6 +59,7 @@ public class ImportService : IImportService
                 try
                 {
                     this._logger.LogInformation("Processing: {CsvFile}", csvFile);
+                    string source = Path.GetFileName(csvFile);
 
                     if (folderPath.Contains("CORPORATE", StringComparison.OrdinalIgnoreCase))
                     {
@@ -66,6 +67,7 @@ public class ImportService : IImportService
                             await this._broker.ParseCorporateActionsAsync(csvFile);
                         foreach (Domain.Entities.AssetTransaction tx in corporateTransactions)
                         {
+                            tx.SetSource(source);
                             ValidationResult vr = this._validator.Validate(tx);
                             result.ValidationErrors.AddRange(vr.Errors);
                             result.ValidationWarnings.AddRange(vr.Warnings);
@@ -84,6 +86,7 @@ public class ImportService : IImportService
 
                         foreach (Domain.Entities.Transaction tx in transactions)
                         {
+                            tx.SetSource(source);
                             ValidationResult vr = this._validator.Validate(tx);
                             result.ValidationErrors.AddRange(vr.Errors);
                             result.ValidationWarnings.AddRange(vr.Warnings);
@@ -95,6 +98,7 @@ public class ImportService : IImportService
 
                         foreach (Domain.Entities.AssetTransaction tx in assetTransactions)
                         {
+                            tx.SetSource(source);
                             ValidationResult vr = this._validator.Validate(tx);
                             result.ValidationErrors.AddRange(vr.Errors);
                             result.ValidationWarnings.AddRange(vr.Warnings);
@@ -249,7 +253,8 @@ public class ImportService : IImportService
             transaction.Date,
             transaction.Description,
             transaction.Money,
-            newCategory);
+            newCategory,
+            transaction.Source);
 
         int index = all.FindIndex(t => t.Id == transaction.Id);
         if (index >= 0)

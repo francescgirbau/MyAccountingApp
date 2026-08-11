@@ -88,6 +88,7 @@ else
             <col style="width: 80px" />
             <col style="width: 80px" />
             <col style="width: 80px" />
+            <col style="width: 140px" />
         </ColGroup>
         <HeaderContent>
             <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Transaction.Date)">Date</MudTableSortLabel></MudTh>
@@ -97,6 +98,7 @@ else
             <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Transaction.Money.Amount)">Amount</MudTableSortLabel></MudTh>
             <MudTh>Curr.</MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Type)">Type</MudTableSortLabel></MudTh>
+            <MudTh>Source</MudTh>
             <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
@@ -109,6 +111,16 @@ else
             <MudTd DataLabel="Amount">@context.Transaction.Money.Amount.ToString("N2")</MudTd>
             <MudTd DataLabel="Curr.">@context.Transaction.Money.Currency</MudTd>
             <MudTd DataLabel="Type">@context.Type</MudTd>
+            <MudTd DataLabel="Source">
+                @if (!string.IsNullOrEmpty(context.Source))
+                {
+                    <MudText Typo="Typo.caption" Class="text-medium-emphasis">@context.Source</MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.caption">—</MudText>
+                }
+            </MudTd>
             <MudTd DataLabel="Actions">
                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => OpenEditDialog(context))" />
                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => OpenDeleteDialog(context))" />
