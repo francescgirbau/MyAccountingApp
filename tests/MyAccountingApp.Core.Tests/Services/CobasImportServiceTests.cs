@@ -28,7 +28,7 @@ public class CobasImportServiceTests
             Assert.Empty(options);
             AssetTransaction asset = Assert.Single(assets);
             Assert.Equal(AssetTransactionType.Buy, asset.Type);
-            Assert.Equal(TransactionCategory.EXPENSE, asset.Transaction.Category);
+            Assert.Equal(TransactionCategory.INVESTMENT, asset.Transaction.Category);
             Assert.Equal("COBAS_INTERNACIONAL_D", asset.Symbol);
             Assert.Equal(0.502652m, asset.Quantity);
             Assert.Equal(120.00m, asset.Transaction.Money.Amount);

@@ -170,7 +170,7 @@ public class IBKRStatementAgentsTests
     }
 
     [Theory]
-    [InlineData("10.00", TransactionCategory.INCOME)]
+    [InlineData("10.00", TransactionCategory.INTEREST)]
     [InlineData("-2.00", TransactionCategory.EXPENSE)]
     public void InterestAgent_ClassifiesBySign(string amount, TransactionCategory expected)
     {
@@ -192,7 +192,7 @@ public class IBKRStatementAgentsTests
     }
 
     [Fact]
-    public void WithholdingTaxAgent_AddsExpense()
+    public void WithholdingTaxAgent_AddsWithholdingTax()
     {
         WithholdingTaxAgent agent = new();
         List<Transaction> tx = new();
@@ -208,7 +208,7 @@ public class IBKRStatementAgentsTests
         agent.Parse(rows, tx, assets, options, errors);
 
         Transaction transaction = Assert.Single(tx);
-        Assert.Equal(TransactionCategory.EXPENSE, transaction.Category);
+        Assert.Equal(TransactionCategory.WITHHOLDING_TAX, transaction.Category);
         Assert.Equal(15, transaction.Money.Amount);
     }
 
@@ -229,7 +229,7 @@ public class IBKRStatementAgentsTests
         agent.Parse(rows, tx, assets, options, errors);
 
         Transaction transaction = Assert.Single(tx);
-        Assert.Equal(TransactionCategory.EXPENSE, transaction.Category);
+        Assert.Equal(TransactionCategory.FEE, transaction.Category);
         Assert.Equal("USD", transaction.Money.Currency);
         Assert.Equal(2.5m, transaction.Money.Amount);
     }
@@ -251,7 +251,7 @@ public class IBKRStatementAgentsTests
         agent.Parse(rows, tx, assets, options, errors);
 
         Transaction transaction = Assert.Single(tx);
-        Assert.Equal(TransactionCategory.INCOME, transaction.Category);
+        Assert.Equal(TransactionCategory.DIVIDEND, transaction.Category);
         Assert.Equal(1.5m, transaction.Money.Amount);
     }
 
