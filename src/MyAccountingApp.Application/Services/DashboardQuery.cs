@@ -32,6 +32,7 @@ public class DashboardQuery : IDashboardQuery
         CashSnapshotDto cash = BuildCashSnapshot(allTransactions, asOf);
         PortfolioSnapshotDto portfolio = BuildPortfolioSnapshot(allAssetTransactions, asOf.Year);
         List<DashboardAlertDto> alerts = BuildAlerts(allTransactions, allAssetTransactions);
+        this.AddDataQualityAlert(alerts);
 
         return Task.FromResult(new DashboardDto(asOf, cash, portfolio, alerts));
     }
@@ -151,6 +152,28 @@ public class DashboardQuery : IDashboardQuery
         }
 
         return alerts;
+    }
+
+    private void AddDataQualityAlert(List<DashboardAlertDto> alerts)
+    {
+        ValidationResult validation = this._validationQuery.ValidateAll();
+
+        if (validation.Errors.Count > 0)
+        {
+            alerts.Add(new DashboardAlertDto(
+                "error",
+                "DATA_QUALITY",
+                $"{validation.Errors.Count} data quality error(s) found",
+                "/data-quality"));
+        }
+        else if (validation.Warnings.Count > 0)
+        {
+            alerts.Add(new DashboardAlertDto(
+                "warning",
+                "DATA_QUALITY",
+                $"{validation.Warnings.Count} data quality warning(s) found",
+                "/data-quality"));
+        }
     }
 
     private sealed class FifoLot
