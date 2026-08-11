@@ -45,7 +45,7 @@ public partial class DegiroTransactionImportService : IBrokerImportService
                 string exchange = fields[4];
 
                 int rawQuantity = int.Parse(fields[6], NumberStyles.Any, CultureInfo.InvariantCulture);
-                decimal amount = ParseEuropeanDecimal(fields[9]);
+                decimal amount = CsvParsing.ParseEuropeanDecimal(fields[9]);
                 string currency = NormalizeCurrency(fields[8]);
 
                 if (rawQuantity == 0 || amount == 0)
@@ -101,12 +101,6 @@ public partial class DegiroTransactionImportService : IBrokerImportService
         }
 
         return DateTime.Parse(value, CultureInfo.InvariantCulture);
-    }
-
-    private static decimal ParseEuropeanDecimal(string value)
-    {
-        string cleaned = value.Replace(".", string.Empty).Replace(",", ".");
-        return decimal.Parse(cleaned, NumberStyles.Any, CultureInfo.InvariantCulture);
     }
 
     private static string NormalizeCurrency(string value)

@@ -42,7 +42,7 @@ public class DegiroImportService : IBrokerImportService
                 DateTime date = ParseDate(fields[0]);
                 string description = fields[5];
                 string currency = NormalizeCurrency(fields[7], fields[9]);
-                decimal amount = ParseEuropeanDecimal(fields[8]);
+                decimal amount = CsvParsing.ParseEuropeanDecimal(fields[8]);
 
                 if (string.IsNullOrWhiteSpace(description) || amount == 0)
                 {
@@ -88,12 +88,6 @@ public class DegiroImportService : IBrokerImportService
         }
 
         return DateTime.Parse(value, CultureInfo.InvariantCulture);
-    }
-
-    private static decimal ParseEuropeanDecimal(string value)
-    {
-        string cleaned = value.Replace(".", string.Empty).Replace(",", ".");
-        return decimal.Parse(cleaned, NumberStyles.Any, CultureInfo.InvariantCulture);
     }
 
     private static string NormalizeCurrency(string variationCurrency, string balanceCurrency)
