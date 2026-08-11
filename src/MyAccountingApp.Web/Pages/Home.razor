@@ -17,11 +17,12 @@ else
         <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@LoadAsync" Size="Size.Small" aria-label="Refresh" />
     </MudText>
 
+    <MudText Typo="Typo.subtitle1" Class="mb-2 mud-text-secondary">Cash</MudText>
     <MudGrid>
         <MudItem xs="12" sm="6" md="3">
             <MudCard Class="pa-4" Outlined="true">
                 <MudCardContent>
-                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Cash — month to date</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Month to date</MudText>
                     <MudText Typo="Typo.h4" Class="green--text">+@_dashboard.Cash.IncomeMtd.ToString("N2")</MudText>
                     <MudText Typo="Typo.h4" Class="red--text">-@_dashboard.Cash.ExpenseMtd.ToString("N2")</MudText>
                     <MudText Typo="Typo.h5" Class="@NetClass(_dashboard.Cash.NetCashFlowMtd)">Net @_dashboard.Cash.NetCashFlowMtd.ToString("N2")</MudText>
@@ -31,7 +32,7 @@ else
         <MudItem xs="12" sm="6" md="3">
             <MudCard Class="pa-4" Outlined="true">
                 <MudCardContent>
-                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Cash — year to date</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Year to date</MudText>
                     <MudText Typo="Typo.h4" Class="green--text">+@_dashboard.Cash.IncomeYtd.ToString("N2")</MudText>
                     <MudText Typo="Typo.h4" Class="red--text">-@_dashboard.Cash.ExpenseYtd.ToString("N2")</MudText>
                     <MudText Typo="Typo.h5" Class="@NetClass(_dashboard.Cash.NetCashFlowYtd)">Net @_dashboard.Cash.NetCashFlowYtd.ToString("N2")</MudText>
@@ -41,19 +42,52 @@ else
         <MudItem xs="12" sm="6" md="3">
             <MudCard Class="pa-4" Outlined="true">
                 <MudCardContent>
-                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Investments — year to date</MudText>
-                    <MudText Typo="Typo.h4">@_dashboard.Portfolio.TotalCostBasisEur.ToString("N2") EUR</MudText>
-                    <MudText Typo="Typo.body2" Class="mud-text-secondary">cost basis of open positions</MudText>
-                    <MudText Typo="Typo.h6" Class="@GainClass(_dashboard.Portfolio.RealizedGainLossYtdEur)">Realized @_dashboard.Portfolio.RealizedGainLossYtdEur.ToString("N2") EUR</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Transfers YTD</MudText>
+                    <MudText Typo="Typo.h5">@_dashboard.Cash.TransfersYtd.ToString("N2")</MudText>
                 </MudCardContent>
             </MudCard>
         </MudItem>
         <MudItem xs="12" sm="6" md="3">
             <MudCard Class="pa-4" Outlined="true">
                 <MudCardContent>
-                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Portfolio</MudText>
-                    <MudText Typo="Typo.h4">@_dashboard.Portfolio.OpenPositionCount open positions</MudText>
-                    <MudText Typo="Typo.body2" Class="mud-text-secondary">@_dashboard.Portfolio.SymbolCount symbol(s) tracked</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Deposits YTD</MudText>
+                    <MudText Typo="Typo.h5" Class="green--text">@_dashboard.Cash.DepositsYtd.ToString("N2")</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <MudText Typo="Typo.subtitle1" Class="mt-6 mb-2 mud-text-secondary">Investments</MudText>
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Class="pa-4" Outlined="true">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Cost basis (open)</MudText>
+                    <MudText Typo="Typo.h4">@_dashboard.Portfolio.TotalCostBasisEur.ToString("N2") EUR</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Class="pa-4" Outlined="true">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Realized YTD</MudText>
+                    <MudText Typo="Typo.h5" Class="@GainClass(_dashboard.Portfolio.RealizedGainLossYtdEur)">@_dashboard.Portfolio.RealizedGainLossYtdEur.ToString("N2") EUR</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Class="pa-4" Outlined="true">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Open positions</MudText>
+                    <MudText Typo="Typo.h4">@_dashboard.Portfolio.OpenPositionCount</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Class="pa-4" Outlined="true">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Symbols tracked</MudText>
+                    <MudText Typo="Typo.h5">@_dashboard.Portfolio.SymbolCount</MudText>
                 </MudCardContent>
             </MudCard>
         </MudItem>

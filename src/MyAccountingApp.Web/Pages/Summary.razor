@@ -21,22 +21,39 @@ else if (_error != null)
 else if (Year.HasValue)
 {
     <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowBack" Href="summary" Class="mb-4">Back to all years</MudButton>
+    <MudText Typo="Typo.h4" GutterBottom="true">@Year.Value</MudText>
+
+    <MudText Typo="Typo.subtitle1" Class="mb-2 mud-text-secondary">Cash</MudText>
     <MudCard Class="pa-6" Outlined="true">
         <MudCardContent>
-            <MudText Typo="Typo.h4" GutterBottom="true">@Year.Value</MudText>
             <MudGrid>
                 <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Income</MudText><MudText Typo="Typo.h5" Color="Color.Success">@_summary?.Income.ToString("N2") €</MudText></MudItem>
                 <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Expenses</MudText><MudText Typo="Typo.h5" Color="Color.Error">@_summary?.Expenses.ToString("N2") €</MudText></MudItem>
                 <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Transfers</MudText><MudText Typo="Typo.h5">@_summary?.Transfers.ToString("N2") €</MudText></MudItem>
                 <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Deposits</MudText><MudText Typo="Typo.h5" Color="Color.Success">@_summary?.Deposits.ToString("N2") €</MudText></MudItem>
                 <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Net Cash Flow</MudText><MudText Typo="Typo.h5" Color="@NetCashFlowColor">@_summary?.NetCashFlow.ToString("N2") €</MudText></MudItem>
-                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Transactions</MudText><MudText Typo="Typo.h5">@_summary?.TransactionCount</MudText></MudItem>
-                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Investment Purchases</MudText><MudText Typo="Typo.h5">@_summary?.InvestmentPurchases.ToString("N2") €</MudText></MudItem>
-                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Investment Sales</MudText><MudText Typo="Typo.h5">@_summary?.InvestmentSales.ToString("N2") €</MudText></MudItem>
+                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Bank Transactions</MudText><MudText Typo="Typo.h5">@_summary?.TransactionCount</MudText></MudItem>
+            </MudGrid>
+        </MudCardContent>
+    </MudCard>
+
+    <MudText Typo="Typo.subtitle1" Class="mt-6 mb-2 mud-text-secondary">Investments</MudText>
+    <MudCard Class="pa-6" Outlined="true">
+        <MudCardContent>
+            <MudGrid>
+                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Purchases</MudText><MudText Typo="Typo.h5">@_summary?.InvestmentPurchases.ToString("N2") €</MudText></MudItem>
+                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Sales</MudText><MudText Typo="Typo.h5">@_summary?.InvestmentSales.ToString("N2") €</MudText></MudItem>
                 <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Asset Transactions</MudText><MudText Typo="Typo.h5">@_summary?.AssetTransactionCount</MudText></MudItem>
             </MudGrid>
         </MudCardContent>
     </MudCard>
+
+    @if (_summary is { IncludesAssetCashFlows: false })
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-4">
+            Cash and investment flows are reported separately: net cash flow only counts the cash ledger, and investment purchases/sales are shown above without being folded into cash expenses.
+        </MudAlert>
+    }
 
     @if (_summary?.Months is { Count: > 0 })
     {
