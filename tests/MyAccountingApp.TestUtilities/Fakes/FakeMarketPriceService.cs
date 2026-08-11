@@ -30,5 +30,8 @@ namespace MyAccountingApp.TestUtilities.Fakes
         }
 
         public Task<Money?> RefreshPriceAsync(string symbol) => this.GetPriceAsync(symbol);
+
+        public Task<Money?> GetCachedPriceAsync(string symbol) =>
+            Task.FromResult(_prices.TryGetValue(symbol, out Money? price) ? price : null);
     }
 }

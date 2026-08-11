@@ -23,4 +23,6 @@ public class CountingMarketPriceService : IMarketPriceService
         Interlocked.Increment(ref _calls);
         return Task.FromResult<Money?>(new Money(100m, "USD"));
     }
+
+    public Task<Money?> GetCachedPriceAsync(string symbol) => Task.FromResult<Money?>(null);
 }
