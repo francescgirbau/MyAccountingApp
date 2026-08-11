@@ -71,4 +71,19 @@ public class TransactionTests
         // Assert - should adjust to positve too
         Assert.True(transaction.Money.Amount > 0);
     }
+
+    [Fact]
+    public void UpdateCategory_ShouldChangeCategory()
+    {
+        // Arrange
+        DateTime date = DateTime.Now;
+        Money money = new Money(amount: 100, currency: Currencies.EUR.ToString());
+        Transaction transaction = new Transaction(date, "Groceries", money, TransactionCategory.EXPENSE);
+
+        // Act
+        transaction.UpdateCategory(TransactionCategory.TRANSFER);
+
+        // Assert
+        Assert.Equal(TransactionCategory.TRANSFER, transaction.Category);
+    }
 }

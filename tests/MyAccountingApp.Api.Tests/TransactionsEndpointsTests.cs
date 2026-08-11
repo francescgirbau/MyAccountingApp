@@ -101,4 +101,75 @@ public class TransactionsEndpointsTests
         using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal(1, document.RootElement.GetProperty("transactions").GetInt32());
     }
+
+    [Fact]
+    public async Task BatchPatch_ShouldUpdateCategories_ForAllIds()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        List<Guid> ids = new();
+        for (int i = 0; i < 3; i++)
+        {
+            HttpResponseMessage created = await client.PostAsJsonAsync("/api/transactions", CreateTransactionBody(new DateTime(2026, 8, 1)));
+            string location = created.Headers.Location!.ToString();
+            ids.Add(Guid.Parse(location.Split('/').Last()));
+        }
+
+        // Act
+        HttpResponseMessage response = await client.PatchAsJsonAsync(
+            "/api/transactions/batch",
+            new { ids, patch = new { category = "TRANSFER" } });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(3, document.RootElement.GetProperty("requested").GetInt32());
+        Assert.Equal(3, document.RootElement.GetProperty("updated").GetInt32());
+        Assert.Empty(document.RootElement.GetProperty("failures").EnumerateArray());
+
+        HttpResponseMessage all = await client.GetAsync("/api/transactions");
+        using JsonDocument allDocument = JsonDocument.Parse(await all.Content.ReadAsStringAsync());
+        Assert.All(allDocument.RootElement.EnumerateArray(), tx => Assert.Equal("TRANSFER", tx.GetProperty("category").GetString()));
+    }
+
+    [Fact]
+    public async Task BatchPatch_ShouldReportInvalidCategory_AsFailure()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        HttpResponseMessage created = await client.PostAsJsonAsync("/api/transactions", CreateTransactionBody(new DateTime(2026, 8, 1)));
+        string location = created.Headers.Location!.ToString();
+        Guid id = Guid.Parse(location.Split('/').Last());
+
+        // Act
+        HttpResponseMessage response = await client.PatchAsJsonAsync(
+            "/api/transactions/batch",
+            new { ids = new[] { id }, patch = new { category = "NOT_A_CATEGORY" } });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(0, document.RootElement.GetProperty("updated").GetInt32());
+        JsonElement failure = Assert.Single(document.RootElement.GetProperty("failures").EnumerateArray());
+        Assert.Equal(id, failure.GetProperty("id").GetGuid());
+        Assert.Contains("Invalid category", failure.GetProperty("error").GetString());
+    }
+
+    [Fact]
+    public async Task BatchPatch_EmptyIds_ShouldReturnBadRequest()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        // Act
+        HttpResponseMessage response = await client.PatchAsJsonAsync(
+            "/api/transactions/batch",
+            new { ids = Array.Empty<Guid>(), patch = new { category = "TRANSFER" } });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }

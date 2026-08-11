@@ -95,4 +95,78 @@ public class OptionTransactionsEndpointsTests
         using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal(1, document.RootElement.GetProperty("deletedOptions").GetInt32());
     }
+
+    [Fact]
+    public async Task BatchPatch_ShouldUpdateSymbols_ForAllIds()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        Guid first = Guid.NewGuid();
+        Guid second = Guid.NewGuid();
+        Transaction tx1 = new(first, new DateTime(2026, 8, 1), "Seed option", new Money(100m, "EUR"), TransactionCategory.EXPENSE);
+        Transaction tx2 = new(second, new DateTime(2026, 8, 2), "Seed option", new Money(100m, "EUR"), TransactionCategory.EXPENSE);
+        IOptionTransactionRepository repository = factory.Services.GetRequiredService<IOptionTransactionRepository>();
+        repository.Initialize(new[]
+        {
+            new OptionTransaction(tx1, "AAPL", "US0378331005", 2m, AssetTransactionType.Buy),
+            new OptionTransaction(tx2, "AAPL", "US0378331005", 2m, AssetTransactionType.Buy),
+        });
+
+        // Act
+        HttpResponseMessage response = await client.PatchAsJsonAsync(
+            "/api/option-transactions/batch",
+            new { ids = new[] { first, second }, patch = new { symbol = "MSFT 260918C00330000" } });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(2, document.RootElement.GetProperty("requested").GetInt32());
+        Assert.Equal(2, document.RootElement.GetProperty("updated").GetInt32());
+        Assert.Empty(document.RootElement.GetProperty("failures").EnumerateArray());
+
+        HttpResponseMessage all = await client.GetAsync("/api/option-transactions");
+        using JsonDocument allDocument = JsonDocument.Parse(await all.Content.ReadAsStringAsync());
+        Assert.All(allDocument.RootElement.EnumerateArray(), tx => Assert.Equal("MSFT 260918C00330000", tx.GetProperty("symbol").GetString()));
+    }
+
+    [Fact]
+    public async Task BatchPatch_ShouldReportMissingId_AsFailure()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        Guid existing = Guid.NewGuid();
+        Guid missing = Guid.NewGuid();
+        SeedOptionTransaction(factory, existing, new DateTime(2026, 8, 1));
+
+        // Act
+        HttpResponseMessage response = await client.PatchAsJsonAsync(
+            "/api/option-transactions/batch",
+            new { ids = new[] { existing, missing }, patch = new { symbol = "TSLA" } });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(2, document.RootElement.GetProperty("requested").GetInt32());
+        Assert.Equal(1, document.RootElement.GetProperty("updated").GetInt32());
+        JsonElement failure = Assert.Single(document.RootElement.GetProperty("failures").EnumerateArray());
+        Assert.Equal(missing, failure.GetProperty("id").GetGuid());
+    }
+
+    [Fact]
+    public async Task BatchPatch_EmptyIds_ShouldReturnBadRequest()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        // Act
+        HttpResponseMessage response = await client.PatchAsJsonAsync(
+            "/api/option-transactions/batch",
+            new { ids = Array.Empty<Guid>(), patch = new { symbol = "TSLA" } });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }

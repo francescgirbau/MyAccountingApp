@@ -8,7 +8,7 @@ public class OptionTransaction
 {
     public Transaction Transaction { get; }
 
-    public string Symbol { get; }
+    public string Symbol { get; private set; }
 
     public string Isin { get; }
 
@@ -43,5 +43,15 @@ public class OptionTransaction
         {
             throw new ArgumentException("Quantity must be greater than zero.");
         }
+    }
+
+    public void UpdateSymbol(string symbol)
+    {
+        if (string.IsNullOrWhiteSpace(symbol))
+        {
+            throw new ArgumentException("Symbol cannot be null or empty.");
+        }
+
+        this.Symbol = symbol;
     }
 }

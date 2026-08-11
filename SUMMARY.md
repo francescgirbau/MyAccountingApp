@@ -43,11 +43,17 @@ Rules of thumb: Domain has no external dependencies; Application depends only on
 | POST | `/api/transactions` | Create transaction |
 | PUT | `/api/transactions/{id}` | Update transaction |
 | DELETE | `/api/transactions/{id}` | Delete transaction |
+| PATCH | `/api/transactions/batch` | Bulk update: `{ids: [...], patch: {category}}` → `{requested, updated, failures}` (best-effort) |
 | GET | `/api/asset-transactions` | List asset transactions |
 | POST | `/api/asset-transactions` | Create asset transaction |
 | PUT | `/api/asset-transactions/{id}` | Update asset transaction |
 | DELETE | `/api/asset-transactions/{id}` | Delete asset transaction |
 | PATCH | `/api/asset-transactions/batch` | Bulk update: `{ids: [...], patch: {symbol}}` → `{requested, updated, failures}` (best-effort) |
+| GET | `/api/option-transactions` | List option transactions |
+| GET | `/api/option-transactions/{symbol}` | List option transactions by symbol |
+| PUT | `/api/option-transactions/{id}` | Update option transaction |
+| DELETE | `/api/option-transactions/{id}` | Delete option transaction |
+| PATCH | `/api/option-transactions/batch` | Bulk update: `{ids: [...], patch: {symbol}}` → `{requested, updated, failures}` (best-effort) |
 | GET | `/api/portfolio` | Portfolio positions |
 | GET | `/api/conversions` | Currency conversions (timeseries lookups) |
 | GET | `/api/conversions?date=YYYY-MM-DD` | Single conversion, fetched on demand and cached (stale fallback when the provider fails or quota is exhausted) |

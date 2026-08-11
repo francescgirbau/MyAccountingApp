@@ -164,6 +164,8 @@ public static class DependencyInjection
         builder.Services.AddSingleton<IImportService, ImportService>();
         builder.Services.AddSingleton<ITransactionValidator, TransactionValidator>();
         builder.Services.AddSingleton<IAssetTransactionCommandService, AssetTransactionCommandService>();
+        builder.Services.AddSingleton<IOptionTransactionCommandService, OptionTransactionCommandService>();
+        builder.Services.AddSingleton<ITransactionCommandService, TransactionCommandService>();
         builder.Services.AddSingleton<IPortfolioQuery, PortfolioQuery>();
         builder.Services.AddSingleton<IPositionEngine, PositionEngine>();
         builder.Services.AddSingleton<IValidationQuery, ValidationQuery>();
