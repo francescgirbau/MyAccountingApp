@@ -188,6 +188,26 @@ public class CurrencyRateService : ICurrencyRateService
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<FxQuoteDto>> GetFxQuotesAsync(DateTime date, CancellationToken cancellationToken = default)
+    {
+        Conversion conversion = await this.GetConversionAsync(date);
+        DateOnly requestedDate = DateOnly.FromDateTime(date.Date);
+        DateOnly rateDate = DateOnly.FromDateTime(conversion.Date);
+
+        return conversion.Quotes
+            .OrderBy(kv => kv.Key)
+            .Select(kv => new FxQuoteDto(
+                requestedDate,
+                rateDate,
+                this._source.ToString(),
+                kv.Key.ToString(),
+                kv.Value,
+                conversion.IsStale,
+                conversion.SourceProvider))
+            .ToList();
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> SyncRangeAsync(DateOnly start, DateOnly end, CancellationToken cancellationToken = default)
     {
         await this._quotaManager.EnsurePeriodAsync(cancellationToken);

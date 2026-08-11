@@ -19,6 +19,14 @@ public sealed class FakeCurrencyRateService : ICurrencyRateService
         return Task.FromResult(conversion);
     }
 
+    public Task<IReadOnlyList<FxQuoteDto>> GetFxQuotesAsync(DateTime date, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<IReadOnlyList<FxQuoteDto>>(new List<FxQuoteDto>
+        {
+            new(DateOnly.FromDateTime(date.Date), DateOnly.FromDateTime(date.Date), "EUR", "USD", 1.1m, false, "frankfurter"),
+        });
+    }
+
     public Task<bool> SyncRangeAsync(DateOnly start, DateOnly end, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(true);

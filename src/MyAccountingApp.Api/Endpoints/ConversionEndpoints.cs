@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using MyAccountingApp.Application.DTOs;
 using MyAccountingApp.Application.Interfaces;
 using MyAccountingApp.Domain.Entities;
+using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Exceptions;
 using MyAccountingApp.Domain.Interfaces;
 
@@ -30,6 +31,33 @@ public static class ConversionEndpoints
 
             List<ConversionDto> conversions = repo.GetAll().Select(c => c.ToDto()).ToList();
             return Results.Ok(conversions);
+        });
+
+        app.MapGet($"{prefix}/conversions/quote", async (ICurrencyRateService currencyRateService, DateTime? date, string? to) =>
+        {
+            DateOnly requested = DateOnly.FromDateTime((date ?? DateTime.UtcNow).Date);
+
+            if (to is not null && !Enum.TryParse<Currencies>(to, true, out _))
+            {
+                return Results.BadRequest(new { message = $"Unknown target currency '{to}'" });
+            }
+
+            try
+            {
+                IReadOnlyList<FxQuoteDto> quotes = await currencyRateService.GetFxQuotesAsync(requested.ToDateTime(TimeOnly.MinValue));
+
+                if (to is not null)
+                {
+                    FxQuoteDto? match = quotes.FirstOrDefault(q => string.Equals(q.Quote, to, StringComparison.OrdinalIgnoreCase));
+                    return match is not null ? Results.Ok(match) : Results.NotFound(new { date = requested, to, message = "No quote available for this currency" });
+                }
+
+                return Results.Ok(quotes);
+            }
+            catch (ConversionNotAvailableException)
+            {
+                return Results.NotFound(new { date = requested, message = "No conversion available for this date" });
+            }
         });
 
         app.MapGet($"{prefix}/conversions/quota", async (ICurrencyRateService currencyRateService, IPendingConversionQueue pendingQueue) =>

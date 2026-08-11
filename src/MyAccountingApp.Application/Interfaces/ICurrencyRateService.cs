@@ -28,6 +28,15 @@ public interface ICurrencyRateService
     Task<Conversion> GetConversionAsync(DateTime date);
 
     /// <summary>
+    /// Asynchronously retrieves one quote per currency for the specified date, exposing both the
+    /// requested date and the actual rate date so stale fallbacks remain traceable.
+    /// </summary>
+    /// <param name="date">The date for which to retrieve the quotes.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The quotes for the requested date, each marked stale when a fallback was used.</returns>
+    Task<IReadOnlyList<FxQuoteDto>> GetFxQuotesAsync(DateTime date, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Fetches and persists conversions for a range of dates using a single timeseries request.
     /// </summary>
     /// <param name="start">The first date of the range (inclusive).</param>
