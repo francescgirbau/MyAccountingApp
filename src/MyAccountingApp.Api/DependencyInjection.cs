@@ -170,6 +170,7 @@ public static class DependencyInjection
         builder.Services.AddSingleton<IPositionEngine, PositionEngine>();
         builder.Services.AddSingleton<IValidationQuery, ValidationQuery>();
         builder.Services.AddSingleton<IAnnualSummaryService, AnnualSummaryService>();
+        builder.Services.AddSingleton<IDashboardQuery, DashboardQuery>();
         builder.Services.AddSingleton(currencyOptions);
         builder.Services.AddHostedService<CurrencyStartupSync>();
 
