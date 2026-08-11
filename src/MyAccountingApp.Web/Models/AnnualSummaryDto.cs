@@ -34,4 +34,5 @@ public class AnnualSummaryDto
     public List<MonthlySummaryDto>? Months { get; set; }
     public decimal Transfers { get; set; }
     public decimal Deposits { get; set; }
+    public bool IncludesAssetCashFlows { get; set; }
 }
