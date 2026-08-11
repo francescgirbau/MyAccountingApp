@@ -85,3 +85,42 @@ public class BatchPatchResultDto
     public int Updated { get; set; }
     public List<BatchPatchFailureDto> Failures { get; set; } = new();
 }
+
+public class DashboardDto
+{
+    public DateOnly AsOf { get; set; }
+    public CashSnapshotDto Cash { get; set; } = new();
+    public PortfolioSnapshotDto Portfolio { get; set; } = new();
+    public List<DashboardAlertDto> Alerts { get; set; } = new();
+}
+
+public class CashSnapshotDto
+{
+    public decimal IncomeMtd { get; set; }
+    public decimal ExpenseMtd { get; set; }
+    public decimal NetCashFlowMtd { get; set; }
+    public decimal IncomeYtd { get; set; }
+    public decimal ExpenseYtd { get; set; }
+    public decimal NetCashFlowYtd { get; set; }
+    public decimal TransfersYtd { get; set; }
+    public decimal DepositsYtd { get; set; }
+}
+
+public class PortfolioSnapshotDto
+{
+    public decimal TotalCostBasisEur { get; set; }
+    public decimal? TotalMarketValueEur { get; set; }
+    public decimal? TotalUnrealizedEur { get; set; }
+    public decimal RealizedGainLossYtdEur { get; set; }
+    public int OpenPositionCount { get; set; }
+    public int SymbolCount { get; set; }
+    public int SymbolsWithoutPrice { get; set; }
+}
+
+public class DashboardAlertDto
+{
+    public string Severity { get; set; } = string.Empty;
+    public string Code { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public string? Link { get; set; }
+}

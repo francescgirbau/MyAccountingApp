@@ -1,55 +1,117 @@
+@page "/"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
 <PageTitle>Home</PageTitle>
 
 <MudText Typo="Typo.h3" GutterBottom="true">MyAccountingApp</MudText>
-<MudText Typo="Typo.body1" Class="mb-6">Personal finance dashboard. Select a section from the menu.</MudText>
 
-<MudAlert Severity="Severity.Info" Class="mb-4">
-    Use the sidebar to navigate between Summary, Transactions, Asset Transactions, and Portfolio.
-</MudAlert>
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+        Dashboard as of @_dashboard.AsOf.ToString("yyyy-MM-dd")
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@LoadAsync" Size="Size.Small" aria-label="Refresh" />
+    </MudText>
 
-<MudGrid>
-    <MudItem xs="12" sm="6" md="3">
-        <MudCard Class="pa-4" Outlined="true">
-            <MudCardContent>
-                <MudText Typo="Typo.h4"><MudIcon Icon="@Icons.Material.Filled.BarChart" /> Summary</MudText>
-                <MudText Typo="Typo.body2">Annual financial summaries with income, expenses, and investment breakdown.</MudText>
-            </MudCardContent>
-            <MudCardActions>
-                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="summary">Open</MudButton>
-            </MudCardActions>
-        </MudCard>
-    </MudItem>
-    <MudItem xs="12" sm="6" md="3">
-        <MudCard Class="pa-4" Outlined="true">
-            <MudCardContent>
-                <MudText Typo="Typo.h4"><MudIcon Icon="@Icons.Material.Filled.Receipt" /> Transactions</MudText>
-                <MudText Typo="Typo.body2">View and filter bank transactions by year, category, and description.</MudText>
-            </MudCardContent>
-            <MudCardActions>
-                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="transactions">Open</MudButton>
-            </MudCardActions>
-        </MudCard>
-    </MudItem>
-    <MudItem xs="12" sm="6" md="3">
-        <MudCard Class="pa-4" Outlined="true">
-            <MudCardContent>
-                <MudText Typo="Typo.h4"><MudIcon Icon="@Icons.Material.Filled.TrendingUp" /> Asset Transactions</MudText>
-                <MudText Typo="Typo.body2">Track buy/sell operations for stocks, ETFs, and funds.</MudText>
-            </MudCardContent>
-            <MudCardActions>
-                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="asset-transactions">Open</MudButton>
-            </MudCardActions>
-        </MudCard>
-    </MudItem>
-    <MudItem xs="12" sm="6" md="3">
-        <MudCard Class="pa-4" Outlined="true">
-            <MudCardContent>
-                <MudText Typo="Typo.h4"><MudIcon Icon="@Icons.Material.Filled.AccountBalance" /> Portfolio</MudText>
-                <MudText Typo="Typo.body2">View positions, cost basis, and P&amp;L by symbol.</MudText>
-            </MudCardContent>
-            <MudCardActions>
-                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="portfolio">Open</MudButton>
-            </MudCardActions>
-        </MudCard>
-    </MudItem>
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Class="pa-4" Outlined="true">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Cash — month to date</MudText>
+                    <MudText Typo="Typo.h4" Class="green--text">+@_dashboard.Cash.IncomeMtd.ToString("N2")</MudText>
+                    <MudText Typo="Typo.h4" Class="red--text">-@_dashboard.Cash.ExpenseMtd.ToString("N2")</MudText>
+                    <MudText Typo="Typo.h5" Class="@NetClass(_dashboard.Cash.NetCashFlowMtd)">Net @_dashboard.Cash.NetCashFlowMtd.ToString("N2")</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Class="pa-4" Outlined="true">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Cash — year to date</MudText>
+                    <MudText Typo="Typo.h4" Class="green--text">+@_dashboard.Cash.IncomeYtd.ToString("N2")</MudText>
+                    <MudText Typo="Typo.h4" Class="red--text">-@_dashboard.Cash.ExpenseYtd.ToString("N2")</MudText>
+                    <MudText Typo="Typo.h5" Class="@NetClass(_dashboard.Cash.NetCashFlowYtd)">Net @_dashboard.Cash.NetCashFlowYtd.ToString("N2")</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Class="pa-4" Outlined="true">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Investments — year to date</MudText>
+                    <MudText Typo="Typo.h4">@_dashboard.Portfolio.TotalCostBasisEur.ToString("N2") EUR</MudText>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">cost basis of open positions</MudText>
+                    <MudText Typo="Typo.h6" Class="@GainClass(_dashboard.Portfolio.RealizedGainLossYtdEur)">Realized @_dashboard.Portfolio.RealizedGainLossYtdEur.ToString("N2") EUR</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Class="pa-4" Outlined="true">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Portfolio</MudText>
+                    <MudText Typo="Typo.h4">@_dashboard.Portfolio.OpenPositionCount open positions</MudText>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">@_dashboard.Portfolio.SymbolCount symbol(s) tracked</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    @if (_dashboard.Alerts.Count > 0)
+    {
+        <MudText Typo="Typo.h5" Class="mt-4 mb-2">Alerts</MudText>
+        @foreach (var alert in _dashboard.Alerts)
+        {
+            <MudAlert Severity="@MapSeverity(alert.Severity)" Class="mb-2" Variant="Variant.Outlined">
+                <MudText Class="d-inline">@alert.Message</MudText>
+                @if (!string.IsNullOrWhiteSpace(alert.Link))
+                {
+                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => Navigation.NavigateTo(alert.Link))">Open</MudButton>
+                }
+            </MudAlert>
+        }
+    }
+}
+
+<MudGrid Class="mt-4">
+    <MudItem xs="6" sm="3"><MudButton FullWidth="true" Variant="Variant.Outlined" Href="summary">Summary</MudButton></MudItem>
+    <MudItem xs="6" sm="3"><MudButton FullWidth="true" Variant="Variant.Outlined" Href="transactions">Transactions</MudButton></MudItem>
+    <MudItem xs="6" sm="3"><MudButton FullWidth="true" Variant="Variant.Outlined" Href="portfolio">Portfolio</MudButton></MudItem>
+    <MudItem xs="6" sm="3"><MudButton FullWidth="true" Variant="Variant.Outlined" Href="import">Import</MudButton></MudItem>
 </MudGrid>
+
+@code {
+    private DashboardDto _dashboard = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            _dashboard = await Http.GetFromJsonAsync<DashboardDto>("/api/dashboard") ?? new();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static Severity MapSeverity(string severity) => severity switch
+    {
+        "error" => Severity.Error,
+        "warning" => Severity.Warning,
+        _ => Severity.Info,
+    };
+
+    private static string NetClass(decimal value) => value >= 0 ? "green--text" : "red--text";
+
+    private static string GainClass(decimal value) => value >= 0 ? "green--text" : "red--text";
+}
