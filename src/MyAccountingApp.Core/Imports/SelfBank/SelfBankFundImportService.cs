@@ -59,8 +59,8 @@ public class SelfBankFundImportService : IBrokerImportService
                 }
 
                 DateTime date = ParseDate(fields[0]);
-                decimal quantity = BankCsvImportService.ParseEuropeanDecimal(fields[4]);
-                decimal amount = Math.Abs(BankCsvImportService.ParseEuropeanDecimal(fields[6]));
+                decimal quantity = CsvParsing.ParseEuropeanDecimal(fields[4]);
+                decimal amount = Math.Abs(CsvParsing.ParseEuropeanDecimal(fields[6]));
 
                 if (quantity <= 0 || amount <= 0)
                 {

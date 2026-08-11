@@ -45,7 +45,7 @@ public class MyInvestorAccountImportService : IBrokerImportService
 
                 DateTime date = ParseDate(fields[0]);
                 string concepto = fields[2];
-                decimal amount = BankCsvImportService.ParseEuropeanDecimal(fields[3]);
+                decimal amount = CsvParsing.ParseEuropeanDecimal(fields[3]);
                 string currency = fields[4];
 
                 if (amount == 0)

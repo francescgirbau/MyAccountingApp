@@ -51,7 +51,7 @@ public class MyInvestorFundImportService : IBrokerImportService
 
                 DateTime date = ParseDate(fields[0]);
                 (decimal amount, string currency) = ParseAmount(fields[2]);
-                decimal quantity = BankCsvImportService.ParseEuropeanDecimal(fields[3]);
+                decimal quantity = CsvParsing.ParseEuropeanDecimal(fields[3]);
 
                 if (amount <= 0 || quantity <= 0)
                 {
@@ -92,7 +92,7 @@ public class MyInvestorFundImportService : IBrokerImportService
     {
         string[] parts = value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         string currency = parts.Length > 1 ? parts[^1].ToUpperInvariant() : "EUR";
-        decimal amount = BankCsvImportService.ParseEuropeanDecimal(value);
+        decimal amount = CsvParsing.ParseEuropeanDecimal(value);
         return (amount, currency);
     }
 }

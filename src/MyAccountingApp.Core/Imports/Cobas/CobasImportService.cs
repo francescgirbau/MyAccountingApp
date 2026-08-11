@@ -56,8 +56,8 @@ public class CobasImportService : IBrokerImportService
                 }
 
                 DateTime date = ParseDate(fields[2]);
-                decimal amount = ParseEuropeanDecimal(JoinAmountFields(fields));
-                decimal quantity = ParseEuropeanDecimal(fields[^1]);
+                decimal amount = CsvParsing.ParseEuropeanDecimal(JoinAmountFields(fields));
+                decimal quantity = CsvParsing.ParseEuropeanDecimal(fields[^1]);
 
                 if (amount <= 0 || quantity <= 0)
                 {
@@ -119,33 +119,7 @@ public class CobasImportService : IBrokerImportService
     {
         // Importe may be split by an unquoted comma (e.g. "2.560,32 € (Bruto)");
         // Valor liquidativo and Participaciones are always the last two fields.
-        return string.Join(",", fields.Skip(5).Take(fields.Count - 7));
-    }
-
-    private static decimal ParseEuropeanDecimal(string value)
-    {
-        StringBuilder digits = new(value.Length);
-        foreach (char c in value)
-        {
-            if (char.IsDigit(c) || c == '.' || c == ',')
-            {
-                digits.Append(c);
-            }
-        }
-
-        string cleaned = digits.ToString();
-        int lastDot = cleaned.LastIndexOf('.');
-        int lastComma = cleaned.LastIndexOf(',');
-        if (lastComma > lastDot)
-        {
-            cleaned = cleaned.Replace(".", string.Empty).Replace(",", ".");
-        }
-        else if (lastDot > lastComma)
-        {
-            cleaned = cleaned.Replace(",", string.Empty);
-        }
-
-        return decimal.Parse(cleaned, NumberStyles.Any, CultureInfo.InvariantCulture);
+return string.Join(",", fields.Skip(5).Take(fields.Count - 7));
     }
 
     private static string BuildSymbol(string producto)
