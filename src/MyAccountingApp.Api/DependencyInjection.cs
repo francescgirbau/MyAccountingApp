@@ -168,6 +168,8 @@ public static class DependencyInjection
         builder.Services.AddSingleton<ITransactionCommandService, TransactionCommandService>();
         builder.Services.AddSingleton<IPortfolioQuery, PortfolioQuery>();
         builder.Services.AddSingleton<IPositionEngine, PositionEngine>();
+        builder.Services.AddSingleton<IToEurConverter, ToEurConverter>();
+        builder.Services.AddSingleton<IPositionValuationService, PositionValuationService>();
         builder.Services.AddSingleton<IRealizedGainsReportService, RealizedGainsReportService>();
         builder.Services.AddSingleton<IValidationQuery, ValidationQuery>();
         builder.Services.AddSingleton<IAnnualSummaryService, AnnualSummaryService>();
