@@ -93,6 +93,11 @@ public class Transaction
         }
     }
 
+    public void UpdateCategory(TransactionCategory category)
+    {
+        this.Category = category;
+    }
+
     public TransactionFingerprint GetFingerprint() => new TransactionFingerprint(
         this.Date.Date,
         Math.Abs(this.Money.Amount),

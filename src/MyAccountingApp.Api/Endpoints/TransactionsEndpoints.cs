@@ -36,6 +36,22 @@ public static class TransactionsEndpoints
             return Results.Created($"/api/transactions/{transaction.Id}", transaction.ToDto());
         });
 
+        app.MapPatch($"{prefix}/transactions/batch", (BatchTransactionPatchRequest request, ITransactionCommandService service) =>
+        {
+            if (request.Ids is null || request.Ids.Count == 0)
+            {
+                return Results.BadRequest(new { message = "ids are required." });
+            }
+
+            if (request.Patch is null || request.Patch.Category is null)
+            {
+                return Results.BadRequest(new { message = "patch.category is required." });
+            }
+
+            BatchPatchResult result = service.PatchMany(request.Ids, request.Patch);
+            return Results.Ok(result);
+        });
+
         app.MapPut($"{prefix}/transactions/{{id:guid}}", (Guid id, CreateTransactionRequest request, ITransactionRepository repo, ITransactionValidator validator) =>
         {
             Transaction? existing = repo.GetAll().FirstOrDefault(t => t.Id == id);
@@ -192,6 +208,22 @@ public static class TransactionsEndpoints
             return Results.Ok(transactions);
         });
 
+        app.MapPatch($"{prefix}/option-transactions/batch", (BatchOptionTransactionPatchRequest request, IOptionTransactionCommandService service) =>
+        {
+            if (request.Ids is null || request.Ids.Count == 0)
+            {
+                return Results.BadRequest(new { message = "ids are required." });
+            }
+
+            if (request.Patch is null || request.Patch.Symbol is null)
+            {
+                return Results.BadRequest(new { message = "patch.symbol is required." });
+            }
+
+            BatchPatchResult result = service.PatchMany(request.Ids, request.Patch);
+            return Results.Ok(result);
+        });
+
         app.MapPut($"{prefix}/option-transactions/{{id:guid}}", (Guid id, UpdateOptionTransactionRequest request, IOptionTransactionRepository repo) =>
         {
             OptionTransaction? existing = repo.GetAll().FirstOrDefault(t => t.Transaction.Id == id);
@@ -233,3 +265,5 @@ record CreateTransactionRequest(DateTime Date, string Description, decimal Amoun
 record CreateAssetTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, decimal Quantity, string Type);
 record UpdateOptionTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, string Isin, decimal Quantity, string Type);
 record BatchAssetTransactionPatchRequest(List<Guid> Ids, AssetTransactionPatch Patch);
+record BatchOptionTransactionPatchRequest(List<Guid> Ids, OptionTransactionPatch Patch);
+record BatchTransactionPatchRequest(List<Guid> Ids, TransactionPatch Patch);

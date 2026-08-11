@@ -89,7 +89,22 @@ else
         }
     </MudPaper>
 
-    <MudTable Items="@_filteredTransactions" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true" SortLabel="Sort by">
+    @if (_selected.Count > 0)
+    {
+        <MudPaper Class="pa-2 mb-2 d-flex align-center" Outlined="true">
+            <MudChip T="int" Color="Color.Primary" Size="Size.Small">@_selected.Count selected</MudChip>
+            <MudText Typo="Typo.body2" Class="ml-2 mud-text-secondary">visible rows selected — bulk actions apply only to these</MudText>
+            <MudSpacer />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       OnClick="@OpenBulkCategoryDialog" StartIcon="@Icons.Material.Filled.Edit">
+                Change category
+            </MudButton>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="@ClearSelection" Size="Size.Small" />
+        </MudPaper>
+    }
+
+    <MudTable Items="@_filteredTransactions" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true" SortLabel="Sort by"
+              MultiSelection="true" @bind-SelectedItems="_selected">
         <ToolBarContent>
             <MudText Typo="Typo.subtitle1">@_filteredTransactions.Count transactions</MudText>
             <MudSpacer />
@@ -175,6 +190,30 @@ else
     </DialogActions>
 </MudDialog>
 
+<MudDialog @bind-Visible="_showBulkCategoryDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Change category</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-4">
+            The new category will be applied to <strong>@_selected.Count</strong> selected transaction(s).
+        </MudText>
+        <MudSelect @bind-Value="_bulkCategory" Label="New category" Variant="Variant.Outlined">
+            @foreach (var cat in _categories)
+            {
+                <MudSelectItem Value="cat">@cat</MudSelectItem>
+            }
+        </MudSelect>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@CloseBulkCategoryDialog">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@ConfirmBulkCategoryAsync"
+                   Disabled="@(string.IsNullOrWhiteSpace(_bulkCategory))">
+            Update @_selected.Count
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
 <MudDialog @bind-Visible="_showDeleteDialog">
     <TitleContent>
         <MudText Typo="Typo.h6">Delete Transaction</MudText>
@@ -213,8 +252,11 @@ else
 
     private bool _showFormDialog;
     private bool _showDeleteDialog;
+    private bool _showBulkCategoryDialog;
     private Guid? _editingId;
     private TransactionDto? _deletingTx;
+    private HashSet<TransactionDto> _selected = new();
+    private string _bulkCategory = "";
 
     private DateTime? _formDate;
     private string _formDescription = "";
@@ -383,6 +425,64 @@ else
                 string error = await response.Content.ReadAsStringAsync();
                 Snackbar.Add($"Failed to save: {error}", Severity.Error);
             }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void ClearSelection()
+    {
+        _selected.Clear();
+    }
+
+    private void OpenBulkCategoryDialog()
+    {
+        _bulkCategory = "";
+        _showBulkCategoryDialog = true;
+    }
+
+    private void CloseBulkCategoryDialog()
+    {
+        _showBulkCategoryDialog = false;
+    }
+
+    private async Task ConfirmBulkCategoryAsync()
+    {
+        if (_selected.Count == 0 || string.IsNullOrWhiteSpace(_bulkCategory))
+        {
+            return;
+        }
+
+        var payload = new
+        {
+            ids = _selected.Select(t => t.Id).ToList(),
+            patch = new { category = _bulkCategory },
+        };
+
+        try
+        {
+            HttpResponseMessage response = await Http.PatchAsJsonAsync("/api/transactions/batch", payload);
+            BatchPatchResultDto? result = await response.Content.ReadFromJsonAsync<BatchPatchResultDto>();
+            _showBulkCategoryDialog = false;
+            _selected.Clear();
+
+            if (result is null)
+            {
+                Snackbar.Add("Bulk update failed", Severity.Error);
+            }
+            else if (result.Failures.Count == 0)
+            {
+                Snackbar.Add($"{result.Updated} transaction(s) updated", Severity.Success);
+            }
+            else
+            {
+                string details = string.Join("; ", result.Failures.Select(f => f.Error));
+                Snackbar.Add($"{result.Updated} updated, {result.Failures.Count} failed: {details}", Severity.Warning);
+            }
+
+            await LoadDataAsync();
         }
         catch (Exception ex)
         {
