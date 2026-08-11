@@ -85,6 +85,42 @@ public class TransactionCommandServiceTests
         Assert.Equal(TransactionCategory.EXPENSE, repo.GetAll().Single().Category);
     }
 
+    [Fact]
+    public void PatchMany_ShouldNotCountUnchangedCategory_AsUpdated()
+    {
+        FakeTxRepo repo = new();
+        Transaction existing = CreateTransaction();
+        repo.Add(existing);
+        TransactionCommandService service = new(repo);
+
+        BatchPatchResult result = service.PatchMany(
+            new[] { existing.Id },
+            new TransactionPatch("EXPENSE"));
+
+        Assert.Equal(1, result.Requested);
+        Assert.Equal(0, result.Updated);
+        Assert.Empty(result.Failures);
+        Assert.Equal(TransactionCategory.EXPENSE, repo.GetAll().Single().Category);
+    }
+
+    [Fact]
+    public void PatchMany_ShouldCountDuplicateIdsOnce()
+    {
+        FakeTxRepo repo = new();
+        Transaction existing = CreateTransaction();
+        repo.Add(existing);
+        TransactionCommandService service = new(repo);
+
+        BatchPatchResult result = service.PatchMany(
+            new[] { existing.Id, existing.Id },
+            new TransactionPatch("TRANSFER"));
+
+        Assert.Equal(1, result.Requested);
+        Assert.Equal(1, result.Updated);
+        Assert.Empty(result.Failures);
+        Assert.Equal(TransactionCategory.TRANSFER, repo.GetAll().Single().Category);
+    }
+
     private static Transaction CreateTransaction()
     {
         return new Transaction(

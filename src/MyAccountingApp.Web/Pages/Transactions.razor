@@ -293,7 +293,8 @@ else
                 .Distinct()
                 .OrderByDescending(y => y)
                 .ToList();
-            ApplyFilters();
+ApplyFilters();
+            _selected.Clear();
         }
         finally
         {
@@ -328,6 +329,7 @@ else
 
         _filteredTransactions = query.OrderByDescending(t => t.Date).ToList();
         RebuildFilterSummaries();
+        _selected.RemoveWhere(item => !_filteredTransactions.Contains(item));
     }
 
     private void RebuildFilterSummaries()
@@ -450,6 +452,16 @@ else
         _selected.Clear();
     }
 
+    private static string Trim(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "no details";
+        }
+
+        return value.Length <= 200 ? value : value[..200] + "...";
+    }
+
     private void OpenBulkCategoryDialog()
     {
         _bulkCategory = "";
@@ -468,15 +480,29 @@ else
             return;
         }
 
+        List<TransactionDto> targets = _selected.Where(s => _filteredTransactions.Contains(s)).ToList();
+        if (targets.Count == 0)
+        {
+            Snackbar.Add("No visible rows selected", Severity.Warning);
+            return;
+        }
+
         var payload = new
         {
-            ids = _selected.Select(t => t.Id).ToList(),
+            ids = targets.Select(t => t.Id).ToList(),
             patch = new { category = _bulkCategory },
         };
 
         try
         {
             HttpResponseMessage response = await Http.PatchAsJsonAsync("/api/transactions/batch", payload);
+            if (!response.IsSuccessStatusCode)
+            {
+                string body = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Bulk update failed ({(int)response.StatusCode}): {Trim(body)}", Severity.Error);
+                return;
+            }
+
             BatchPatchResultDto? result = await response.Content.ReadFromJsonAsync<BatchPatchResultDto>();
             _showBulkCategoryDialog = false;
             _selected.Clear();

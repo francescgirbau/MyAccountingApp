@@ -69,6 +69,42 @@ public class OptionTransactionCommandServiceTests
         Assert.All(result.Failures, failure => Assert.Contains("cannot be null or empty", failure.Error));
     }
 
+    [Fact]
+    public void PatchMany_ShouldNotCountUnchangedSymbol_AsUpdated()
+    {
+        FakeOptionRepo repo = new();
+        OptionTransaction existing = CreateOption("AAPL");
+        repo.Add(existing);
+        OptionTransactionCommandService service = new(repo);
+
+        BatchPatchResult result = service.PatchMany(
+            new[] { existing.Transaction.Id },
+            new OptionTransactionPatch("AAPL"));
+
+        Assert.Equal(1, result.Requested);
+        Assert.Equal(0, result.Updated);
+        Assert.Empty(result.Failures);
+        Assert.Equal("AAPL", repo.GetAll().Single().Symbol);
+    }
+
+    [Fact]
+    public void PatchMany_ShouldCountDuplicateIdsOnce()
+    {
+        FakeOptionRepo repo = new();
+        OptionTransaction existing = CreateOption("AAPL");
+        repo.Add(existing);
+        OptionTransactionCommandService service = new(repo);
+
+        BatchPatchResult result = service.PatchMany(
+            new[] { existing.Transaction.Id, existing.Transaction.Id },
+            new OptionTransactionPatch("TSLA"));
+
+        Assert.Equal(1, result.Requested);
+        Assert.Equal(1, result.Updated);
+        Assert.Empty(result.Failures);
+        Assert.Equal("TSLA", repo.GetAll().Single().Symbol);
+    }
+
     private static OptionTransaction CreateOption(string symbol)
     {
         Transaction transaction = new(
