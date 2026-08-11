@@ -74,6 +74,35 @@ public class ConversionsEndpointsTests
     }
 
     [Fact]
+    public async Task Quote_ShouldReturnRequestedDateAndRateDate()
+    {
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        HttpResponseMessage response = await client.GetAsync("/api/conversions/quote?date=2026-08-01&to=USD");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("2026-08-01", document.RootElement.GetProperty("requestedDate").GetString());
+        Assert.Equal("2026-08-01", document.RootElement.GetProperty("rateDate").GetString());
+        Assert.Equal("EUR", document.RootElement.GetProperty("base").GetString());
+        Assert.Equal("USD", document.RootElement.GetProperty("quote").GetString());
+        Assert.False(document.RootElement.GetProperty("isStale").GetBoolean());
+        Assert.Equal("frankfurter", document.RootElement.GetProperty("provider").GetString());
+    }
+
+    [Fact]
+    public async Task Quote_ShouldReturnBadRequest_ForUnknownCurrency()
+    {
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        HttpResponseMessage response = await client.GetAsync("/api/conversions/quote?date=2026-08-01&to=XXXX");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Sync_ShouldReturnOk_ForValidRange()
     {
         // Arrange
