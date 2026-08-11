@@ -56,11 +56,12 @@ public class AnnualSummaryServiceTests
         Assert.Equal(1000m, result.Income);
         Assert.Equal(300m, result.InvestmentPurchases);
         Assert.Equal(150m, result.InvestmentSales);
-        Assert.Equal(350m, result.NetCashFlow);
+        Assert.Equal(500m, result.NetCashFlow);
         Assert.Equal(2, result.TransactionCount);
         Assert.Equal(2, result.AssetTransactionCount);
         Assert.Equal(0, result.Transfers);
         Assert.Equal(0, result.Deposits);
+        Assert.False(result.IncludesAssetCashFlows);
         Assert.NotEmpty(result.Months);
         MonthlySummaryDto month = Assert.Single(result.Months);
         Assert.Equal(6, month.Month);
@@ -68,7 +69,7 @@ public class AnnualSummaryServiceTests
         Assert.Equal(1000m, month.Income);
         Assert.Equal(300m, month.InvestmentPurchases);
         Assert.Equal(150m, month.InvestmentSales);
-        Assert.Equal(350m, month.NetCashFlow);
+        Assert.Equal(500m, month.NetCashFlow);
         Assert.Equal(0, month.Transfers);
         Assert.Equal(0, month.Deposits);
     }
@@ -133,7 +134,31 @@ public class AnnualSummaryServiceTests
         AnnualSummaryDto? result = svc.GetByYear(2024);
 
         Assert.NotNull(result);
-        Assert.Equal(2800m, result.NetCashFlow);
+        Assert.Equal(3000m, result.NetCashFlow);
+        Assert.Equal(1000m, result.InvestmentPurchases);
+        Assert.Equal(800m, result.InvestmentSales);
+    }
+
+    [Fact]
+    public void NetCashFlow_DoesNotDoubleCountInvestmentOutflows()
+    {
+        Transaction[] txs = new Transaction[]
+        {
+            Tx(2024, 3000, TransactionCategory.INCOME),
+            Tx(2024, 1000, TransactionCategory.EXPENSE),
+        };
+        AssetTransaction[] assets = new AssetTransaction[]
+        {
+            AssetTx(2024, 1000, AssetTransactionType.Buy),
+        };
+        var svc = CreateService(txs, assets);
+
+        AnnualSummaryDto? result = svc.GetByYear(2024);
+
+        Assert.NotNull(result);
+        Assert.Equal(2000m, result.NetCashFlow);
+        Assert.Equal(1000m, result.InvestmentPurchases);
+        Assert.Equal(1000m, result.Expenses);
     }
 
     [Fact]
