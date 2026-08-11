@@ -1,5 +1,6 @@
 @page "/portfolio"
 @inject HttpClient Http
+@inject NavigationManager Navigation
 
 <PageTitle>Portfolio</PageTitle>
 
@@ -50,6 +51,8 @@ else
         <RowTemplate>
             <MudTd DataLabel="Symbol">
                 <MudChip T="string" Size="Size.Small" Color="Color.Primary">@context.Symbol</MudChip>
+                <MudIconButton Icon="@Icons.Material.Filled.ListAlt" Size="Size.Small" aria-label="View movements"
+                               OnClick="@(() => NavigateToMovements(context.Symbol))" />
             </MudTd>
             <MudTd DataLabel="Net Qty">@context.NetQuantity.ToString("G")</MudTd>
             <MudTd DataLabel="Avg Cost">@context.AverageUnitaryCost.ToString("N4")</MudTd>
@@ -147,5 +150,10 @@ else
     {
         if (!_expanded.Remove(pos.Symbol))
             _expanded.Add(pos.Symbol);
+    }
+
+    private void NavigateToMovements(string symbol)
+    {
+        Navigation.NavigateTo($"/asset-transactions?symbol={Uri.EscapeDataString(symbol)}");
     }
 }
