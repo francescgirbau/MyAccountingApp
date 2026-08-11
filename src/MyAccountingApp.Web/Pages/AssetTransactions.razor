@@ -251,7 +251,21 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        string? symbol = GetQueryParam("symbol");
+        if (!string.IsNullOrWhiteSpace(symbol))
+        {
+            _selectedSymbol = symbol;
+        }
+
         await LoadDataAsync();
+    }
+
+    private string? GetQueryParam(string key)
+    {
+        string query = Navigation.ToAbsoluteUri(Navigation.Uri).Query;
+        string prefix = key + "=";
+        int index = query.IndexOf(prefix, StringComparison.OrdinalIgnoreCase);
+        return index < 0 ? null : Uri.UnescapeDataString(query[(index + prefix.Length)..]);
     }
 
     private async Task LoadDataAsync()
