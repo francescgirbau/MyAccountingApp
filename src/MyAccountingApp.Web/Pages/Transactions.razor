@@ -133,6 +133,7 @@ else
             <col style="width: 100px" />
             <col style="width: 80px" />
             <col style="width: 100px" />
+            <col style="width: 140px" />
             <col style="width: 80px" />
         </ColGroup>
         <HeaderContent>
@@ -141,6 +142,7 @@ else
             <MudTh><MudTableSortLabel SortBy="new Func<TransactionDto, object>(t => t.Money.Amount)">Amount</MudTableSortLabel></MudTh>
             <MudTh>Curr.</MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<TransactionDto, object>(t => t.Category)">Category</MudTableSortLabel></MudTh>
+            <MudTh>Source</MudTh>
             <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
@@ -150,6 +152,16 @@ else
             <MudTd DataLabel="Curr.">@context.Money.Currency</MudTd>
             <MudTd DataLabel="Category">
                 <MudChip T="string" Size="Size.Small" Color="@GetCategoryColor(context.Category)">@context.Category</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Source">
+                @if (!string.IsNullOrEmpty(context.Source))
+                {
+                    <MudText Typo="Typo.caption" Class="text-medium-emphasis">@context.Source</MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.caption">—</MudText>
+                }
             </MudTd>
             <MudTd DataLabel="Actions">
                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => OpenEditDialog(context))" />

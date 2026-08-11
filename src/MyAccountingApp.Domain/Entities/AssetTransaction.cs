@@ -9,6 +9,11 @@ public class AssetTransaction
     public decimal Quantity { get; private set; }
     public AssetTransactionType Type { get; private set; }
 
+    /// <summary>
+    /// Gets the provenance of the asset transaction (e.g. the imported file name), or null.
+    /// </summary>
+    public string? Source { get; private set; }
+
     public AssetTransaction(
         Transaction transaction,
         string symbol,
@@ -44,6 +49,11 @@ public class AssetTransaction
         }
 
         this.Symbol = symbol;
+    }
+
+    public void SetSource(string? source)
+    {
+        this.Source = source;
     }
 
     public Money UnitaryCost()

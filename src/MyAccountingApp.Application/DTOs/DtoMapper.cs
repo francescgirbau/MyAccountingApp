@@ -15,7 +15,8 @@ public static class DtoMapper
             transaction.Date,
             transaction.Description,
             transaction.Money.ToDto(),
-            transaction.Category.ToString());
+            transaction.Category.ToString(),
+            transaction.Source);
 
     public static AssetTransactionDto ToDto(this AssetTransaction assetTransaction) =>
         new(
@@ -23,7 +24,8 @@ public static class DtoMapper
             assetTransaction.Symbol,
             assetTransaction.Quantity,
             assetTransaction.Type.ToString(),
-            assetTransaction.UnitaryCost().ToDto());
+            assetTransaction.UnitaryCost().ToDto(),
+            assetTransaction.Source);
 
     public static ConversionDto ToDto(this Conversion conversion) =>
         new(

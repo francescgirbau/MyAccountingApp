@@ -5,4 +5,5 @@ public record TransactionDto(
     DateTime Date,
     string Description,
     MoneyDto Money,
-    string Category);
+    string Category,
+    string? Source = null);

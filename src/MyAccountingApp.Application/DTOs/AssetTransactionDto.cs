@@ -5,4 +5,5 @@ public record AssetTransactionDto(
     string Symbol,
     decimal Quantity,
     string Type,
-    MoneyDto UnitaryCost);
+    MoneyDto UnitaryCost,
+    string? Source = null);

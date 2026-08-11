@@ -94,6 +94,71 @@ public class ImportServiceTests
     }
 
     [Fact]
+    public async Task ImportFromFoldersAsync_StampsSourceWithFileName()
+    {
+        string dir = CreateTempDir();
+        string file = Path.Combine(dir, "accounts.csv");
+        File.WriteAllText(file, "dummy");
+
+        Transaction tx = new(
+            Guid.NewGuid(),
+            new DateTime(2024, 1, 15),
+            "Test",
+            new Money(100, "EUR"),
+            TransactionCategory.INCOME);
+
+        AssetTransaction assetTx = new(
+            new Transaction(Guid.NewGuid(), new DateTime(2024, 1, 15), "Buy", new Money(200, "EUR"), TransactionCategory.EXPENSE),
+            "AAPL",
+            2,
+            AssetTransactionType.Buy);
+
+        FakeBroker broker = new();
+        broker.Transactions = new[] { tx };
+        broker.AssetTransactions = new[] { assetTx };
+        FakeTxRepo txRepo = new();
+        FakePfRepo pfRepo = new();
+        TransactionValidator validator = new();
+        FakeLogger<ImportService> logger = new();
+        ImportService service = new(broker, txRepo, pfRepo, new FakeOptionRepo(), validator, logger);
+
+        ImportResult result = await service.ImportFromFoldersAsync(new[] { dir });
+
+        Assert.Equal("accounts.csv", tx.Source);
+        Assert.Equal("accounts.csv", assetTx.Source);
+        Assert.Equal("accounts.csv", result.Transactions[0].Source);
+        Assert.Equal("accounts.csv", result.AssetTransactions[0].Source);
+    }
+
+    [Fact]
+    public async Task ImportFromFoldersAsync_StampsCorporateActionsWithFileName()
+    {
+        string dir = CreateTempDir("CORPORATE");
+        string file = Path.Combine(dir, "corporate.csv");
+        File.WriteAllText(file, "dummy");
+
+        AssetTransaction assetTx = new(
+            new Transaction(Guid.NewGuid(), new DateTime(2024, 1, 15), "Corp", new Money(500, "USD"), TransactionCategory.EXPENSE),
+            "AAPL",
+            10,
+            AssetTransactionType.Buy);
+
+        FakeBroker broker = new();
+        broker.Transactions = Array.Empty<Transaction>();
+        broker.AssetTransactions = new[] { assetTx };
+        FakeTxRepo txRepo = new();
+        FakePfRepo pfRepo = new();
+        TransactionValidator validator = new();
+        FakeLogger<ImportService> logger = new();
+        ImportService service = new(broker, txRepo, pfRepo, new FakeOptionRepo(), validator, logger);
+
+        ImportResult result = await service.ImportFromFoldersAsync(new[] { dir });
+
+        Assert.Equal("corporate.csv", assetTx.Source);
+        Assert.Single(result.AssetTransactions);
+    }
+
+    [Fact]
     public async Task ImportFromFoldersAsync_SkipsInvalidTransactions()
     {
         string dir = CreateTempDir();
