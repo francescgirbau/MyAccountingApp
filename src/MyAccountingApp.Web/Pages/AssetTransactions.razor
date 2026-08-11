@@ -249,23 +249,17 @@ else
     private string _formCategory = "EXPENSE";
     private string _formType = "Buy";
 
+    [SupplyParameterFromQuery(Name = "symbol")]
+    public string? SymbolFromQuery { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
-        string? symbol = GetQueryParam("symbol");
-        if (!string.IsNullOrWhiteSpace(symbol))
+        if (!string.IsNullOrWhiteSpace(SymbolFromQuery))
         {
-            _selectedSymbol = symbol;
+            _selectedSymbol = SymbolFromQuery;
         }
 
         await LoadDataAsync();
-    }
-
-    private string? GetQueryParam(string key)
-    {
-        string query = Navigation.ToAbsoluteUri(Navigation.Uri).Query;
-        string prefix = key + "=";
-        int index = query.IndexOf(prefix, StringComparison.OrdinalIgnoreCase);
-        return index < 0 ? null : Uri.UnescapeDataString(query[(index + prefix.Length)..]);
     }
 
     private async Task LoadDataAsync()
@@ -285,6 +279,7 @@ else
                 .OrderBy(s => s)
                 .ToList();
             ApplyFilters();
+            _selected.Clear();
         }
         finally
         {
@@ -306,6 +301,7 @@ else
             query = query.Where(t => t.Type == _selectedType);
 
         _filteredTransactions = query.OrderByDescending(t => t.Transaction.Date).ToList();
+        _selected.RemoveWhere(item => !_filteredTransactions.Contains(item));
     }
 
     private void OpenCreateDialog()
@@ -390,6 +386,16 @@ else
         _selected.Clear();
     }
 
+    private static string Trim(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "no details";
+        }
+
+        return value.Length <= 200 ? value : value[..200] + "...";
+    }
+
     private void OpenBulkSymbolDialog()
     {
         _bulkSymbol = "";
@@ -408,15 +414,29 @@ else
             return;
         }
 
+        List<AssetTransactionDto> targets = _selected.Where(s => _filteredTransactions.Contains(s)).ToList();
+        if (targets.Count == 0)
+        {
+            Snackbar.Add("No visible rows selected", Severity.Warning);
+            return;
+        }
+
         var payload = new
         {
-            ids = _selected.Select(t => t.Transaction.Id).ToList(),
+            ids = targets.Select(t => t.Transaction.Id).ToList(),
             patch = new { symbol = _bulkSymbol.Trim() },
         };
 
         try
         {
             HttpResponseMessage response = await Http.PatchAsJsonAsync("/api/asset-transactions/batch", payload);
+            if (!response.IsSuccessStatusCode)
+            {
+                string body = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Bulk update failed ({(int)response.StatusCode}): {Trim(body)}", Severity.Error);
+                return;
+            }
+
             BatchPatchResultDto? result = await response.Content.ReadFromJsonAsync<BatchPatchResultDto>();
             _showBulkSymbolDialog = false;
             _selected.Clear();

@@ -17,11 +17,12 @@ public sealed class TransactionCommandService : ITransactionCommandService
 
     public BatchPatchResult PatchMany(IReadOnlyList<Guid> ids, TransactionPatch patch)
     {
+        List<Guid> distinctIds = ids.Distinct().ToList();
         List<Transaction> all = this._repository.GetAll().ToList();
         List<BatchPatchFailure> failures = new();
         int updated = 0;
 
-        foreach (Guid id in ids)
+        foreach (Guid id in distinctIds)
         {
             Transaction? target = all.FirstOrDefault(t => t.Id == id);
             if (target is null)
@@ -40,10 +41,13 @@ public sealed class TransactionCommandService : ITransactionCommandService
                         throw new ArgumentException($"Invalid category '{patch.Category}'.");
                     }
 
+                    TransactionCategory before = target.Category;
                     target.UpdateCategory(category);
+                    if (before != target.Category)
+                    {
+                        updated++;
+                    }
                 }
-
-                updated++;
             }
             catch (ArgumentException ex)
             {
@@ -56,6 +60,6 @@ public sealed class TransactionCommandService : ITransactionCommandService
             this._repository.Initialize(all);
         }
 
-        return new BatchPatchResult(ids.Count, updated, failures);
+        return new BatchPatchResult(distinctIds.Count, updated, failures);
     }
 }

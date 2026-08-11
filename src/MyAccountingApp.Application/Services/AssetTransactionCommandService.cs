@@ -16,11 +16,12 @@ public sealed class AssetTransactionCommandService : IAssetTransactionCommandSer
 
     public BatchPatchResult PatchMany(IReadOnlyList<Guid> ids, AssetTransactionPatch patch)
     {
+        List<Guid> distinctIds = ids.Distinct().ToList();
         List<AssetTransaction> all = this._repository.GetAllTransactions().ToList();
         List<BatchPatchFailure> failures = new();
         int updated = 0;
 
-        foreach (Guid id in ids)
+        foreach (Guid id in distinctIds)
         {
             AssetTransaction? target = all.FirstOrDefault(t => t.Transaction.Id == id);
             if (target is null)
@@ -33,10 +34,13 @@ public sealed class AssetTransactionCommandService : IAssetTransactionCommandSer
             {
                 if (patch.Symbol is not null)
                 {
+                    string before = target.Symbol;
                     target.UpdateSymbol(patch.Symbol);
+                    if (!string.Equals(before, target.Symbol, StringComparison.Ordinal))
+                    {
+                        updated++;
+                    }
                 }
-
-                updated++;
             }
             catch (ArgumentException ex)
             {
@@ -49,6 +53,6 @@ public sealed class AssetTransactionCommandService : IAssetTransactionCommandSer
             this._repository.Initialize(all);
         }
 
-        return new BatchPatchResult(ids.Count, updated, failures);
+        return new BatchPatchResult(distinctIds.Count, updated, failures);
     }
 }

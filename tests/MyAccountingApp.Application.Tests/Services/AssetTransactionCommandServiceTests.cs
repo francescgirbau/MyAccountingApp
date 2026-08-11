@@ -72,6 +72,42 @@ public class AssetTransactionCommandServiceTests
     }
 
     [Fact]
+    public void PatchMany_ShouldNotCountUnchangedSymbol_AsUpdated()
+    {
+        FakePfRepo repo = new();
+        AssetTransaction existing = CreateAsset("AAPL");
+        repo.AddOrUpdate(existing);
+        AssetTransactionCommandService service = new(repo);
+
+        BatchPatchResult result = service.PatchMany(
+            new[] { existing.Transaction.Id },
+            new AssetTransactionPatch("AAPL"));
+
+        Assert.Equal(1, result.Requested);
+        Assert.Equal(0, result.Updated);
+        Assert.Empty(result.Failures);
+        Assert.Equal("AAPL", repo.GetAllTransactions().Single().Symbol);
+    }
+
+    [Fact]
+    public void PatchMany_ShouldCountDuplicateIdsOnce()
+    {
+        FakePfRepo repo = new();
+        AssetTransaction existing = CreateAsset("AAPL");
+        repo.AddOrUpdate(existing);
+        AssetTransactionCommandService service = new(repo);
+
+        BatchPatchResult result = service.PatchMany(
+            new[] { existing.Transaction.Id, existing.Transaction.Id },
+            new AssetTransactionPatch("TSLA"));
+
+        Assert.Equal(1, result.Requested);
+        Assert.Equal(1, result.Updated);
+        Assert.Empty(result.Failures);
+        Assert.Equal("TSLA", repo.GetAllTransactions().Single().Symbol);
+    }
+
+    [Fact]
     public void PatchMany_ShouldReportAllMissingIds_WhenNoneExist()
     {
         FakePfRepo repo = new();
