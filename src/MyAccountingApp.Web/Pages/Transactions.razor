@@ -146,7 +146,7 @@ else
         <RowTemplate>
             <MudTd DataLabel="Date">@context.Date.ToString("yyyy-MM-dd")</MudTd>
             <MudTd DataLabel="Description">@context.Description</MudTd>
-            <MudTd DataLabel="Amount"><span class="@(context.Category == "EXPENSE" || context.Category == "TRANSFER" ? "red--text" : "green--text")">@context.Money.Amount.ToString("N2")</span></MudTd>
+            <MudTd DataLabel="Amount"><span class="@(context.Category == "EXPENSE" || context.Category == "FEE" || context.Category == "WITHHOLDING_TAX" || context.Category == "TRANSFER" ? "red--text" : "green--text")">@context.Money.Amount.ToString("N2")</span></MudTd>
             <MudTd DataLabel="Curr.">@context.Money.Currency</MudTd>
             <MudTd DataLabel="Category">
                 <MudChip T="string" Size="Size.Small" Color="@GetCategoryColor(context.Category)">@context.Category</MudChip>
@@ -256,7 +256,7 @@ else
     private string? _selectedCategory { get; set; }
     private string? _searchText { get; set; }
 
-    private static readonly string[] _categories = { "INCOME", "EXPENSE", "TRANSFER", "DEPOSIT" };
+    private static readonly string[] _categories = { "INCOME", "EXPENSE", "TRANSFER", "DEPOSIT", "DIVIDEND", "FEE", "WITHHOLDING_TAX", "INTEREST", "INVESTMENT" };
     private static readonly string[] _monthNames =
     {
         "January", "February", "March", "April", "May", "June",
@@ -339,8 +339,8 @@ ApplyFilters();
             .OrderBy(g => g.Key)
             .Select(g =>
             {
-                decimal income = g.Where(t => t.Category == "INCOME").Sum(t => t.Money.Amount);
-                decimal expense = g.Where(t => t.Category == "EXPENSE").Sum(t => t.Money.Amount);
+                decimal income = g.Where(t => t.Category is "INCOME" or "DIVIDEND" or "INTEREST").Sum(t => t.Money.Amount);
+                decimal expense = g.Where(t => t.Category is "EXPENSE" or "FEE" or "WITHHOLDING_TAX").Sum(t => t.Money.Amount);
                 decimal transfer = g.Where(t => t.Category == "TRANSFER").Sum(t => t.Money.Amount);
                 decimal deposit = g.Where(t => t.Category == "DEPOSIT").Sum(t => t.Money.Amount);
                 return new FilterCurrencySummary
@@ -372,10 +372,10 @@ ApplyFilters();
 
     private static Color GetCategoryColor(string category) => category switch
     {
-        "INCOME" => Color.Success,
-        "EXPENSE" => Color.Error,
+        "INCOME" or "DIVIDEND" or "INTEREST" => Color.Success,
+        "EXPENSE" or "FEE" or "WITHHOLDING_TAX" => Color.Error,
         "TRANSFER" => Color.Warning,
-        "DEPOSIT" => Color.Info,
+        "DEPOSIT" or "INVESTMENT" => Color.Info,
         _ => Color.Default,
     };
 
