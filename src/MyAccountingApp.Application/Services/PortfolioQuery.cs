@@ -53,6 +53,8 @@ public class PortfolioQuery : IPortfolioQuery
             0,
             new List<TaxLotDto>(),
             null,
-            null);
+            null,
+            false,
+            0);
     }
 }
