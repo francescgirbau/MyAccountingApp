@@ -93,7 +93,7 @@ public class AnnualSummaryService : IAnnualSummaryService
             .Where(a => a.Type == AssetTransactionType.Sell)
             .Sum(a => a.Transaction.Money.Amount);
 
-        decimal netCashFlow = income + investmentSales - expenses - investmentPurchases;
+            decimal netCashFlow = income - expenses;
 
         List<MonthlySummaryDto> months = this.BuildMonthlySummaries(year, yearTxs, yearAssetTxs);
 
@@ -108,7 +108,8 @@ public class AnnualSummaryService : IAnnualSummaryService
             yearAssetTxs.Count,
             months,
             Math.Round(transfers, 2),
-            Math.Round(deposits, 2));
+            Math.Round(deposits, 2),
+            IncludesAssetCashFlows: false);
     }
 
     private List<MonthlySummaryDto> BuildMonthlySummaries(
@@ -157,7 +158,7 @@ public class AnnualSummaryService : IAnnualSummaryService
                 .Where(a => a.Type == AssetTransactionType.Sell)
                 .Sum(a => a.Transaction.Money.Amount);
 
-            decimal netCashFlow = income + investmentSales - expenses - investmentPurchases;
+        decimal netCashFlow = income - expenses;
 
             result.Add(new MonthlySummaryDto(
                 month,

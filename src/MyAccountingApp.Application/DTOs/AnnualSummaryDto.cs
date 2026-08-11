@@ -23,4 +23,5 @@ public record AnnualSummaryDto(
     int AssetTransactionCount,
     List<MonthlySummaryDto> Months,
     decimal Transfers,
-    decimal Deposits);
+    decimal Deposits,
+    bool IncludesAssetCashFlows);
