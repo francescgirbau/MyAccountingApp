@@ -229,7 +229,7 @@ else
 
     private bool IsFormInvalid() => string.IsNullOrWhiteSpace(_formDescription) || string.IsNullOrWhiteSpace(_formSymbol) || _formAmount <= 0 || _formQuantity <= 0;
 
-    private static readonly string[] _categories = { "INCOME", "EXPENSE", "TRANSFER", "DEPOSIT" };
+    private static readonly string[] _categories = { "INCOME", "EXPENSE", "TRANSFER", "DEPOSIT", "DIVIDEND", "FEE", "WITHHOLDING_TAX", "INTEREST", "INVESTMENT" };
     private static readonly string[] _types = { "Buy", "Sell", "CorporateAction" };
 
     private bool _showFormDialog;

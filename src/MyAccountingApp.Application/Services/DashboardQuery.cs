@@ -42,18 +42,18 @@ public class DashboardQuery : IDashboardQuery
         DateTime yearStart = new DateTime(asOf.Year, 1, 1);
         DateTime monthStart = new DateTime(asOf.Year, asOf.Month, 1);
 
-        decimal SumCategory(List<Transaction> txs, TransactionCategory category) =>
-            txs.Where(t => t.Category == category).Sum(t => t.Money.Amount);
+        decimal SumCategory(List<Transaction> txs, Func<TransactionCategory, bool> predicate) =>
+            txs.Where(t => predicate(t.Category)).Sum(t => t.Money.Amount);
 
         List<Transaction> ytd = allTransactions.Where(t => t.Date >= yearStart && t.Date <= end).ToList();
         List<Transaction> mtd = allTransactions.Where(t => t.Date >= monthStart && t.Date <= end).ToList();
 
-        decimal incomeYtd = SumCategory(ytd, TransactionCategory.INCOME);
-        decimal expenseYtd = SumCategory(ytd, TransactionCategory.EXPENSE);
-        decimal transfersYtd = SumCategory(ytd, TransactionCategory.TRANSFER);
-        decimal depositsYtd = SumCategory(ytd, TransactionCategory.DEPOSIT);
-        decimal incomeMtd = SumCategory(mtd, TransactionCategory.INCOME);
-        decimal expenseMtd = SumCategory(mtd, TransactionCategory.EXPENSE);
+        decimal incomeYtd = SumCategory(ytd, c => c.IsCashIncome());
+        decimal expenseYtd = SumCategory(ytd, c => c.IsCashExpense());
+        decimal transfersYtd = SumCategory(ytd, c => c == TransactionCategory.TRANSFER);
+        decimal depositsYtd = SumCategory(ytd, c => c == TransactionCategory.DEPOSIT);
+        decimal incomeMtd = SumCategory(mtd, c => c.IsCashIncome());
+        decimal expenseMtd = SumCategory(mtd, c => c.IsCashExpense());
 
         return new CashSnapshotDto(
             Math.Round(incomeMtd, 2),

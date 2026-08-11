@@ -70,11 +70,11 @@ public class AnnualSummaryService : IAnnualSummaryService
             .ToList();
 
         decimal expenses = yearTxs
-            .Where(t => t.Category == TransactionCategory.EXPENSE)
+            .Where(t => t.Category.IsCashExpense())
             .Sum(t => t.Money.Amount);
 
         decimal income = yearTxs
-            .Where(t => t.Category == TransactionCategory.INCOME)
+            .Where(t => t.Category.IsCashIncome())
             .Sum(t => t.Money.Amount);
 
         decimal transfers = yearTxs
@@ -135,11 +135,11 @@ public class AnnualSummaryService : IAnnualSummaryService
             }
 
             decimal expenses = monthTxs
-                .Where(t => t.Category == TransactionCategory.EXPENSE)
+                .Where(t => t.Category.IsCashExpense())
                 .Sum(t => t.Money.Amount);
 
             decimal income = monthTxs
-                .Where(t => t.Category == TransactionCategory.INCOME)
+                .Where(t => t.Category.IsCashIncome())
                 .Sum(t => t.Money.Amount);
 
             decimal transfers = monthTxs
