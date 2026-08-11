@@ -33,6 +33,7 @@ public class PositionEngine : IPositionEngine
         string currency = transactions[0].Transaction.Money.Currency;
         decimal totalCost = 0;
         decimal netQuantity = 0;
+        decimal unmatchedSellQuantity = 0;
 
         foreach (var tx in transactions)
         {
@@ -46,7 +47,6 @@ public class PositionEngine : IPositionEngine
             else
             {
                 decimal sellQty = tx.Quantity;
-                netQuantity -= sellQty;
 
                 foreach (var lot in lots.Where(l => l.RemainingQuantity > 0).OrderBy(l => l.PurchaseDate))
                 {
@@ -61,9 +61,15 @@ public class PositionEngine : IPositionEngine
 
                     realizedGainLoss += proceeds - costBasis;
                     totalCost -= costBasis;
+                    netQuantity -= consumed;
 
                     lot.RemainingQuantity -= consumed;
                     sellQty -= consumed;
+                }
+
+                if (sellQty > 0)
+                {
+                    unmatchedSellQuantity += sellQty;
                 }
             }
         }
@@ -92,7 +98,9 @@ public class PositionEngine : IPositionEngine
                     Math.Round(l.RemainingQuantity * l.UnitaryCost, 2)))
                 .ToList(),
             marketPrice?.Amount,
-            unrealizedGainLoss);
+            unrealizedGainLoss,
+            unmatchedSellQuantity > 0,
+            Math.Round(unmatchedSellQuantity, 4));
     }
 
     private sealed class FifoLot

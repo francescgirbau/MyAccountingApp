@@ -152,6 +152,68 @@ public class PositionEngineTests
         Assert.Null(result.UnrealizedGainLoss);
     }
 
+    [Fact]
+    public async Task GetPosition_WithSellExceedingPosition_FlagsShortfall()
+    {
+        DateTime buyDate = new(2024, 1, 15);
+        DateTime sellDate = new(2024, 6, 1);
+        FakePortfolioRepo repo = new();
+        repo.AddOrUpdate(Buy("AAPL", 100, 10, buyDate));
+        repo.AddOrUpdate(Sell("AAPL", 150, 15, sellDate));
+        FakeMarketPriceService priceService = new();
+        PositionEngine engine = new(repo, priceService);
+
+        var result = await engine.GetPosition("AAPL");
+
+        Assert.NotNull(result);
+        Assert.True(result.HasShortfall);
+        Assert.Equal(5, result.UnmatchedSellQuantity);
+        Assert.Equal(0, result.NetQuantity);
+        Assert.Equal(0, result.TotalCostBasis);
+        Assert.Equal(500m, result.RealizedGainLoss);
+        Assert.Empty(result.OpenLots);
+        Assert.Null(result.MarketPrice);
+        Assert.Null(result.UnrealizedGainLoss);
+    }
+
+    [Fact]
+    public async Task GetPosition_WithFullSell_DoesNotFlagShortfall()
+    {
+        DateTime buyDate = new(2024, 1, 15);
+        DateTime sellDate = new(2024, 6, 1);
+        FakePortfolioRepo repo = new();
+        repo.AddOrUpdate(Buy("AAPL", 100, 10, buyDate));
+        repo.AddOrUpdate(Sell("AAPL", 150, 10, sellDate));
+        FakeMarketPriceService priceService = new();
+        PositionEngine engine = new(repo, priceService);
+
+        var result = await engine.GetPosition("AAPL");
+
+        Assert.NotNull(result);
+        Assert.False(result.HasShortfall);
+        Assert.Equal(0, result.UnmatchedSellQuantity);
+        Assert.Equal(0, result.NetQuantity);
+    }
+
+    [Fact]
+    public async Task GetPosition_WithMultipleShortfallSells_AccumulatesUnmatchedQuantity()
+    {
+        DateTime buyDate = new(2024, 1, 15);
+        FakePortfolioRepo repo = new();
+        repo.AddOrUpdate(Buy("AAPL", 100, 10, buyDate));
+        repo.AddOrUpdate(Sell("AAPL", 150, 7, new DateTime(2024, 6, 1)));
+        repo.AddOrUpdate(Sell("AAPL", 150, 5, new DateTime(2024, 7, 1)));
+        FakeMarketPriceService priceService = new();
+        PositionEngine engine = new(repo, priceService);
+
+        var result = await engine.GetPosition("AAPL");
+
+        Assert.NotNull(result);
+        Assert.True(result.HasShortfall);
+        Assert.Equal(2, result.UnmatchedSellQuantity);
+        Assert.Equal(0, result.NetQuantity);
+    }
+
     private sealed class FakePortfolioRepo : IPortfolioRepository
     {
         private readonly List<AssetTransaction> _transactions = new();

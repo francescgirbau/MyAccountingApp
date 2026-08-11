@@ -10,4 +10,6 @@ public record PortfolioPositionDto(
     decimal RealizedGainLoss,
     List<TaxLotDto> OpenLots,
     decimal? MarketPrice,
-    decimal? UnrealizedGainLoss);
+    decimal? UnrealizedGainLoss,
+    bool HasShortfall,
+    decimal UnmatchedSellQuantity);
