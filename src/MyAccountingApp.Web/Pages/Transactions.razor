@@ -1,6 +1,7 @@
 @page "/transactions"
 @inject HttpClient Http
 @inject ISnackbar Snackbar
+@inject NavigationManager Navigation
 
 <PageTitle>Transactions</PageTitle>
 
@@ -43,6 +44,18 @@
 @if (_loading)
 {
     <MudProgressCircular Indeterminate="true" />
+}
+else if (_allTransactions.Count == 0)
+{
+    <MudPaper Class="pa-8 text-center" Outlined="true">
+        <MudIcon Icon="@Icons.Material.Filled.Receipt" Size="Size.Large" Class="mud-text-secondary" />
+        <MudText Typo="Typo.h5" Class="mt-4">No transactions yet</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">Import your first CSV or create a transaction manually.</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FileUpload"
+                   OnClick="@(() => Navigation.NavigateTo("import"))">
+            Go to Import
+        </MudButton>
+    </MudPaper>
 }
 else
 {

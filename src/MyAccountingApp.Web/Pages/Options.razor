@@ -2,44 +2,57 @@
 @using System.Text.Json
 @inject HttpClient Http
 @inject ISnackbar Snackbar
+@inject NavigationManager Navigation
 
 <PageTitle>Options</PageTitle>
 
 <MudText Typo="Typo.h3" GutterBottom="true">Options</MudText>
 
-<MudPaper Class="pa-4 mb-4" Outlined="true">
-    <MudGrid>
-        <MudItem xs="12" sm="4">
-            <MudSelect T="int?" @bind-Value="_selectedYear" @bind-Value:after="ApplyFilters" Label="Year" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
-                @foreach (var year in _availableYears)
-                {
-                    <MudSelectItem T="int?" Value="@((int?)year)">@year</MudSelectItem>
-                }
-            </MudSelect>
-        </MudItem>
-        <MudItem xs="12" sm="4">
-            <MudSelect @bind-Value="_selectedSymbol" @bind-Value:after="ApplyFilters" Label="Symbol" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
-                @foreach (var symbol in _availableSymbols)
-                {
-                    <MudSelectItem Value="symbol">@symbol</MudSelectItem>
-                }
-            </MudSelect>
-        </MudItem>
-        <MudItem xs="12" sm="4">
-            <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteSweep"
-                       OnClick="@OpenDeleteYearDialog" Disabled="@(!_selectedYear.HasValue)">
-                Delete Year
-            </MudButton>
-        </MudItem>
-    </MudGrid>
-</MudPaper>
-
 @if (_loading)
 {
     <MudProgressCircular Indeterminate="true" />
 }
+else if (_allTransactions.Count == 0)
+{
+    <MudPaper Class="pa-8 text-center" Outlined="true">
+        <MudIcon Icon="@Icons.Material.Filled.ShowChart" Size="Size.Large" Class="mud-text-secondary" />
+        <MudText Typo="Typo.h5" Class="mt-4">No option transactions yet</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">Import your first CSV or create an option transaction manually.</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FileUpload"
+                   OnClick="@(() => Navigation.NavigateTo("import"))">
+            Go to Import
+        </MudButton>
+    </MudPaper>
+}
 else
 {
+    <MudPaper Class="pa-4 mb-4" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" sm="4">
+                <MudSelect T="int?" @bind-Value="_selectedYear" @bind-Value:after="ApplyFilters" Label="Year" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+                    @foreach (var year in _availableYears)
+                    {
+                        <MudSelectItem T="int?" Value="@((int?)year)">@year</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudSelect @bind-Value="_selectedSymbol" @bind-Value:after="ApplyFilters" Label="Symbol" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+                    @foreach (var symbol in _availableSymbols)
+                    {
+                        <MudSelectItem Value="symbol">@symbol</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteSweep"
+                           OnClick="@OpenDeleteYearDialog" Disabled="@(!_selectedYear.HasValue)">
+                    Delete Year
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
     @if (_selected.Count > 0)
     {
         <MudPaper Class="pa-2 mb-2 d-flex align-center" Outlined="true">

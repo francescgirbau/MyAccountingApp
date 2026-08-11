@@ -1,11 +1,23 @@
 ﻿<MudNavMenu>
     <MudText Typo="Typo.h6" Class="px-4 py-4">Navigation</MudText>
     <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
-    <MudNavLink Href="summary" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.BarChart">Summary</MudNavLink>
-    <MudNavLink Href="transactions" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Receipt">Transactions</MudNavLink>
-    <MudNavLink Href="asset-transactions" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.TrendingUp">Asset Transactions</MudNavLink>
-    <MudNavLink Href="options" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ShowChart">Options</MudNavLink>
-    <MudNavLink Href="portfolio" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AccountBalance">Portfolio</MudNavLink>
-    <MudNavLink Href="import" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.FileUpload">Import</MudNavLink>
-    <MudNavLink Href="settings" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">Settings</MudNavLink>
+
+    <MudNavGroup Title="Movements" Icon="@Icons.Material.Filled.SwapVert" Expanded="true">
+        <MudNavLink Href="transactions" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Receipt">Transactions</MudNavLink>
+        <MudNavLink Href="asset-transactions" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.TrendingUp">Asset Transactions</MudNavLink>
+        <MudNavLink Href="options" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ShowChart">Options</MudNavLink>
+    </MudNavGroup>
+
+    <MudNavGroup Title="Investments" Icon="@Icons.Material.Filled.AccountBalance">
+        <MudNavLink Href="portfolio" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.PieChart">Portfolio</MudNavLink>
+    </MudNavGroup>
+
+    <MudNavGroup Title="Reports" Icon="@Icons.Material.Filled.BarChart">
+        <MudNavLink Href="summary" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Summarize">Summary</MudNavLink>
+    </MudNavGroup>
+
+    <MudNavGroup Title="Data" Icon="@Icons.Material.Filled.Storage">
+        <MudNavLink Href="import" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.FileUpload">Import</MudNavLink>
+        <MudNavLink Href="settings" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">Settings</MudNavLink>
+    </MudNavGroup>
 </MudNavMenu>
