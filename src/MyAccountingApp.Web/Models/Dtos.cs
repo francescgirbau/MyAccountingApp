@@ -75,6 +75,15 @@ public class ValidationError
     public string Severity { get; set; } = string.Empty;
 }
 
+public class ValidationResponseDto
+{
+    public bool IsValid { get; set; }
+    public int ErrorCount { get; set; }
+    public int WarningCount { get; set; }
+    public List<ValidationError> Errors { get; set; } = new();
+    public List<ValidationError> Warnings { get; set; } = new();
+}
+
 public class BatchPatchFailureDto
 {
     public Guid Id { get; set; }
