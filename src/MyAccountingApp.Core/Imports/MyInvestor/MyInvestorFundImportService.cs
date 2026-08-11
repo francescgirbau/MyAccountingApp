@@ -59,7 +59,7 @@ public class MyInvestorFundImportService : IBrokerImportService
                 }
 
                 Money money = new Money(amount, currency);
-                Transaction transaction = new Transaction(date, isin, money, TransactionCategory.EXPENSE);
+                Transaction transaction = new Transaction(date, isin, money, TransactionCategory.INVESTMENT);
                 AssetTransaction assetTx = new AssetTransaction(transaction, isin, quantity, AssetTransactionType.Buy);
                 assetTransactions.Add(assetTx);
             }

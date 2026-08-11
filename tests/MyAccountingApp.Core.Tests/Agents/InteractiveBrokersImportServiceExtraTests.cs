@@ -50,7 +50,7 @@ public class InteractiveBrokersImportServiceExtraTests
     }
 
     [Fact]
-    public async Task ParseAllAsync_ClassifiesWithholdingAndFeesAsExpense()
+    public async Task ParseAllAsync_ClassifiesWithholdingAndFeesAsExpenses()
     {
         List<IBKRTransactionRecord> records = new()
         {
@@ -63,7 +63,8 @@ public class InteractiveBrokersImportServiceExtraTests
 
         List<Transaction> list = tx.ToList();
         Assert.Equal(2, list.Count);
-        Assert.All(list, t => Assert.Equal(TransactionCategory.EXPENSE, t.Category));
+        Assert.Equal(TransactionCategory.WITHHOLDING_TAX, list[0].Category);
+        Assert.Equal(TransactionCategory.FEE, list[1].Category);
     }
 
     [Fact]
@@ -80,7 +81,8 @@ public class InteractiveBrokersImportServiceExtraTests
 
         List<Transaction> list = tx.ToList();
         Assert.Equal(2, list.Count);
-        Assert.All(list, t => Assert.Equal(TransactionCategory.INCOME, t.Category));
+        Assert.Equal(TransactionCategory.DIVIDEND, list[0].Category);
+        Assert.Equal(TransactionCategory.INTEREST, list[1].Category);
     }
 
     [Fact]

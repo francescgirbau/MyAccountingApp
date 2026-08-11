@@ -368,15 +368,15 @@ public class InteractiveBrokersImportService : IBrokerImportService
         }
         else if (transactionType.Contains("withholding") || transactionType.Contains("tax"))
         {
-            category = TransactionCategory.EXPENSE;
+            category = TransactionCategory.WITHHOLDING_TAX;
         }
         else if (transactionType.Contains("dividend") || descLower.Contains("dividend"))
         {
-            category = TransactionCategory.INCOME;
+            category = TransactionCategory.DIVIDEND;
         }
         else if (transactionType.Contains("credit interest") || descLower.Contains("credit interest"))
         {
-            category = TransactionCategory.INCOME;
+            category = TransactionCategory.INTEREST;
         }
         else if (transactionType.Contains("debit interest") || descLower.Contains("debit interest"))
         {
@@ -384,7 +384,7 @@ public class InteractiveBrokersImportService : IBrokerImportService
         }
         else if (transactionType.Contains("fee") || descLower.Contains("fee"))
         {
-            category = TransactionCategory.EXPENSE;
+            category = TransactionCategory.FEE;
         }
 
         decimal quantity = this.ParseAmount(record.Quantity ?? "0");

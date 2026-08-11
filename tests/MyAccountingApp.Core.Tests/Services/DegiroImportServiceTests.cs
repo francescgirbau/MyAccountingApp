@@ -117,7 +117,7 @@ public class DegiroImportServiceTests
     }
 
     [Fact]
-    public async Task ParseAllAsync_Commission_CreatesExpense()
+    public async Task ParseAllAsync_Commission_CreatesFee()
     {
         string csv = "Fecha,Hora,Fecha valor,Producto,ISIN,Descripción,Tipo,Variación,,Saldo,,ID Orden\n" +
             "24-10-2025,17:15,24-10-2025,BTCETC BITCOIN EXCHANGE TRADED,DE000A27Z304,\"Costes de transacción y/o externos de DEGIRO\",,EUR,\"-3,00\",EUR,\"96,06\",16e33fba-6d63-411c-bf21-bb8ef4fe3222";
@@ -131,7 +131,7 @@ public class DegiroImportServiceTests
             Assert.Empty(assets);
             var t = Assert.Single(txs);
             Assert.Equal(3.00m, t.Money.Amount);
-            Assert.Equal(Domain.Enums.TransactionCategory.EXPENSE, t.Category);
+            Assert.Equal(Domain.Enums.TransactionCategory.FEE, t.Category);
         }
         finally
         {

@@ -66,7 +66,7 @@ public class CobasImportService : IBrokerImportService
 
                 string producto = fields[1];
                 string symbol = BuildSymbol(producto);
-                TransactionCategory category = type == AssetTransactionType.Buy ? TransactionCategory.EXPENSE : TransactionCategory.INCOME;
+                TransactionCategory category = type == AssetTransactionType.Buy ? TransactionCategory.INVESTMENT : TransactionCategory.INCOME;
 
                 Money money = new Money(amount, "EUR");
                 Transaction transaction = new Transaction(date, producto, money, category);
