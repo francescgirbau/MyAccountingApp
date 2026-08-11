@@ -44,6 +44,8 @@ public class PortfolioPositionDto
     public decimal RealizedGainLoss { get; set; }
     public decimal? MarketPrice { get; set; }
     public decimal? UnrealizedGainLoss { get; set; }
+    public bool HasShortfall { get; set; }
+    public decimal UnmatchedSellQuantity { get; set; }
     public List<TaxLotDto> OpenLots { get; set; } = new();
 }
 

@@ -20,10 +20,23 @@ else
         <ToolBarContent>
             <MudText Typo="Typo.subtitle1">@_positions.Count positions</MudText>
             <MudSpacer />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="@RefreshPricesAsync" Disabled="@(_loading || _refreshing)">
+                @(_refreshing ? "Refreshing..." : "Refresh prices")
+            </MudButton>
             <MudText Typo="Typo.body2" Class="ml-2">
                 Total invested: <strong>@_totalCostBasis.ToString("N2")</strong>
-                &nbsp;|&nbsp; Total unrealized P&L:
-                <strong class="@(_totalUnrealized >= 0 ? "green--text" : "red--text")">@(_totalUnrealized >= 0 ? "+" : "")@_totalUnrealized.ToString("N2")</strong>
+                &nbsp;|&nbsp; Total realized P&amp;L:
+                <strong class="@(_totalRealized >= 0 ? "green--text" : "red--text")">@(_totalRealized >= 0 ? "+" : "")@_totalRealized.ToString("N2")</strong>
+                &nbsp;|&nbsp; Total unrealized P&amp;L:
+                @if (_hasPrices)
+                {
+                    <strong class="@(_totalUnrealized >= 0 ? "green--text" : "red--text")">@(_totalUnrealized >= 0 ? "+" : "")@_totalUnrealized.ToString("N2")</strong>
+                }
+                else
+                {
+                    <strong>—</strong>
+                }
             </MudText>
         </ToolBarContent>
         <ColGroup>
@@ -51,6 +64,17 @@ else
         <RowTemplate>
             <MudTd DataLabel="Symbol">
                 <MudChip T="string" Size="Size.Small" Color="Color.Primary">@context.Symbol</MudChip>
+                @if (context.HasShortfall)
+                {
+                    <MudTooltip Placement="Placement.Top">
+                        <ChildContent>
+                            <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Error" Size="Size.Small" Class="ml-1" />
+                        </ChildContent>
+                        <TooltipContent>
+                            <span>Sell shortfall: @context.UnmatchedSellQuantity.ToString("G") units sold without position</span>
+                        </TooltipContent>
+                    </MudTooltip>
+                }
                 <MudIconButton Icon="@Icons.Material.Filled.ListAlt" Size="Size.Small" aria-label="View movements"
                                OnClick="@(() => NavigateToMovements(context.Symbol))" />
             </MudTd>
@@ -60,9 +84,16 @@ else
             <MudTd DataLabel="Curr.">@context.Currency</MudTd>
             <MudTd DataLabel="Mkt Price">@(context.MarketPrice?.ToString("N4") ?? "—")</MudTd>
             <MudTd DataLabel="Unrealized P&amp;L">
-                <span class="@(context.UnrealizedGainLoss >= 0 ? "green--text" : "red--text")">
-                    @(context.UnrealizedGainLoss >= 0 ? "+" : "")@context.UnrealizedGainLoss?.ToString("N2")
-                </span>
+                @if (context.UnrealizedGainLoss is not null)
+                {
+                    <span class="@(context.UnrealizedGainLoss >= 0 ? "green--text" : "red--text")">
+                        @(context.UnrealizedGainLoss >= 0 ? "+" : "")@context.UnrealizedGainLoss?.ToString("N2")
+                    </span>
+                }
+                else
+                {
+                    <span>—</span>
+                }
             </MudTd>
             <MudTd DataLabel="Realized P&amp;L">
                 <span class="@(context.RealizedGainLoss >= 0 ? "green--text" : "red--text")">
@@ -119,9 +150,12 @@ else
 @code {
     private List<PortfolioPositionDto> _positions = new();
     private bool _loading = true;
+    private bool _refreshing;
+    private bool _hasPrices;
     private readonly HashSet<string> _expanded = new();
 
     private decimal _totalCostBasis;
+    private decimal _totalRealized;
     private decimal _totalUnrealized;
 
     protected override async Task OnInitializedAsync()
@@ -135,13 +169,36 @@ else
         try
         {
             _positions = await Http.GetFromJsonAsync<List<PortfolioPositionDto>>("/api/portfolio") ?? new();
-            _totalCostBasis = _positions.Sum(p => p.TotalCostBasis);
-            _totalUnrealized = _positions.Sum(p => p.UnrealizedGainLoss ?? 0);
+            _hasPrices = false;
+            ComputeTotals();
         }
         finally
         {
             _loading = false;
         }
+    }
+
+    private async Task RefreshPricesAsync()
+    {
+        _refreshing = true;
+        try
+        {
+            HttpResponseMessage response = await Http.PostAsync("/api/portfolio/refresh-prices", null);
+            _positions = await response.Content.ReadFromJsonAsync<List<PortfolioPositionDto>>() ?? new();
+            _hasPrices = true;
+            ComputeTotals();
+        }
+        finally
+        {
+            _refreshing = false;
+        }
+    }
+
+    private void ComputeTotals()
+    {
+        _totalCostBasis = _positions.Sum(p => p.TotalCostBasis);
+        _totalRealized = _positions.Sum(p => p.RealizedGainLoss);
+        _totalUnrealized = _positions.Sum(p => p.UnrealizedGainLoss ?? 0);
     }
 
     private bool GetExpanded(PortfolioPositionDto pos) => _expanded.Contains(pos.Symbol);
