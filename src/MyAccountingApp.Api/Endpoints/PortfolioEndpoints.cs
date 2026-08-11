@@ -32,6 +32,13 @@ public static class PortfolioEndpoints
             return Results.Ok(positions.Where(p => p is not null).ToList());
         });
 
+        app.MapGet($"{prefix}/portfolio/valuation", async (IPositionValuationService valuationService, DateTime? asOf) =>
+        {
+            DateOnly valuationDate = DateOnly.FromDateTime((asOf ?? DateTime.UtcNow).Date);
+            IReadOnlyList<PositionValuationDto> valuations = await valuationService.GetValuationsAsync(valuationDate);
+            return Results.Ok(new { asOf = valuationDate, positions = valuations });
+        });
+
         app.MapGet($"{prefix}/validate", (IValidationQuery validationQuery) =>
         {
             ValidationResult result = validationQuery.ValidateAll();
