@@ -17,7 +17,7 @@ public class PositionEngine : IPositionEngine
         this._marketPriceService = marketPriceService;
     }
 
-    public async Task<PortfolioPositionDto?> GetPosition(string symbol)
+    public async Task<PortfolioPositionDto?> GetPosition(string symbol, bool includePrice = true)
     {
         var transactions = this._portfolioRepo.GetAssetTransactions(symbol)
             .OrderBy(t => t.Transaction.Date)
@@ -76,7 +76,7 @@ public class PositionEngine : IPositionEngine
 
         decimal avgCost = netQuantity > 0 ? Math.Round(totalCost / netQuantity, 4) : 0;
 
-        Money? marketPrice = netQuantity > 0 ? await this._marketPriceService.GetPriceAsync(symbol) : null;
+        Money? marketPrice = includePrice && netQuantity > 0 ? await this._marketPriceService.GetPriceAsync(symbol) : null;
 
         decimal? unrealizedGainLoss = marketPrice is not null && netQuantity > 0
             ? Math.Round((marketPrice.Amount - avgCost) * netQuantity, 2)

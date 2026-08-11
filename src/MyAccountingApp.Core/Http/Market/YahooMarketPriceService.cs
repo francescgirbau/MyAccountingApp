@@ -5,7 +5,43 @@ using YahooFinanceApi;
 namespace MyAccountingApp.Core.Http.Market;
 public class YahooMarketPriceService : IMarketPriceService
 {
-    public async Task<Money?> GetPriceAsync(string symbol)
+    private readonly MarketPriceCache _cache = new();
+
+    public Task<Money?> GetPriceAsync(string symbol) => this.FetchAsync(symbol, useCache: true);
+
+    public Task<Money?> RefreshPriceAsync(string symbol) => this.FetchAsync(symbol, useCache: false);
+
+    private async Task<Money?> FetchAsync(string symbol, bool useCache)
+    {
+        if (!LooksLikeListedEquity(symbol))
+        {
+            return null;
+        }
+
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+
+        if (useCache && this._cache.TryGetFresh(symbol, now, out Money? cachedPrice))
+        {
+            return cachedPrice;
+        }
+
+        Money? price = await FetchFromYahooAsync(symbol);
+
+        if (price is not null)
+        {
+            this._cache.Set(symbol, price, now);
+        }
+
+        return price;
+    }
+
+    /// <summary>
+    /// Heuristic to detect fund symbols (e.g. COBAS_*, SIGMA_*) that are not listed on Yahoo.
+    /// </summary>
+    public static bool LooksLikeListedEquity(string? symbol) =>
+        !string.IsNullOrWhiteSpace(symbol) && !symbol.Contains('_');
+
+    private static async Task<Money?> FetchFromYahooAsync(string symbol)
     {
         try
         {
