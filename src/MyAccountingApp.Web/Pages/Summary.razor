@@ -2,7 +2,9 @@
 @page "/summary/{Year:int}"
 @inject HttpClient Http
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 @using System.Globalization
+@using System.Text
 
 <PageTitle>Summary</PageTitle>
 
@@ -38,7 +40,17 @@ else if (Year.HasValue)
 
     @if (_summary?.Months is { Count: > 0 })
     {
-        <MudText Typo="Typo.h5" GutterBottom="true" Class="mt-8">Monthly Breakdown</MudText>
+        <MudText Typo="Typo.h5" GutterBottom="true" Class="mt-8">Income vs Expenses by month</MudText>
+        <MudChart T="double" ChartType="ChartType.Bar" ChartSeries="_chartSeries" ChartLabels="_chartLabels" Width="100%" Height="350px" Class="mb-4" />
+
+        <div class="d-flex align-center">
+            <MudText Typo="Typo.h5" Class="mb-0">Monthly Breakdown</MudText>
+            <MudSpacer />
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                       OnClick="@ExportCsvAsync" StartIcon="@Icons.Material.Filled.Download">
+                Export CSV
+            </MudButton>
+        </div>
         <MudTable Items="@_summary.Months" Dense="true" Hover="true" Striped="true" Class="mt-4">
             <ColGroup>
                 <col style="width: 10%" />
@@ -120,6 +132,8 @@ else
     private AnnualSummaryDto? _summary;
     private bool _loading = true;
     private string? _error;
+    private List<ChartSeries<double>> _chartSeries = new();
+    private string[] _chartLabels = Array.Empty<string>();
 
     private Color NetCashFlowColor => (_summary?.NetCashFlow ?? 0) >= 0 ? Color.Success : Color.Error;
     private Color GetNetColor(decimal net) => net >= 0 ? Color.Success : Color.Error;
@@ -142,6 +156,10 @@ else
                 {
                     _error = $"No data found for year {Year.Value}.";
                 }
+                else
+                {
+                    BuildChartData();
+                }
             }
         }
         catch (Exception ex)
@@ -152,5 +170,56 @@ else
         {
             _loading = false;
         }
+    }
+
+    private void BuildChartData()
+    {
+        if (_summary is null)
+        {
+            return;
+        }
+
+        double[] income = new double[12];
+        double[] expenses = new double[12];
+
+        foreach (MonthlySummaryDto month in _summary.Months ?? new())
+        {
+            income[month.Month - 1] = (double)month.Income;
+            expenses[month.Month - 1] = (double)month.Expenses;
+        }
+
+        _chartSeries = new List<ChartSeries<double>>
+        {
+            new() { Name = "Income", Data = income },
+            new() { Name = "Expenses", Data = expenses },
+        };
+        _chartLabels = Enumerable.Range(1, 12).Select(GetMonthName).ToArray();
+    }
+
+    private async Task ExportCsvAsync()
+    {
+        if (_summary is null)
+        {
+            return;
+        }
+
+        StringBuilder csv = new();
+        csv.AppendLine("Month,Income,Expenses,Transfers,Deposits,NetCashFlow,InvestmentPurchases,InvestmentSales,BankTx,AssetTx");
+        foreach (MonthlySummaryDto month in _summary.Months ?? new())
+        {
+            csv.AppendLine(string.Join(",",
+                GetMonthName(month.Month),
+                month.Income.ToString("F2", CultureInfo.InvariantCulture),
+                month.Expenses.ToString("F2", CultureInfo.InvariantCulture),
+                month.Transfers.ToString("F2", CultureInfo.InvariantCulture),
+                month.Deposits.ToString("F2", CultureInfo.InvariantCulture),
+                month.NetCashFlow.ToString("F2", CultureInfo.InvariantCulture),
+                month.InvestmentPurchases.ToString("F2", CultureInfo.InvariantCulture),
+                month.InvestmentSales.ToString("F2", CultureInfo.InvariantCulture),
+                month.TransactionCount,
+                month.AssetTransactionCount));
+        }
+
+        await JS.InvokeVoidAsync("downloadTextFile", $"summary-{_summary.Year}.csv", csv.ToString(), "text/csv;charset=utf-8");
     }
 }
