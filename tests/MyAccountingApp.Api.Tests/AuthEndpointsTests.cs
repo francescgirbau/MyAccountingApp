@@ -25,6 +25,7 @@ public class AuthEndpointsTests
 
         // 2. Setup vault if not initialized
         HttpResponseMessage setupResp = await client.PostAsJsonAsync("/api/auth/setup", new { password = "testpassword123" });
+
         // It might be already initialized or succeed
         Assert.True(setupResp.StatusCode == HttpStatusCode.OK || setupResp.StatusCode == HttpStatusCode.BadRequest);
 
@@ -40,6 +41,7 @@ public class AuthEndpointsTests
 
             // 5. Unlock vault
             HttpResponseMessage unlockResp = await client.PostAsJsonAsync("/api/auth/unlock", new { password = "testpassword123" });
+
             // If setup succeeded with testpassword123, unlock will succeed
             if (unlockResp.StatusCode == HttpStatusCode.OK)
             {
