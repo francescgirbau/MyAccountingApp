@@ -29,6 +29,12 @@ jobs:
     - name: Run StyleCop (linter)
       run: dotnet build --configuration Release -warnaserror --no-incremental
 
+    - name: Restore dotnet tools
+      run: dotnet tool restore
+
+    - name: Auto-format code
+      run: dotnet format
+
     - name: Verify formatting (dotnet format)
       run: dotnet format --verify-no-changes --no-restore
 
