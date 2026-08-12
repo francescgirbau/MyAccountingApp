@@ -1,4 +1,5 @@
-﻿using MyAccountingApp.Domain.Entities;
+﻿using MyAccountingApp.Core.Vault;
+using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Interfaces;
 
 namespace MyAccountingApp.Core.Persistence
@@ -8,13 +9,20 @@ namespace MyAccountingApp.Core.Persistence
         private readonly InMemoryPortfolioRepository _memoryRepo;
         private readonly JsonPortfolioRepository _jsonRepo;
 
-        public CompositePortfolioRepository(string jsonPath)
+        public CompositePortfolioRepository(string jsonPath, IVaultService? vaultService = null)
         {
-            this._jsonRepo = new JsonPortfolioRepository(jsonPath);
+            this._jsonRepo = new JsonPortfolioRepository(jsonPath, vaultService);
             this._memoryRepo = new InMemoryPortfolioRepository();
 
-            List<AssetTransaction> transactions = this._jsonRepo.GetAllTransactions().ToList();
-            this._memoryRepo.Initialize(transactions);
+            try
+            {
+                List<AssetTransaction> transactions = this._jsonRepo.GetAllTransactions().ToList();
+                this._memoryRepo.Initialize(transactions);
+            }
+            catch
+            {
+                this._memoryRepo.Initialize(Enumerable.Empty<AssetTransaction>());
+            }
         }
 
         public void AddOrUpdate(AssetTransaction assetTransaction)

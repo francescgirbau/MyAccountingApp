@@ -1,25 +1,28 @@
 ﻿namespace MyAccountingApp.Core.Persistence;
 using System.Text.Json;
+using MyAccountingApp.Core.Vault;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Interfaces;
 
 public class JsonOptionTransactionRepository : IOptionTransactionRepository
 {
     private readonly string filePath;
+    private readonly IVaultService? _vaultService;
 
-    public JsonOptionTransactionRepository(string filePath)
+    public JsonOptionTransactionRepository(string filePath, IVaultService? vaultService = null)
     {
         this.filePath = filePath;
+        this._vaultService = vaultService;
     }
 
     public IEnumerable<OptionTransaction> GetAll()
     {
-        if (!File.Exists(this.filePath) || new FileInfo(this.filePath).Length == 0)
+        string json = EncryptedJsonFileStorage.ReadText(this.filePath, this._vaultService);
+        if (string.IsNullOrWhiteSpace(json))
         {
             return new List<OptionTransaction>();
         }
 
-        string json = File.ReadAllText(this.filePath);
         try
         {
             return JsonSerializer.Deserialize<List<OptionTransaction>>(json) ?? new List<OptionTransaction>();
@@ -86,6 +89,6 @@ public class JsonOptionTransactionRepository : IOptionTransactionRepository
         }
 
         string json = JsonSerializer.Serialize(transactions, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(this.filePath, json);
+        EncryptedJsonFileStorage.WriteText(this.filePath, json, this._vaultService);
     }
 }

@@ -29,6 +29,9 @@ jobs:
     - name: Run StyleCop (linter)
       run: dotnet build --configuration Release -warnaserror --no-incremental
 
+    - name: Verify formatting (dotnet format)
+      run: dotnet format --verify-no-changes --no-restore
+
     - name: Run tests with coverage (min 80%)
       run: |
         # Run all tests with coverage

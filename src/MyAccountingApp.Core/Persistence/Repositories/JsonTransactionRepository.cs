@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using MyAccountingApp.Core.Vault;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Interfaces;
 
@@ -8,10 +9,12 @@ namespace MyAccountingApp.Core.Persistence;
 public class JsonTransactionRepository : ITransactionRepository
 {
     private readonly string _filePath;
+    private readonly IVaultService? _vaultService;
 
-    public JsonTransactionRepository(string filePath)
+    public JsonTransactionRepository(string filePath, IVaultService? vaultService = null)
     {
         this._filePath = filePath;
+        this._vaultService = vaultService;
     }
 
     public void AddOrUpdate(Transaction transaction)
@@ -39,12 +42,11 @@ public class JsonTransactionRepository : ITransactionRepository
 
     public IEnumerable<Transaction> GetAll()
     {
-        if (!File.Exists(this._filePath) || new FileInfo(this._filePath).Length == 0)
+        string json = EncryptedJsonFileStorage.ReadText(this._filePath, this._vaultService);
+        if (string.IsNullOrWhiteSpace(json))
         {
             return new List<Transaction>();
         }
-
-        string json = File.ReadAllText(this._filePath);
 
         JsonSerializerOptions options = new JsonSerializerOptions
         {
@@ -120,8 +122,6 @@ public class JsonTransactionRepository : ITransactionRepository
     {
         JsonSerializerOptions options = new() { WriteIndented = true, Converters = { new JsonStringEnumConverter() } };
         string json = JsonSerializer.Serialize(transactions, options);
-        string tempPath = this._filePath + ".tmp";
-        File.WriteAllText(tempPath, json);
-        File.Move(tempPath, this._filePath, overwrite: true);
+        EncryptedJsonFileStorage.WriteText(this._filePath, json, this._vaultService);
     }
 }

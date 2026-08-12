@@ -18,7 +18,10 @@ try
     app.UseApiPipeline();
     app.MapApiEndpoints();
 
-    app.Run();
+    if (builder.Environment.EnvironmentName != "Testing")
+    {
+        app.Run();
+    }
 }
 catch (Exception ex)
 {

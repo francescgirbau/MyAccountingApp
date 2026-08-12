@@ -1,4 +1,5 @@
-﻿using MyAccountingApp.Domain.Entities;
+﻿using MyAccountingApp.Core.Vault;
+using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Interfaces;
 
 namespace MyAccountingApp.Core.Persistence;
@@ -16,14 +17,21 @@ public class CompositeConversionRepository : IConversionRepository
     /// Loads existing conversions from the JSON file into memory.
     /// </summary>
     /// <param name="jsonPath">The path to the JSON file for persistent storage.</param>
-    public CompositeConversionRepository(string jsonPath)
+    /// <param name="vaultService">Optional vault service for encryption.</param>
+    public CompositeConversionRepository(string jsonPath, IVaultService? vaultService = null)
     {
-        this._jsonRepo = new JsonConversionRepository(jsonPath);
+        this._jsonRepo = new JsonConversionRepository(jsonPath, vaultService);
         this._memoryRepo = new InMemoryConversionRepository();
 
-        List<Conversion> conversions = this._jsonRepo.GetAll().ToList();
-
-        this._memoryRepo.Initialize(conversions);
+        try
+        {
+            List<Conversion> conversions = this._jsonRepo.GetAll().ToList();
+            this._memoryRepo.Initialize(conversions);
+        }
+        catch
+        {
+            this._memoryRepo.Initialize(Enumerable.Empty<Conversion>());
+        }
     }
 
     /// <summary>

@@ -65,23 +65,27 @@ public class AnnualSummaryService : IAnnualSummaryService
             .Where(t => t.Date.Year == year)
             .ToList();
 
+        List<Domain.Entities.Transaction> yearEurCashTxs = yearTxs
+            .Where(t => string.Equals(t.Money.Currency, "EUR", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
         List<Domain.Entities.AssetTransaction> yearAssetTxs = assetTransactions
             .Where(a => a.Transaction.Date.Year == year)
             .ToList();
 
-        decimal expenses = yearTxs
+        decimal expenses = yearEurCashTxs
             .Where(t => t.Category.IsCashExpense())
             .Sum(t => t.Money.Amount);
 
-        decimal income = yearTxs
+        decimal income = yearEurCashTxs
             .Where(t => t.Category.IsCashIncome())
             .Sum(t => t.Money.Amount);
 
-        decimal transfers = yearTxs
+        decimal transfers = yearEurCashTxs
             .Where(t => t.Category == TransactionCategory.TRANSFER)
             .Sum(t => t.Money.Amount);
 
-        decimal deposits = yearTxs
+        decimal deposits = yearEurCashTxs
             .Where(t => t.Category == TransactionCategory.DEPOSIT)
             .Sum(t => t.Money.Amount);
 
@@ -125,6 +129,10 @@ public class AnnualSummaryService : IAnnualSummaryService
                 .Where(t => t.Date.Month == month)
                 .ToList();
 
+            List<Domain.Entities.Transaction> monthEurCashTxs = monthTxs
+                .Where(t => string.Equals(t.Money.Currency, "EUR", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
             List<Domain.Entities.AssetTransaction> monthAssetTxs = yearAssetTxs
                 .Where(a => a.Transaction.Date.Month == month)
                 .ToList();
@@ -134,19 +142,19 @@ public class AnnualSummaryService : IAnnualSummaryService
                 continue;
             }
 
-            decimal expenses = monthTxs
+            decimal expenses = monthEurCashTxs
                 .Where(t => t.Category.IsCashExpense())
                 .Sum(t => t.Money.Amount);
 
-            decimal income = monthTxs
+            decimal income = monthEurCashTxs
                 .Where(t => t.Category.IsCashIncome())
                 .Sum(t => t.Money.Amount);
 
-            decimal transfers = monthTxs
+            decimal transfers = monthEurCashTxs
                 .Where(t => t.Category == TransactionCategory.TRANSFER)
                 .Sum(t => t.Money.Amount);
 
-            decimal deposits = monthTxs
+            decimal deposits = monthEurCashTxs
                 .Where(t => t.Category == TransactionCategory.DEPOSIT)
                 .Sum(t => t.Money.Amount);
 
