@@ -1,5 +1,6 @@
 @page "/data-quality"
 @inject HttpClient Http
+@inject NavigationManager Navigation
 
 <PageTitle>Data quality</PageTitle>
 
@@ -47,6 +48,7 @@ else
                 <MudTh>Severity</MudTh>
                 <MudTh>Code</MudTh>
                 <MudTh>Message</MudTh>
+                <MudTh>Impacted</MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="Severity">
@@ -54,6 +56,20 @@ else
                 </MudTd>
                 <MudTd DataLabel="Code"><MudText Typo="Typo.body2" Style="font-family: monospace">@context.Field</MudText></MudTd>
                 <MudTd DataLabel="Message">@context.Message</MudTd>
+                <MudTd DataLabel="Impacted">
+                    @if (!string.IsNullOrEmpty(context.DeepLink))
+                    {
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                                   OnClick="@(() => Navigation.NavigateTo(context.DeepLink!))"
+                                   StartIcon="@Icons.Material.Filled.OpenInNew">
+                            View @(context.EntityIds.Count > 0 ? $"{context.EntityIds.Count} {(context.EntityIds.Count == 1 ? "transaction" : "transactions")}" : "movements")
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">—</MudText>
+                    }
+                </MudTd>
             </RowTemplate>
             <NoRecordsContent>
                 <MudText Class="pa-4">No issues.</MudText>

@@ -100,6 +100,22 @@ docker compose up --build -d
 Frankfurter is the default provider and requires **no key, no account, no quota**. Just run the API/ConsoleApp as-is.
 `CURRENCY_API_KEY` is only needed when `CurrencyApi:Provider` is set to `ExchangeRateHost`.
 
+## Vault configuration rules
+- `Vault:Enabled` defaults to **true** (`appsettings.json`); `appsettings.Development.json` overrides it to `false` so local dev runs plaintext without Setup/Unlock screens.
+- The API **refuses to start** if `Vault:Enabled=false` in any non-Development environment (`VaultStartupPolicy`) — fail closed, no silent plaintext deployments.
+- Backup restore order: plaintext JSON is accepted as-is; otherwise (vault unlocked) the body is decrypted with the vault key. Anything else — another vault's `.bin`, corrupted files — returns `400 "Backup is neither valid JSON nor a vault-encrypted backup"` and **never overwrites** existing data.
+
+## Data Quality workflow (error → rows → fix)
+`GET /api/validate` issues now carry actionable context, so the loop is:
+
+```text
+Data Quality → View N transactions → filtered + preselected rows → bulk edit / per-row edit → Re-check
+```
+
+- Every `ValidationError` includes `entityType`, `entityIds`, optional `symbol` and a `deepLink` (`/transactions?ids=...`, `/asset-transactions?symbol=...`).
+- Rule mapping: `DUPLICATE_FINGERPRINT` → all ids of the duplicated group; `UNMATCHED_TRANSFER` → the orphan transfer id; `MISSING_FX` → grouped by date+currency with all affected ids; `FIFO_SHORTFALL` → symbol + all asset ids; `SYMBOL_NO_PRICE` → symbol deep link; field errors (`Date`, `Description`, …) → the single affected id.
+- The Transactions / Asset Transactions pages accept `?ids=` (and `?issue=` for the banner) and preselect the rows so bulk category/symbol edit applies immediately; `?symbol=` filters asset transactions by ticker. A "Clear filter / Back to Data Quality" banner sits on top of the filtered view.
+
 ## Currency Options (`appsettings.json` → `CurrencyApi`)
 | Key | Default | Description |
 |---|---|---|
@@ -114,7 +130,7 @@ Frankfurter is the default provider and requires **no key, no account, no quota*
 On startup the API backfills the last 90 days if no conversions are stored; otherwise it syncs the gap between the last cached day and yesterday, chunked by `MaxTimeseriesDays`. When the provider fails or the quota is exhausted for a requested date, the date is queued in `pending_conversions.json` and the closest cached conversion is returned marked as **stale**; `POST /api/conversions/process-pending` retries the queue once quota is available again. Quota is consumed only after a successful API response (P0). HTTP calls to the providers use `IHttpClientFactory` with a retry policy for transient failures (408/5xx/timeout, 3 attempts exponential backoff; no retry on 429/4xx so quota errors surface immediately).
 
 ## Testing
-- **339 tests**, combined coverage above the 80% gate
+- **455 tests**, combined coverage above the 80% gate
 - `tests/MyAccountingApp.Api.Tests` boots the real API with `WebApplicationFactory<Program>` (in-memory fakes, no external HTTP) and exercises every endpoint group
 - CI: GitHub Actions, Release build with `-warnaserror` and StyleCop gate (0 warnings), coverage gate ≥ 80%
 
