@@ -1,6 +1,7 @@
 @page "/data-quality"
 @inject HttpClient Http
 @inject NavigationManager Navigation
+@inject ISnackbar Snackbar
 
 <PageTitle>Data quality</PageTitle>
 
@@ -10,8 +11,12 @@
            OnClick="@LoadDataAsync" Disabled="@_loading" Class="mb-4">
     Re-check
 </MudButton>
+<MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.SwapHoriz"
+           OnClick="@RecalculateTransferMatchesAsync" Disabled="@_recalculating" Class="mb-4 ml-4">
+    @(_recalculating ? "Calculating…" : "Recalculate transfer matches")
+</MudButton>
 
-@if (_loading)
+@if (_loading || _recalculating)
 {
     <MudProgressCircular Indeterminate="true" />
 }
@@ -82,6 +87,7 @@ else
     private ValidationResponseDto? _result;
     private List<ValidationError> _issues = new();
     private bool _loading = true;
+    private bool _recalculating;
 
     private int WarningCount => _result?.Warnings.Count(w => w.Severity != "info") ?? 0;
     private int InfoCount => _result?.Warnings.Count(w => w.Severity == "info") ?? 0;
@@ -107,6 +113,33 @@ else
         finally
         {
             _loading = false;
+        }
+    }
+
+    private async Task RecalculateTransferMatchesAsync()
+    {
+        _recalculating = true;
+        try
+        {
+            HttpResponseMessage response = await Http.PostAsync("/api/data-quality/transfer-matches/recalculate", null);
+            response.EnsureSuccessStatusCode();
+            TransferMatchingResultDto? result = await response.Content.ReadFromJsonAsync<TransferMatchingResultDto>();
+            if (result is not null)
+            {
+                Snackbar.Add(
+                    $"Recalculated: {result.MatchedPairs} matched pairs, {result.ChangedTransactions} transactions changed, {result.UnmatchedTransfers} unmatched.",
+                    Severity.Info);
+            }
+
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to recalculate transfer matches: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _recalculating = false;
         }
     }
 

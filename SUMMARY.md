@@ -64,6 +64,7 @@ Rules of thumb: Domain has no external dependencies; Application depends only on
 | GET | `/api/summary` | Annual summaries |
 | POST | `/api/import` | Folder import |
 | POST | `/api/import/upload` | CSV file upload |
+| POST | `/api/data-quality/transfer-matches/recalculate` | Re-run transfer matching (idempotent). Response: `{transferCount, matchedPairs, unmatchedTransfers, changedTransactions, calculatedAtUtc}`. Returns `401` while the vault is locked |
 
 ## Persistence
 - **JSON files** mounted as Docker volumes (`./data:/app/data`)
@@ -115,6 +116,7 @@ Data Quality → View N transactions → filtered + preselected rows → bulk ed
 - Every `ValidationError` includes `entityType`, `entityIds`, optional `symbol` and a `deepLink` (`/transactions?ids=...`, `/asset-transactions?symbol=...`).
 - Rule mapping: `DUPLICATE_FINGERPRINT` → all ids of the duplicated group; `UNMATCHED_TRANSFER` → the orphan transfer id; `MISSING_FX` → grouped by date+currency with all affected ids; `FIFO_SHORTFALL` → symbol + all asset ids; `SYMBOL_NO_PRICE` → symbol deep link; field errors (`Date`, `Description`, …) → the single affected id.
 - The Transactions / Asset Transactions pages accept `?ids=` (and `?issue=` for the banner) and preselect the rows so bulk category/symbol edit applies immediately; `?symbol=` filters asset transactions by ticker. A "Clear filter / Back to Data Quality" banner sits on top of the filtered view.
+- **Recalculate transfer matches** button runs `POST /api/data-quality/transfer-matches/recalculate`, which re-scans every transaction whose description looks like a bank transfer (keywords `FRANCESC`/`F GIRBAU`), pairs equal-amount transfers within ±3 days, and re-categorizes both sides to `TRANSFER`. It is idempotent (a second run reports `changedTransactions: 0`), safe (non-transfer transactions are never touched, amounts/dates/descriptions are preserved), and persists with a single atomic write. The page then re-runs `GET /api/validate` automatically.
 
 ## Currency Options (`appsettings.json` → `CurrencyApi`)
 | Key | Default | Description |
