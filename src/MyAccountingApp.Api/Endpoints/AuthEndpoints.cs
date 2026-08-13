@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using MyAccountingApp.Core.Persistence;
 using MyAccountingApp.Core.Vault;
 
 namespace MyAccountingApp.Api.Endpoints;
@@ -25,23 +26,16 @@ public static class AuthEndpoints
                 return Results.BadRequest(new { message = "Vault is already initialized." });
             }
 
-            if (string.IsNullOrWhiteSpace(request?.Password) || request.Password.Length < 4)
+            if (string.IsNullOrWhiteSpace(request?.Password) || request.Password.Length < 12)
             {
-                return Results.BadRequest(new { message = "Password must be at least 4 characters long." });
+                return Results.BadRequest(new { message = "Password must be at least 12 characters long." });
             }
 
-            try
-            {
-                vault.Initialize(request.Password);
-                return Results.Ok(new { success = true });
-            }
-            catch (Exception ex)
-            {
-                return Results.BadRequest(new { message = ex.Message });
-            }
+            vault.Initialize(request.Password);
+            return Results.Ok(new { success = true });
         });
 
-        app.MapPost($"{prefix}/auth/unlock", (AuthRequest request, IVaultService vault) =>
+        app.MapPost($"{prefix}/auth/unlock", (AuthRequest request, IVaultService vault, IVaultSessionListener sessionListener) =>
         {
             if (!vault.IsInitialized)
             {
@@ -54,12 +48,14 @@ public static class AuthEndpoints
                 return Results.BadRequest(new { success = false, message = "Invalid password." });
             }
 
+            sessionListener.OnUnlocked();
             return Results.Ok(new { success = true });
         });
 
-        app.MapPost($"{prefix}/auth/lock", (IVaultService vault) =>
+        app.MapPost($"{prefix}/auth/lock", (IVaultService vault, IVaultSessionListener sessionListener) =>
         {
             vault.Lock();
+            sessionListener.OnLocked();
             return Results.Ok(new { success = true });
         });
     }

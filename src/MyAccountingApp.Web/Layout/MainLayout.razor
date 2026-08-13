@@ -1,4 +1,6 @@
 ﻿@inherits LayoutComponentBase
+@inject HttpClient Http
+@inject NavigationManager Navigation
 
 <MudThemeProvider />
 <MudDialogProvider />
@@ -24,4 +26,37 @@
 
 @code {
     private bool _drawerOpen = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await this.CheckVaultStateAsync();
+    }
+
+    private async Task CheckVaultStateAsync()
+    {
+        try
+        {
+            AuthStatusDto status = await Http.GetFromJsonAsync<AuthStatusDto>("/api/auth/status") ?? new AuthStatusDto();
+            if (!status.IsInitialized)
+            {
+                if (!IsOnAuthPage("/setup"))
+                {
+                    Navigation.NavigateTo("/setup");
+                }
+            }
+            else if (!status.IsUnlocked && !IsOnAuthPage("/unlock") && !IsOnAuthPage("/setup"))
+            {
+                Navigation.NavigateTo("/unlock");
+            }
+        }
+        catch
+        {
+            // API unreachable: let the pages surface their own errors.
+        }
+    }
+
+    private bool IsOnAuthPage(string page)
+    {
+        return Navigation.Uri.EndsWith(page, StringComparison.OrdinalIgnoreCase);
+    }
 }

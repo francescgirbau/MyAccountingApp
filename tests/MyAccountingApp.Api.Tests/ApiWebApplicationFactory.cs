@@ -21,6 +21,8 @@ public class ApiWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<IHostedService>();
             services.RemoveAll<IVaultService>();
             services.AddSingleton<IVaultService>(new VaultService(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())));
+            services.RemoveAll<IVaultSessionListener>();
+            services.AddSingleton<IVaultSessionListener>(new NoOpVaultSessionListener());
             services.RemoveAll<ICurrencyRateService>();
             services.AddSingleton<ICurrencyRateService>(new FakeCurrencyRateService());
             services.RemoveAll<IConversionRepository>();

@@ -28,10 +28,29 @@ public class CompositeConversionRepository : IConversionRepository
             List<Conversion> conversions = this._jsonRepo.GetAll().ToList();
             this._memoryRepo.Initialize(conversions);
         }
-        catch
+        catch (InvalidOperationException)
         {
+            // Vault is locked at startup: memory stays empty until the vault is unlocked and Reload is called.
             this._memoryRepo.Initialize(Enumerable.Empty<Conversion>());
         }
+    }
+
+    /// <summary>
+    /// Reloads all conversions from the JSON repository into memory.
+    /// </summary>
+    /// <remarks>Requires the vault to be unlocked when encryption is enabled.</remarks>
+    public void Reload()
+    {
+        List<Conversion> conversions = this._jsonRepo.GetAll().ToList();
+        this._memoryRepo.Initialize(conversions);
+    }
+
+    /// <summary>
+    /// Clears all conversions from memory.
+    /// </summary>
+    public void Clear()
+    {
+        this._memoryRepo.Initialize(Enumerable.Empty<Conversion>());
     }
 
     /// <summary>

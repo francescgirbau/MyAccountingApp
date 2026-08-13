@@ -198,3 +198,9 @@ public class WithholdingTotalDto
     public decimal Amount { get; set; }
     public int TransactionCount { get; set; }
 }
+
+public class AuthStatusDto
+{
+    public bool IsInitialized { get; set; }
+    public bool IsUnlocked { get; set; }
+}

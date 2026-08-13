@@ -91,4 +91,56 @@ public class EncryptedRepositoryTests : IDisposable
         Assert.True(File.Exists(filePath + ".bak"));
         Assert.False(File.Exists(filePath));
     }
+
+    [Fact]
+    public void CompositeRepository_ShouldReloadData_AfterVaultUnlock()
+    {
+        IVaultService vault = new VaultService(this._tempDir);
+        vault.Initialize("testpass123");
+
+        string filePath = Path.Combine(this._tempDir, "transactions.json");
+        CompositeTransactionRepository repo = new CompositeTransactionRepository(filePath, vault);
+
+        Transaction tx = TransactionObjectMother.ValidIncome();
+        repo.Initialize(new[] { tx });
+
+        // Lock: memory is cleared alongside the vault key
+        vault.Lock();
+        repo.Clear();
+        Assert.Empty(repo.GetAll());
+
+        // Unlock: reload brings the persisted data back into memory
+        Assert.True(vault.Unlock("testpass123"));
+        repo.Reload();
+        List<Transaction> all = repo.GetAll().ToList();
+        Assert.Single(all);
+        Assert.Equal(tx.Id, all[0].Id);
+    }
+
+    [Fact]
+    public void CompositeRepository_ShouldStartEmpty_WhenLockedAtStartup_AndReloadOnUnlock()
+    {
+        IVaultService vault = new VaultService(this._tempDir);
+        vault.Initialize("testpass123");
+
+        string filePath = Path.Combine(this._tempDir, "transactions.json");
+        Transaction tx = TransactionObjectMother.ValidIncome();
+
+        // Seed while unlocked so the data is persisted encrypted
+        JsonTransactionRepository jsonRepo = new JsonTransactionRepository(filePath, vault);
+        jsonRepo.Initialize(new[] { tx });
+        Assert.True(File.Exists(filePath + ".enc"));
+
+        // Simulate API restart with a locked vault: constructor starts empty
+        vault.Lock();
+        CompositeTransactionRepository composite = new CompositeTransactionRepository(filePath, vault);
+        Assert.Empty(composite.GetAll());
+
+        // Unlock + reload brings the data back without a process restart
+        Assert.True(vault.Unlock("testpass123"));
+        composite.Reload();
+        List<Transaction> all = composite.GetAll().ToList();
+        Assert.Single(all);
+        Assert.Equal(tx.Id, all[0].Id);
+    }
 }

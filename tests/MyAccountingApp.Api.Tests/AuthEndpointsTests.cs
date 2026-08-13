@@ -8,46 +8,60 @@ namespace MyAccountingApp.Api.Tests;
 public class AuthEndpointsTests
 {
     [Fact]
-    public async Task AuthWorkflow_ShouldManageVaultCorrectly()
+    public async Task AuthWorkflow_ShouldLockAndUnlock_TheVault()
     {
         using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
         HttpClient client = factory.CreateClient();
 
-        // 1. Check status
+        // 1. Fresh vault: not initialized, not unlocked
         HttpResponseMessage statusResp = await client.GetAsync("/api/auth/status");
         Assert.Equal(HttpStatusCode.OK, statusResp.StatusCode);
         using (JsonDocument doc = JsonDocument.Parse(await statusResp.Content.ReadAsStringAsync()))
         {
-            // Note: If factory shares or initializes vault, let's verify endpoints respond correctly
-            Assert.True(doc.RootElement.TryGetProperty("isInitialized", out _));
-            Assert.True(doc.RootElement.TryGetProperty("isUnlocked", out _));
+            Assert.False(doc.RootElement.GetProperty("isInitialized").GetBoolean());
+            Assert.False(doc.RootElement.GetProperty("isUnlocked").GetBoolean());
         }
 
-        // 2. Setup vault if not initialized
+        // 2. Setup with a too-short password is rejected
+        HttpResponseMessage weakSetupResp = await client.PostAsJsonAsync("/api/auth/setup", new { password = "short" });
+        Assert.Equal(HttpStatusCode.BadRequest, weakSetupResp.StatusCode);
+
+        // 3. Setup with a valid password succeeds
         HttpResponseMessage setupResp = await client.PostAsJsonAsync("/api/auth/setup", new { password = "testpassword123" });
+        Assert.Equal(HttpStatusCode.OK, setupResp.StatusCode);
 
-        // It might be already initialized or succeed
-        Assert.True(setupResp.StatusCode == HttpStatusCode.OK || setupResp.StatusCode == HttpStatusCode.BadRequest);
+        // 4. After setup the vault is unlocked, and a transaction can be created
+        HttpResponseMessage created = await client.PostAsJsonAsync("/api/transactions", new
+        {
+            date = DateTime.Today,
+            description = "Test transaction",
+            amount = 12.5m,
+            currency = "EUR",
+            category = "EXPENSE",
+        });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
 
-        // 3. Lock vault
+        // 5. Lock the vault
         HttpResponseMessage lockResp = await client.PostAsJsonAsync("/api/auth/lock", new { });
         Assert.Equal(HttpStatusCode.OK, lockResp.StatusCode);
 
-        // 4. Try accessing protected endpoint when locked
+        // 6. Protected endpoints return 401 while locked
         HttpResponseMessage txResp = await client.GetAsync("/api/transactions");
-        if (txResp.StatusCode == HttpStatusCode.Unauthorized)
-        {
-            Assert.Equal(HttpStatusCode.Unauthorized, txResp.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, txResp.StatusCode);
+        HttpResponseMessage dashboardResp = await client.GetAsync("/api/dashboard");
+        Assert.Equal(HttpStatusCode.Unauthorized, dashboardResp.StatusCode);
 
-            // 5. Unlock vault
-            HttpResponseMessage unlockResp = await client.PostAsJsonAsync("/api/auth/unlock", new { password = "testpassword123" });
+        // 7. Wrong password does not unlock
+        HttpResponseMessage wrongUnlockResp = await client.PostAsJsonAsync("/api/auth/unlock", new { password = "wrongpassword123" });
+        Assert.Equal(HttpStatusCode.BadRequest, wrongUnlockResp.StatusCode);
 
-            // If setup succeeded with testpassword123, unlock will succeed
-            if (unlockResp.StatusCode == HttpStatusCode.OK)
-            {
-                HttpResponseMessage txAfterUnlock = await client.GetAsync("/api/transactions");
-                Assert.Equal(HttpStatusCode.OK, txAfterUnlock.StatusCode);
-            }
-        }
+        // 8. Correct password unlocks and data is visible again
+        HttpResponseMessage unlockResp = await client.PostAsJsonAsync("/api/auth/unlock", new { password = "testpassword123" });
+        Assert.Equal(HttpStatusCode.OK, unlockResp.StatusCode);
+
+        HttpResponseMessage txAfterUnlock = await client.GetAsync("/api/transactions");
+        Assert.Equal(HttpStatusCode.OK, txAfterUnlock.StatusCode);
+        JsonDocument txDoc = JsonDocument.Parse(await txAfterUnlock.Content.ReadAsStringAsync());
+        Assert.Equal(1, txDoc.RootElement.GetArrayLength());
     }
 }
