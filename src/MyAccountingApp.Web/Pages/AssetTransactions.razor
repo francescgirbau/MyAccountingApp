@@ -7,6 +7,21 @@
 
 <MudText Typo="Typo.h3" GutterBottom="true">Asset Transactions</MudText>
 
+@if (_issueContext is not null)
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4">
+        <MudText Typo="Typo.body2" Class="d-inline">
+            Showing <strong>@_filteredTransactions.Count</strong> impacted asset transaction(s) from Data Quality
+            @if (!string.IsNullOrEmpty(IssueFromQuery))
+            {
+                <text>· @IssueFromQuery</text>
+            }
+        </MudText>
+        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@ClearIssueFilter">Clear filter</MudButton>
+        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => Navigation.NavigateTo("/data-quality"))">Back to Data Quality</MudButton>
+    </MudAlert>
+}
+
 @if (_loading)
 {
     <MudProgressCircular Indeterminate="true" />
@@ -264,6 +279,15 @@ else
     [SupplyParameterFromQuery(Name = "symbol")]
     public string? SymbolFromQuery { get; set; }
 
+    [SupplyParameterFromQuery(Name = "ids")]
+    public string? IdsFromQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "issue")]
+    public string? IssueFromQuery { get; set; }
+
+    private List<Guid> _impactedIds = new();
+    private string? _issueContext;
+
     protected override async Task OnInitializedAsync()
     {
         if (!string.IsNullOrWhiteSpace(SymbolFromQuery))
@@ -271,7 +295,39 @@ else
             _selectedSymbol = SymbolFromQuery;
         }
 
+        ApplyIssueFilterFromQuery();
         await LoadDataAsync();
+    }
+
+    private void ApplyIssueFilterFromQuery()
+    {
+        this._impactedIds = new();
+        this._issueContext = null;
+
+        if (string.IsNullOrWhiteSpace(this.IdsFromQuery))
+        {
+            return;
+        }
+
+        List<Guid> ids = this.IdsFromQuery
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => Guid.TryParse(s, out Guid g) ? g : Guid.Empty)
+            .Where(g => g != Guid.Empty)
+            .ToList();
+
+        if (ids.Count > 0)
+        {
+            this._impactedIds = ids;
+            this._issueContext = string.IsNullOrWhiteSpace(this.IssueFromQuery) ? "impacted transactions" : this.IssueFromQuery;
+        }
+    }
+
+    private void ClearIssueFilter()
+    {
+        this._impactedIds = new();
+        this._issueContext = null;
+        this._selected.Clear();
+        this.ApplyFilters();
     }
 
     private async Task LoadDataAsync()
@@ -290,8 +346,8 @@ else
                 .Distinct()
                 .OrderBy(s => s)
                 .ToList();
-            ApplyFilters();
             _selected.Clear();
+            ApplyFilters();
         }
         finally
         {
@@ -312,9 +368,20 @@ else
         if (!string.IsNullOrWhiteSpace(_selectedType))
             query = query.Where(t => t.Type == _selectedType);
 
+        if (_impactedIds.Count > 0)
+            query = query.Where(t => _impactedIds.Contains(t.Transaction.Id));
+
         _filteredTransactions = query.OrderByDescending(t => t.Transaction.Date).ToList();
         HashSet<Guid> filteredIds = _filteredTransactions.Select(t => t.Transaction.Id).ToHashSet();
         _selected.RemoveWhere(item => !filteredIds.Contains(item.Transaction.Id));
+
+        if (_impactedIds.Count > 0 && _issueContext is not null)
+        {
+            foreach (AssetTransactionDto tx in _filteredTransactions.Where(t => _impactedIds.Contains(t.Transaction.Id)).Take(200))
+            {
+                _selected.Add(tx);
+            }
+        }
     }
 
     private void OpenCreateDialog()

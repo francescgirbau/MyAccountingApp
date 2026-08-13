@@ -7,6 +7,21 @@
 
 <MudText Typo="Typo.h3" GutterBottom="true">Transactions</MudText>
 
+@if (_issueContext is not null)
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4">
+        <MudText Typo="Typo.body2" Class="d-inline">
+            Showing <strong>@_filteredTransactions.Count</strong> impacted transaction(s) from Data Quality
+            @if (!string.IsNullOrEmpty(IssueFromQuery))
+            {
+                <text>· @IssueFromQuery</text>
+            }
+        </MudText>
+        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@ClearIssueFilter">Clear filter</MudButton>
+        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => Navigation.NavigateTo("/data-quality"))">Back to Data Quality</MudButton>
+    </MudAlert>
+}
+
 <MudPaper Class="pa-4 mb-4" Outlined="true">
     <MudGrid>
         <MudItem xs="12" sm="6" md="3">
@@ -283,6 +298,15 @@ else
     private HashSet<TransactionDto> _selected = new();
     private string _bulkCategory = "";
 
+    [SupplyParameterFromQuery(Name = "ids")]
+    public string? IdsFromQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "issue")]
+    public string? IssueFromQuery { get; set; }
+
+    private List<Guid> _impactedIds = new();
+    private string? _issueContext;
+
     private DateTime? _formDate;
     private string _formDescription = "";
     private decimal _formAmount;
@@ -291,7 +315,39 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadDataAsync();
+        this.ApplyIssueFilterFromQuery();
+        await this.LoadDataAsync();
+    }
+
+    private void ApplyIssueFilterFromQuery()
+    {
+        this._impactedIds = new();
+        this._issueContext = null;
+
+        if (string.IsNullOrWhiteSpace(this.IdsFromQuery))
+        {
+            return;
+        }
+
+        List<Guid> ids = this.IdsFromQuery
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => Guid.TryParse(s, out Guid g) ? g : Guid.Empty)
+            .Where(g => g != Guid.Empty)
+            .ToList();
+
+        if (ids.Count > 0)
+        {
+            this._impactedIds = ids;
+            this._issueContext = string.IsNullOrWhiteSpace(this.IssueFromQuery) ? "impacted transactions" : this.IssueFromQuery;
+        }
+    }
+
+    private void ClearIssueFilter()
+    {
+        this._impactedIds = new();
+        this._issueContext = null;
+        this._selected.Clear();
+        this.ApplyFilters();
     }
 
     private async Task LoadDataAsync()
@@ -305,8 +361,8 @@ else
                 .Distinct()
                 .OrderByDescending(y => y)
                 .ToList();
-ApplyFilters();
             _selected.Clear();
+            ApplyFilters();
         }
         finally
         {
@@ -339,10 +395,21 @@ ApplyFilters();
         if (!string.IsNullOrWhiteSpace(_searchText))
             query = query.Where(t => t.Description.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
 
+        if (_impactedIds.Count > 0)
+            query = query.Where(t => _impactedIds.Contains(t.Id));
+
         _filteredTransactions = query.OrderByDescending(t => t.Date).ToList();
         RebuildFilterSummaries();
         HashSet<Guid> filteredIds = _filteredTransactions.Select(t => t.Id).ToHashSet();
         _selected.RemoveWhere(item => !filteredIds.Contains(item.Id));
+
+        if (_impactedIds.Count > 0 && _issueContext is not null)
+        {
+            foreach (TransactionDto tx in _filteredTransactions.Where(t => _impactedIds.Contains(t.Id)).Take(200))
+            {
+                _selected.Add(tx);
+            }
+        }
     }
 
     private void RebuildFilterSummaries()

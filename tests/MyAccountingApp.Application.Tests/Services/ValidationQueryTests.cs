@@ -175,6 +175,129 @@ public class ValidationQueryTests
         Assert.Equal("info", warning.Severity);
     }
 
+    [Fact]
+    public void ValidateAll_DuplicateFingerprint_IncludesAllIdsOfGroup()
+    {
+        FakeTxRepo txRepo = new();
+        Transaction first = new(Guid.NewGuid(), new DateTime(2025, 1, 10), "Salary", new Money(1000m, "EUR"), TransactionCategory.INCOME);
+        Transaction second = new(Guid.NewGuid(), first.Date, first.Description, first.Money, first.Category);
+        txRepo.AddOrUpdate(first);
+        txRepo.AddOrUpdate(second);
+        FakePfRepo pfRepo = new();
+        ValidationQuery query = new(txRepo, pfRepo, new TransactionValidator(), new FakeConversionRepo(), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        ValidationError error = Assert.Single(result.Errors);
+        Assert.Equal("DUPLICATE_FINGERPRINT", error.Field);
+        Assert.Equal(2, error.EntityIds?.Count);
+        Assert.Contains(first.Id, error.EntityIds!);
+        Assert.Contains(second.Id, error.EntityIds!);
+        Assert.Equal($"/transactions?ids={first.Id},{second.Id}", error.DeepLink);
+    }
+
+    [Fact]
+    public void ValidateAll_UnmatchedTransfer_IncludesTransferId()
+    {
+        FakeTxRepo txRepo = new();
+        Transaction transfer = new(Guid.NewGuid(), new DateTime(2025, 1, 10), "Transfer to bank", new Money(500m, "EUR"), TransactionCategory.TRANSFER);
+        txRepo.AddOrUpdate(transfer);
+        FakePfRepo pfRepo = new();
+        ValidationQuery query = new(txRepo, pfRepo, new TransactionValidator(), new FakeConversionRepo(), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        ValidationError warning = Assert.Single(result.Warnings);
+        Assert.Equal("UNMATCHED_TRANSFER", warning.Field);
+        Assert.Equal("Transaction", warning.EntityType);
+        Assert.Equal(transfer.Id, Assert.Single(warning.EntityIds!));
+        Assert.Equal($"/transactions?ids={transfer.Id}", warning.DeepLink);
+    }
+
+    [Fact]
+    public void ValidateAll_MissingFx_IncludesAllGroupedTransactionIds()
+    {
+        FakeTxRepo txRepo = new();
+        DateTime date = new(2025, 1, 10);
+        Transaction first = new(Guid.NewGuid(), date, "Buy USD", new Money(100m, "USD"), TransactionCategory.EXPENSE);
+        Transaction second = new(Guid.NewGuid(), date, "Fee USD", new Money(5m, "USD"), TransactionCategory.FEE);
+        txRepo.AddOrUpdate(first);
+        txRepo.AddOrUpdate(second);
+        FakePfRepo pfRepo = new();
+        ValidationQuery query = new(txRepo, pfRepo, new TransactionValidator(), new FakeConversionRepo(), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        ValidationError warning = Assert.Single(result.Warnings);
+        Assert.Equal("MISSING_FX", warning.Field);
+        Assert.Equal(2, warning.EntityIds?.Count);
+        Assert.Contains(first.Id, warning.EntityIds!);
+        Assert.Contains(second.Id, warning.EntityIds!);
+        Assert.StartsWith("/transactions?ids=", warning.DeepLink);
+    }
+
+    [Fact]
+    public void ValidateAll_FifoShortfall_HasSymbolAndAssetIds()
+    {
+        FakeTxRepo txRepo = new();
+        FakePfRepo pfRepo = new();
+        Transaction buyTx = new(Guid.NewGuid(), new DateTime(2024, 1, 15), "Buy AAPL", new Money(1000m, "USD"), TransactionCategory.INVESTMENT);
+        Transaction sellTx = new(Guid.NewGuid(), new DateTime(2024, 6, 1), "Sell AAPL", new Money(1500m, "USD"), TransactionCategory.INCOME);
+        pfRepo.AddOrUpdate(new AssetTransaction(buyTx, "AAPL", 10, AssetTransactionType.Buy));
+        pfRepo.AddOrUpdate(new AssetTransaction(sellTx, "AAPL", 15, AssetTransactionType.Sell));
+        ValidationQuery query = new(txRepo, pfRepo, new TransactionValidator(), new FakeConversionRepo(), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        ValidationError warning = Assert.Single(result.Warnings);
+        Assert.Equal("FIFO_SHORTFALL", warning.Field);
+        Assert.Equal("AssetTransaction", warning.EntityType);
+        Assert.Equal("AAPL", warning.Symbol);
+        Assert.Equal(2, warning.EntityIds?.Count);
+        Assert.Contains(buyTx.Id, warning.EntityIds!);
+        Assert.Contains(sellTx.Id, warning.EntityIds!);
+    }
+
+    [Fact]
+    public void ValidateAll_FieldErrors_CarryTransactionIdAndDeepLink()
+    {
+        FakeTxRepo txRepo = new();
+        Transaction tx = new(Guid.NewGuid(), DateTime.UtcNow.AddDays(10), "Future purchase", new Money(100m, "EUR"), TransactionCategory.EXPENSE);
+        txRepo.AddOrUpdate(tx);
+        FakePfRepo pfRepo = new();
+        ValidationQuery query = new(txRepo, pfRepo, new TransactionValidator(), new FakeConversionRepo(), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        ValidationError error = Assert.Single(result.Errors);
+        Assert.Equal("Date", error.Field);
+        Assert.Equal("Transaction", error.EntityType);
+        Assert.Equal(tx.Id, Assert.Single(error.EntityIds!));
+        Assert.Equal($"/transactions?ids={tx.Id}", error.DeepLink);
+    }
+
+    [Fact]
+    public void ValidateAll_SymbolNoPrice_HasSymbolDeepLinkWhenNoIds()
+    {
+        FakeTxRepo txRepo = new();
+        FakePfRepo pfRepo = new();
+        pfRepo.AddOrUpdate(new AssetTransaction(
+            new Transaction(Guid.NewGuid(), new DateTime(2025, 1, 15), "Buy UNKN", new Money(100m, "USD"), TransactionCategory.INVESTMENT),
+            "UNKN",
+            5,
+            AssetTransactionType.Buy));
+        ValidationQuery query = new(txRepo, pfRepo, new TransactionValidator(), new FakeConversionRepo(), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        ValidationError warning = Assert.Single(result.Warnings);
+        Assert.Equal("SYMBOL_NO_PRICE", warning.Field);
+        Assert.Equal("AssetTransaction", warning.EntityType);
+        Assert.Equal("UNKN", warning.Symbol);
+        Assert.NotNull(warning.DeepLink);
+        Assert.Equal("/asset-transactions?symbol=UNKN", warning.DeepLink);
+    }
+
     private sealed class FakeTxRepo : ITransactionRepository
     {
         private readonly List<Transaction> _transactions = new();

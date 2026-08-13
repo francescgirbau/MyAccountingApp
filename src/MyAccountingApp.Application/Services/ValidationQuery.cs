@@ -36,15 +36,29 @@ public class ValidationQuery : IValidationQuery
         foreach (Transaction tx in this._txRepo.GetAll())
         {
             ValidationResult vr = this._validator.Validate(tx);
-            allErrors.AddRange(vr.Errors);
-            allWarnings.AddRange(vr.Warnings);
+            foreach (ValidationError error in vr.Errors)
+            {
+                allErrors.Add(new ValidationError(error.Field, error.Message, error.Severity, EntityType: "Transaction", EntityIds: new[] { tx.Id }, Date: DateOnly.FromDateTime(tx.Date)));
+            }
+
+            foreach (ValidationError warning in vr.Warnings)
+            {
+                allWarnings.Add(new ValidationError(warning.Field, warning.Message, warning.Severity, EntityType: "Transaction", EntityIds: new[] { tx.Id }, Date: DateOnly.FromDateTime(tx.Date)));
+            }
         }
 
         foreach (AssetTransaction tx in this._pfRepo.GetAllTransactions())
         {
             ValidationResult vr = this._validator.Validate(tx);
-            allErrors.AddRange(vr.Errors);
-            allWarnings.AddRange(vr.Warnings);
+            foreach (ValidationError error in vr.Errors)
+            {
+                allErrors.Add(new ValidationError(error.Field, error.Message, error.Severity, EntityType: "AssetTransaction", EntityIds: new[] { tx.Transaction.Id }, Symbol: tx.Symbol, Date: DateOnly.FromDateTime(tx.Transaction.Date)));
+            }
+
+            foreach (ValidationError warning in vr.Warnings)
+            {
+                allWarnings.Add(new ValidationError(warning.Field, warning.Message, warning.Severity, EntityType: "AssetTransaction", EntityIds: new[] { tx.Transaction.Id }, Symbol: tx.Symbol, Date: DateOnly.FromDateTime(tx.Transaction.Date)));
+            }
         }
 
         this.AddFifoShortfallRules(allWarnings);
@@ -70,7 +84,10 @@ public class ValidationQuery : IValidationQuery
                 warnings.Add(new ValidationError(
                     "FIFO_SHORTFALL",
                     $"Symbol {group.Key} has {Math.Round(position.UnmatchedSellQuantity, 4):G} units sold without an open position",
-                    "warning"));
+                    "warning",
+                    EntityType: "AssetTransaction",
+                    EntityIds: group.Select(t => t.Transaction.Id).ToArray(),
+                    Symbol: group.Key));
             }
         }
     }
@@ -94,7 +111,10 @@ public class ValidationQuery : IValidationQuery
                 warnings.Add(new ValidationError(
                     "UNMATCHED_TRANSFER",
                     $"Transfer on {transfer.Date:yyyy-MM-dd} ({transfer.Description}) has no matching counterpart within 3 days",
-                    "warning"));
+                    "warning",
+                    EntityType: "Transaction",
+                    EntityIds: new[] { transfer.Id },
+                    Date: DateOnly.FromDateTime(transfer.Date)));
             }
         }
     }
@@ -109,7 +129,10 @@ public class ValidationQuery : IValidationQuery
             errors.Add(new ValidationError(
                 "DUPLICATE_FINGERPRINT",
                 $"{group.Count()} transactions share the same date, description and amount ({first.Date:yyyy-MM-dd} {first.Description} {first.Money.Amount} {first.Money.Currency})",
-                "error"));
+                "error",
+                EntityType: "Transaction",
+                EntityIds: group.Select(t => t.Id).ToArray(),
+                Date: DateOnly.FromDateTime(first.Date)));
         }
     }
 
@@ -118,14 +141,17 @@ public class ValidationQuery : IValidationQuery
         IEnumerable<Transaction> nonEur = this._txRepo.GetAll()
             .Where(t => t.Money.Currency != "EUR");
 
-        foreach (Transaction tx in nonEur)
+        foreach (IGrouping<(DateOnly Date, string Currency), Transaction> group in nonEur.GroupBy(t => (DateOnly.FromDateTime(t.Date), t.Money.Currency)))
         {
-            if (this._conversionRepo.GetByDate(tx.Date) is null)
+            if (this._conversionRepo.GetByDate(group.Key.Date.ToDateTime(TimeOnly.MinValue)) is null)
             {
                 warnings.Add(new ValidationError(
                     "MISSING_FX",
-                    $"No EUR conversion available for {tx.Date:yyyy-MM-dd} ({tx.Money.Currency})",
-                    "warning"));
+                    $"No EUR conversion available for {group.Key.Date:yyyy-MM-dd} ({group.Key.Currency})",
+                    "warning",
+                    EntityType: "Transaction",
+                    EntityIds: group.Select(t => t.Id).ToArray(),
+                    Date: group.Key.Date));
             }
         }
     }
@@ -148,7 +174,9 @@ public class ValidationQuery : IValidationQuery
                 warnings.Add(new ValidationError(
                     "SYMBOL_NO_PRICE",
                     $"Symbol {group.Key} has an open position but no market price cached",
-                    "info"));
+                    "info",
+                    EntityType: "AssetTransaction",
+                    Symbol: group.Key));
             }
         }
     }

@@ -96,6 +96,10 @@ public class ValidationError
     public string Field { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
     public string Severity { get; set; } = string.Empty;
+    public string EntityType { get; set; } = "Transaction";
+    public List<Guid> EntityIds { get; set; } = new();
+    public string? Symbol { get; set; }
+    public string? DeepLink { get; set; }
 }
 
 public class ValidationResponseDto
