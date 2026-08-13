@@ -371,6 +371,9 @@ FodyWeavers.xsd
 # User-specific app settings (contains API keys, connection strings)
 appsettings.json
 appsettings.*.json
+# The API settings hold no secrets (keys come from env vars) and are tracked to make the fail-closed vault policy reproducible.
+!src/MyAccountingApp.Api/appsettings.json
+!src/MyAccountingApp.Api/appsettings.Development.json
 
 # Test files for agents
 

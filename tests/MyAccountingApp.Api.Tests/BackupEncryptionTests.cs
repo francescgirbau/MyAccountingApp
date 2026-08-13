@@ -79,6 +79,35 @@ public class BackupEncryptionTests
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Backup_ShouldRejectGarbage_AndNotOverwriteData_WhenVaultIsUnlocked()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        await client.PostAsJsonAsync("/api/auth/setup", new { password = "testpassword123" });
+        await client.PostAsJsonAsync("/api/transactions", new
+        {
+            date = DateTime.Today,
+            description = "Keep me",
+            amount = 12.5m,
+            currency = "EUR",
+            category = "EXPENSE",
+        });
+
+        // Act: upload an encrypted blob that does not decrypt (other vault / corrupted)
+        HttpResponseMessage response = await client.PostAsync("/api/backup", new ByteArrayContent(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }));
+
+        // Assert: rejected with the clear message and data untouched
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        string error = await response.Content.ReadAsStringAsync();
+        Assert.Contains("neither valid JSON nor a vault-encrypted backup", error);
+
+        HttpResponseMessage txResp = await client.GetAsync("/api/transactions");
+        using JsonDocument txDoc = JsonDocument.Parse(await txResp.Content.ReadAsStringAsync());
+        Assert.Equal(1, txDoc.RootElement.GetArrayLength());
+    }
+
     private sealed class DisabledVaultFactory : ApiWebApplicationFactory
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
