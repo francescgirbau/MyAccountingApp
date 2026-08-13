@@ -1,4 +1,5 @@
-using Microsoft.AspNetCore.Diagnostics;
+﻿using Microsoft.AspNetCore.Diagnostics;
+using MyAccountingApp.Core.Vault;
 using Serilog;
 
 namespace MyAccountingApp.Api;
@@ -34,10 +35,10 @@ public static class PipelineExtensions
                 if (!path.Equals("/api/health", StringComparison.OrdinalIgnoreCase) &&
                     !path.StartsWith("/api/auth/", StringComparison.OrdinalIgnoreCase))
                 {
-                    var env = context.RequestServices.GetService<IWebHostEnvironment>();
+                    IWebHostEnvironment? env = context.RequestServices.GetService<IWebHostEnvironment>();
                     if (env == null || !env.IsEnvironment("Testing"))
                     {
-                        var vault = context.RequestServices.GetService<Core.Vault.IVaultService>();
+                        IVaultService? vault = context.RequestServices.GetService<IVaultService>();
                         if (vault != null && vault.IsInitialized && !vault.IsUnlocked)
                         {
                             context.Response.StatusCode = StatusCodes.Status401Unauthorized;

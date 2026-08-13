@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
@@ -7,9 +7,9 @@ namespace MyAccountingApp.Core.Vault;
 public class VaultService : IVaultService
 {
     private readonly string _metaFilePath;
-private readonly object _lock = new();
-private byte[]? _derivedKey;
-private bool _isUnlocked;
+    private readonly object _lock = new();
+    private byte[]? _derivedKey;
+    private bool _isUnlocked;
 
     public VaultService(string dataDirectory)
     {

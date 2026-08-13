@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -45,7 +45,7 @@ public class EncryptedRepositoryTests : IDisposable
         Assert.False(File.Exists(filePath));
 
         // Read back
-        var all = repo.GetAll().ToList();
+        List<Transaction> all = repo.GetAll().ToList();
         Assert.Single(all);
         Assert.Equal(tx.Id, all[0].Id);
     }
@@ -82,7 +82,7 @@ public class EncryptedRepositoryTests : IDisposable
         JsonTransactionRepository repo = new JsonTransactionRepository(filePath, vault);
 
         // Act & Assert
-        var all = repo.GetAll().ToList();
+        List<Transaction> all = repo.GetAll().ToList();
         Assert.Single(all);
         Assert.Equal(tx.Id, all[0].Id);
 

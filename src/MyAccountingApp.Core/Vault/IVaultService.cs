@@ -1,4 +1,4 @@
-namespace MyAccountingApp.Core.Vault;
+﻿namespace MyAccountingApp.Core.Vault;
 
 public interface IVaultService
 {

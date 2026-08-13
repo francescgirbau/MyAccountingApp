@@ -111,7 +111,7 @@ On startup the API backfills the last 90 days if no conversions are stored; othe
 ## Testing
 - **339 tests**, combined coverage above the 80% gate
 - `tests/MyAccountingApp.Api.Tests` boots the real API with `WebApplicationFactory<Program>` (in-memory fakes, no external HTTP) and exercises every endpoint group
-- CI: GitHub Actions, Release build with `-warnaserror` and StyleCop gate (0 warnings), `dotnet format --verify-no-changes`, coverage gate ≥ 80%
+- CI: GitHub Actions, Release build with `-warnaserror` and StyleCop gate (0 warnings), coverage gate ≥ 80%
 
 ## Improvement series P0–P2 (closed, August 2026)
 - **P0** (#94–#97): quota consumed only on API success, repository file renames, `CurrencyRateService` naming, docs

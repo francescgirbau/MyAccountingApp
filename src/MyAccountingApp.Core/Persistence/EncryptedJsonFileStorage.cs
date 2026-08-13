@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using MyAccountingApp.Core.Vault;
 
 namespace MyAccountingApp.Core.Persistence;
