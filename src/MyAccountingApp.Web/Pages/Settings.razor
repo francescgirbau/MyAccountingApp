@@ -12,8 +12,12 @@
 
 <MudPaper Class="pa-4 mb-4" Outlined="true">
     <MudText Typo="Typo.body2" Class="mb-4">
-        Download a full backup of all transactions and asset transactions as a JSON file.
+        Download a full backup of all transactions and asset transactions.
         Use the restore feature to reload the backup after a hard reset.
+        @if (_status.IsEnabled)
+        {
+            <text>The downloaded file is encrypted and can only be restored while the vault is unlocked.</text>
+        }
     </MudText>
 
     <MudButton Variant="Variant.Filled" Color="Color.Primary"
@@ -32,6 +36,56 @@
         <InputFile OnChange="@UploadBackup" />
     </div>
 </MudPaper>
+
+@if (_status.IsEnabled)
+{
+    <MudText Typo="Typo.h6" Class="mb-4">Security</MudText>
+
+    <MudPaper Class="pa-4 mb-4" Outlined="true">
+        <MudText Typo="Typo.body2" Class="mb-4">
+            @if (_status.IsInitialized)
+            {
+                <MudChip T="string" Size="Size.Small" Color="@(_status.IsUnlocked ? Color.Success : Color.Warning)" Variant="Variant.Outlined">
+                    @(_status.IsUnlocked ? "Unlocked" : "Locked")
+                </MudChip>
+                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">Encrypted at rest</MudChip>
+            }
+            else
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">Vault not set up yet</MudChip>
+            }
+        </MudText>
+
+        @if (_status.IsInitialized)
+        {
+            <MudText Typo="Typo.body2" Class="mb-4">
+                All data is encrypted with your password before being written to disk, and backups downloaded from this page are encrypted too.
+            </MudText>
+
+            @if (_status.IsUnlocked)
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Warning"
+                           OnClick="@LockVaultAsync" StartIcon="@Icons.Material.Filled.Lock">
+                    Lock vault
+                </MudButton>
+            }
+
+            <MudAlert Severity="Severity.Warning" Class="mt-4">
+                Old plaintext backup files (<code>data/*.bak</code>) are <strong>not encrypted</strong>.
+                Delete them to avoid leaving readable data on disk.
+            </MudAlert>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Class="mb-4">
+                The vault is enabled but not initialized yet. Set up a password to start encrypting your data.
+            </MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@GoToSetup" StartIcon="@Icons.Material.Filled.Key">
+                Set up vault
+            </MudButton>
+        }
+    </MudPaper>
+}
 
 <MudPaper Class="pa-4 mb-4" Outlined="true" Style="border-color: var(--mud-palette-error);">
     <MudText Typo="Typo.h6" GutterBottom="true" Color="Color.Error">Danger Zone</MudText>
@@ -133,7 +187,7 @@
             Currency conversions will not be deleted.
         </MudText>
         <MudText Class="mt-2" Typo="Typo.body2">
-            Prefer a backup of <code>data/transactions.json</code> and <code>data/portfolio.json</code> before continuing.
+            Use <strong>Download Backup</strong> above before continuing.
         </MudText>
     </DialogContent>
     <DialogActions>
@@ -179,6 +233,7 @@
 </MudDialog>
 
 @code {
+    private AuthStatusDto _status = new();
     private bool _isRestoring;
     private bool _isResetting;
     private string? _lastRestoreMessage;
@@ -197,6 +252,36 @@
     private int _deleteYearPreviewOptions;
     private bool _showDeleteAssetYearDialog;
     private int _deleteAssetYearPreviewAssets;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _status = await Http.GetFromJsonAsync<AuthStatusDto>("/api/auth/status") ?? new AuthStatusDto();
+        }
+        catch
+        {
+            // API unreachable: the page renders with the default state.
+        }
+    }
+
+    private void GoToSetup()
+    {
+        Navigation.NavigateTo("/setup");
+    }
+
+    private async Task LockVaultAsync()
+    {
+        try
+        {
+            await Http.PostAsync("/api/auth/lock", null);
+            Navigation.NavigateTo("/unlock", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to lock vault: {ex.Message}", Severity.Error);
+        }
+    }
 
     private void DownloadBackup()
     {

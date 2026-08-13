@@ -201,6 +201,7 @@ public class WithholdingTotalDto
 
 public class AuthStatusDto
 {
+    public bool IsEnabled { get; set; }
     public bool IsInitialized { get; set; }
     public bool IsUnlocked { get; set; }
 }

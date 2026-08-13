@@ -43,7 +43,11 @@ else
         try
         {
             AuthStatusDto status = await Http.GetFromJsonAsync<AuthStatusDto>("/api/auth/status") ?? new AuthStatusDto();
-            if (!status.IsInitialized)
+            if (!status.IsEnabled)
+            {
+                Navigation.NavigateTo("/");
+            }
+            else if (!status.IsInitialized)
             {
                 Navigation.NavigateTo("/setup");
             }

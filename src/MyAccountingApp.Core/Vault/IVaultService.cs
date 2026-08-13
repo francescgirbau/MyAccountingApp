@@ -2,6 +2,7 @@
 
 public interface IVaultService
 {
+    bool IsEnabled { get; }
     bool IsInitialized { get; }
     bool IsUnlocked { get; }
     void Initialize(string password);

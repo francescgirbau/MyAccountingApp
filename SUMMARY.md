@@ -86,11 +86,13 @@ docker compose up --build -d
 - Logs: mounted to `./logs/` (Serilog, 7-day retention)
 
 ## Security model (vault + localhost-first)
+- **Feature flag**: `Vault:Enabled` in `appsettings.json`. While developing, keep it `false`: the vault is off, data is stored plaintext, and no Setup/Unlock screens appear. Switch it to `true` when the product is consolidated and data should be encrypted. Until then, **fails open by design** — do not deploy with `Vault:Enabled=false` if you treat the backup/threat model as active.
 - **Encrypted at rest**: financial data is stored as `data/*.json.enc` (AES-GCM, 256-bit key derived with PBKDF2-SHA256). A reader with filesystem access cannot read the data without the password.
 - **Unlock required**: on first run the UI asks to create a vault (**Setup**, password ≥ 12 chars); after that, every start requires **Unlock**. While the vault is locked, all `/api/*` endpoints (except `/api/health` and `/api/auth/*`) return **401** and the UI shows the unlock screen.
+- **Encrypted backups**: while the vault is unlocked, `Download Backup` produces a `.bin` file encrypted with the vault key (`application/octet-stream`); restore decrypts it automatically and still accepts older plaintext `.json` backups. With the vault disabled the backup is plaintext JSON.
 - **Plaintext only in memory**: decrypted data lives in RAM only while unlocked; locking the vault clears both the derived key and the in-memory repositories.
 - **No password recovery**: if you forget the vault password and have no backup, the data is unrecoverable (by design).
-- **Migration**: on first unlock after upgrading, existing plaintext `data/*.json` files are encrypted in place and a `*.json.bak` copy is left behind — delete the `.bak` files once you have confirmed the migration worked (`.bak` files are plaintext).
+- **Migration**: on first unlock after upgrading, existing plaintext `data/*.json` files are encrypted in place and a `*.json.bak` copy is left behind — delete the `.bak` files once you have confirmed the migration worked (`.bak` files are plaintext, warned about in Settings → Security).
 - **Localhost-first**: the Docker port is bound to `127.0.0.1` only (`docker-compose.yml`). **Do not publish port 8080 beyond localhost** (no `0.0.0.0`/LAN/VPN): anyone who can reach the port can attempt to unlock the vault.
 - **Threat model**: a sibling/colleague with the same OS session who opens the browser on this machine can interact with the UI, but cannot read the data on disk. The remaining surface is the machine itself: while unlocked, a process running under the same user could read the plaintext from RAM. Single-user local app by design.
 

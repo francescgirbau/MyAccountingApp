@@ -37,6 +37,11 @@
         try
         {
             AuthStatusDto status = await Http.GetFromJsonAsync<AuthStatusDto>("/api/auth/status") ?? new AuthStatusDto();
+            if (!status.IsEnabled)
+            {
+                return;
+            }
+
             if (!status.IsInitialized)
             {
                 if (!IsOnAuthPage("/setup"))
