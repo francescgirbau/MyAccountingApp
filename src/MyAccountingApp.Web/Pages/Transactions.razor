@@ -341,7 +341,8 @@ ApplyFilters();
 
         _filteredTransactions = query.OrderByDescending(t => t.Date).ToList();
         RebuildFilterSummaries();
-        _selected.RemoveWhere(item => !_filteredTransactions.Contains(item));
+        HashSet<Guid> filteredIds = _filteredTransactions.Select(t => t.Id).ToHashSet();
+        _selected.RemoveWhere(item => !filteredIds.Contains(item.Id));
     }
 
     private void RebuildFilterSummaries()
@@ -492,7 +493,7 @@ ApplyFilters();
             return;
         }
 
-        List<TransactionDto> targets = _selected.Where(s => _filteredTransactions.Contains(s)).ToList();
+        List<TransactionDto> targets = _selected.Where(s => _filteredTransactions.Any(f => f.Id == s.Id)).ToList();
         if (targets.Count == 0)
         {
             Snackbar.Add("No visible rows selected", Severity.Warning);

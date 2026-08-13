@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using MyAccountingApp.Core.Vault;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Interfaces;
 
@@ -15,6 +16,7 @@ public class JsonApiQuotaRepository : IApiQuotaRepository
     private readonly int _requestsLimit;
     private readonly int _safetyMargin;
     private readonly string _providerName;
+    private readonly IVaultService? _vaultService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JsonApiQuotaRepository"/> class.
@@ -23,12 +25,14 @@ public class JsonApiQuotaRepository : IApiQuotaRepository
     /// <param name="requestsLimit">The monthly request limit.</param>
     /// <param name="safetyMargin">The number of requests reserved as a safety margin.</param>
     /// <param name="providerName">The name of the external provider.</param>
-    public JsonApiQuotaRepository(string filePath, int requestsLimit = 100, int safetyMargin = 10, string providerName = "exchangerate.host")
+    /// <param name="vaultService">Optional vault service for encryption.</param>
+    public JsonApiQuotaRepository(string filePath, int requestsLimit = 100, int safetyMargin = 10, string providerName = "exchangerate.host", IVaultService? vaultService = null)
     {
         this._filePath = filePath;
         this._requestsLimit = requestsLimit;
         this._safetyMargin = safetyMargin;
         this._providerName = providerName;
+        this._vaultService = vaultService;
     }
 
     /// <summary>
@@ -37,9 +41,9 @@ public class JsonApiQuotaRepository : IApiQuotaRepository
     /// <returns>The current quota.</returns>
     public ApiUsageQuota Get()
     {
-        if (File.Exists(this._filePath) && new FileInfo(this._filePath).Length > 0)
+        string json = EncryptedJsonFileStorage.ReadText(this._filePath, this._vaultService);
+        if (!string.IsNullOrWhiteSpace(json))
         {
-            string json = File.ReadAllText(this._filePath);
             JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true, Converters = { new JsonStringEnumConverter() } };
             ApiUsageQuota? quota = JsonSerializer.Deserialize<ApiUsageQuota>(json, options);
 
@@ -66,7 +70,7 @@ public class JsonApiQuotaRepository : IApiQuotaRepository
         };
 
         string json = JsonSerializer.Serialize(quota, options);
-        File.WriteAllText(this._filePath, json);
+        EncryptedJsonFileStorage.WriteText(this._filePath, json, this._vaultService);
     }
 
     private ApiUsageQuota CreateDefault()

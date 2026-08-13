@@ -10,6 +10,7 @@ public static class ApiEndpoints
     {
         app.MapGet($"{ApiPrefix}/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
+        app.MapAuthEndpoints();
         app.MapTransactionsEndpoints();
         app.MapImportEndpoints();
         app.MapPortfolioEndpoints();

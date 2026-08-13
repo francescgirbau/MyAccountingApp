@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using MyAccountingApp.Core.Vault;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Interfaces;
 
@@ -13,14 +14,17 @@ namespace MyAccountingApp.Core.Persistence;
 public class JsonPendingConversionRepository : IPendingConversionRepository
 {
     private readonly string _filePath;
+    private readonly IVaultService? _vaultService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JsonPendingConversionRepository"/> class.
     /// </summary>
     /// <param name="filePath">The path to the JSON file.</param>
-    public JsonPendingConversionRepository(string filePath)
+    /// <param name="vaultService">Optional vault service for encryption.</param>
+    public JsonPendingConversionRepository(string filePath, IVaultService? vaultService = null)
     {
         this._filePath = filePath;
+        this._vaultService = vaultService;
     }
 
     /// <summary>
@@ -29,9 +33,9 @@ public class JsonPendingConversionRepository : IPendingConversionRepository
     /// <returns>All queued conversion requests.</returns>
     public IEnumerable<PendingConversionRequest> GetAll()
     {
-        if (File.Exists(this._filePath) && new FileInfo(this._filePath).Length > 0)
+        string json = EncryptedJsonFileStorage.ReadText(this._filePath, this._vaultService);
+        if (!string.IsNullOrWhiteSpace(json))
         {
-            string json = File.ReadAllText(this._filePath);
             JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true, Converters = { new JsonStringEnumConverter() } };
             List<PendingConversionRequest>? requests = JsonSerializer.Deserialize<List<PendingConversionRequest>>(json, options);
 
@@ -70,7 +74,7 @@ public class JsonPendingConversionRepository : IPendingConversionRepository
         };
 
         string json = JsonSerializer.Serialize(requests, options);
-        File.WriteAllText(this._filePath, json);
+        EncryptedJsonFileStorage.WriteText(this._filePath, json, this._vaultService);
     }
 
     private void EnsureDirectory()

@@ -302,7 +302,8 @@ else
             query = query.Where(t => t.Symbol == _selectedSymbol);
 
         _filteredTransactions = query.OrderByDescending(t => t.Transaction.Date).ToList();
-        _selected.RemoveWhere(item => !_filteredTransactions.Contains(item));
+        HashSet<Guid> filteredIds = _filteredTransactions.Select(t => t.Transaction.Id).ToHashSet();
+        _selected.RemoveWhere(item => !filteredIds.Contains(item.Transaction.Id));
     }
 
     private void OpenEditDialog(OptionTransactionDto tx)
@@ -393,7 +394,7 @@ else
             return;
         }
 
-        List<OptionTransactionDto> targets = _selected.Where(s => _filteredTransactions.Contains(s)).ToList();
+        List<OptionTransactionDto> targets = _selected.Where(s => _filteredTransactions.Any(f => f.Transaction.Id == s.Transaction.Id)).ToList();
         if (targets.Count == 0)
         {
             Snackbar.Add("No visible rows selected", Severity.Warning);

@@ -1,4 +1,5 @@
-﻿using MyAccountingApp.Domain.Entities;
+﻿using MyAccountingApp.Core.Vault;
+using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Interfaces;
 
 namespace MyAccountingApp.Core.Persistence;
@@ -15,12 +16,20 @@ public class CompositeTransactionRepository : ITransactionRepository
     /// Initializes a new instance of the <see cref="CompositeTransactionRepository"/> class.
     /// </summary>
     /// <param name="jsonPath">The path to the JSON file for persistent storage.</param>
-    public CompositeTransactionRepository(string jsonPath)
+    /// <param name="vaultService">Optional vault service for encryption.</param>
+    public CompositeTransactionRepository(string jsonPath, IVaultService? vaultService = null)
     {
-        this._jsonRepo = new JsonTransactionRepository(jsonPath);
+        this._jsonRepo = new JsonTransactionRepository(jsonPath, vaultService);
         this._memoryRepo = new InMemoryTransactionRepository();
 
-        this._memoryRepo.Initialize(this._jsonRepo.GetAll());
+        try
+        {
+            this._memoryRepo.Initialize(this._jsonRepo.GetAll());
+        }
+        catch
+        {
+            this._memoryRepo.Initialize(Enumerable.Empty<Transaction>());
+        }
     }
 
     /// <summary>

@@ -15,6 +15,7 @@ using MyAccountingApp.Core.Imports.MyInvestor;
 using MyAccountingApp.Core.Imports.Revolut;
 using MyAccountingApp.Core.Imports.SelfBank;
 using MyAccountingApp.Core.Persistence;
+using MyAccountingApp.Core.Vault;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
 using Serilog;
@@ -26,6 +27,9 @@ public static class DependencyInjection
     public static void AddApplicationServices(this WebApplicationBuilder builder)
     {
         bool isDev = builder.Environment.IsDevelopment();
+
+        IVaultService vaultService = new VaultService("data");
+        builder.Services.AddSingleton<IVaultService>(vaultService);
 
         builder.Services.AddCors(options =>
         {
@@ -42,7 +46,7 @@ public static class DependencyInjection
 
         bool useFrankfurter = string.Equals(currencyOptions.Provider, "Frankfurter", StringComparison.OrdinalIgnoreCase);
 
-        CompositeConversionRepository repo = new CompositeConversionRepository("data/conversions.json");
+        CompositeConversionRepository repo = new CompositeConversionRepository("data/conversions.json", vaultService);
 
         builder.Services.AddHttpClient("Frankfurter", client =>
         {
@@ -71,12 +75,12 @@ public static class DependencyInjection
                     ?? throw new InvalidOperationException(
                         "CurrencyApi:ApiKey not found. Set it in appsettings.json or the CURRENCY_API_KEY environment variable.");
 
-            quotaRepo = new JsonApiQuotaRepository("data/api_quota.json", currencyOptions.RequestsLimit, currencyOptions.SafetyMargin, currencyOptions.ProviderName);
+            quotaRepo = new JsonApiQuotaRepository("data/api_quota.json", currencyOptions.RequestsLimit, currencyOptions.SafetyMargin, currencyOptions.ProviderName, vaultService);
             quotaManager = new ApiQuotaManager(quotaRepo);
         }
 
         Currencies source = Currencies.EUR;
-        JsonPendingConversionRepository pendingRepo = new JsonPendingConversionRepository("data/pending_conversions.json");
+        JsonPendingConversionRepository pendingRepo = new JsonPendingConversionRepository("data/pending_conversions.json", vaultService);
         PendingConversionQueue pendingQueue = new PendingConversionQueue(pendingRepo);
 
         builder.Services.AddSingleton<ICurrencyConverter>(sp =>
@@ -123,11 +127,11 @@ public static class DependencyInjection
                 sp.GetRequiredService<ILogger<CurrencyRateService>>());
         });
         builder.Services.AddSingleton<ITransactionRepository>(
-            new CompositeTransactionRepository("data/transactions.json"));
+            new CompositeTransactionRepository("data/transactions.json", vaultService));
         builder.Services.AddSingleton<IPortfolioRepository>(
-            new CompositePortfolioRepository("data/portfolio.json"));
+            new CompositePortfolioRepository("data/portfolio.json", vaultService));
         builder.Services.AddSingleton<IOptionTransactionRepository>(
-            new JsonOptionTransactionRepository("data/options.json"));
+            new JsonOptionTransactionRepository("data/options.json", vaultService));
         builder.Services.AddSingleton<InteractiveBrokersImportService>(sp =>
         {
             ICsvParser csvParser = new InteractiveBrokersCsvParser();

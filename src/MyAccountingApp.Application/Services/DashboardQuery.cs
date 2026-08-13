@@ -44,7 +44,7 @@ public class DashboardQuery : IDashboardQuery
         DateTime monthStart = new DateTime(asOf.Year, asOf.Month, 1);
 
         decimal SumCategory(List<Transaction> txs, Func<TransactionCategory, bool> predicate) =>
-            txs.Where(t => predicate(t.Category)).Sum(t => t.Money.Amount);
+            txs.Where(t => predicate(t.Category) && string.Equals(t.Money.Currency, Eur, StringComparison.OrdinalIgnoreCase)).Sum(t => t.Money.Amount);
 
         List<Transaction> ytd = allTransactions.Where(t => t.Date >= yearStart && t.Date <= end).ToList();
         List<Transaction> mtd = allTransactions.Where(t => t.Date >= monthStart && t.Date <= end).ToList();

@@ -85,6 +85,12 @@ docker compose up --build -d
 - Swagger: `http://localhost:8080/swagger`
 - Logs: mounted to `./logs/` (Serilog, 7-day retention)
 
+## Security model (localhost-first)
+- The API has **no authentication**: by design the Docker port is bound to `127.0.0.1` only (`docker-compose.yml`), so the app is reachable solely from the machine running the container.
+- **Do not publish port 8080 beyond localhost** (no `0.0.0.0`/LAN/VPN) until the v2.0 auth gate (unlock + encrypted vault) exists. Anyone who can reach the port can read `GET /api/transactions`, download backups and reset data.
+- The financial data itself is stored **in plain JSON** on disk (`data/*.json`): a reader with filesystem access can read them. Encryption at rest is planned for v2.0 (`data/*.json.enc`, AES-GCM + unlock password). There is **no password recovery**: if you forget the vault password and have no backup, the data is unrecoverable.
+- Threat model (v1): a sibling/colleague opening the browser on this machine and reading files on this machine can see your data. The current defenses are: localhost-only port binding and normal OS filesystem permissions.
+
 ## How to run without CURRENCY_API_KEY
 Frankfurter is the default provider and requires **no key, no account, no quota**. Just run the API/ConsoleApp as-is.
 `CURRENCY_API_KEY` is only needed when `CurrencyApi:Provider` is set to `ExchangeRateHost`.

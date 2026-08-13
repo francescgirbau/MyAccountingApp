@@ -22,8 +22,12 @@ public static class TransactionsEndpoints
 
         app.MapPost($"{prefix}/transactions", (CreateTransactionRequest request, ITransactionRepository repo, ITransactionValidator validator) =>
         {
+            if (!Enum.TryParse<TransactionCategory>(request.Category, ignoreCase: true, out TransactionCategory category))
+            {
+                return Results.BadRequest(new { message = $"Invalid category: {request.Category}" });
+            }
+
             Money money = new(request.Amount, request.Currency);
-            TransactionCategory category = Enum.Parse<TransactionCategory>(request.Category);
             Transaction transaction = new(request.Date, request.Description, money, category);
 
             ValidationResult validation = validator.Validate(transaction);
@@ -60,8 +64,12 @@ public static class TransactionsEndpoints
                 return Results.NotFound(new { id, message = "Transaction not found" });
             }
 
+            if (!Enum.TryParse<TransactionCategory>(request.Category, ignoreCase: true, out TransactionCategory category))
+            {
+                return Results.BadRequest(new { message = $"Invalid category: {request.Category}" });
+            }
+
             Money money = new(request.Amount, request.Currency);
-            TransactionCategory category = Enum.Parse<TransactionCategory>(request.Category);
             Transaction transaction = new(id, request.Date, request.Description, money, category);
 
             ValidationResult validation = validator.Validate(transaction);
@@ -116,8 +124,17 @@ public static class TransactionsEndpoints
 
         app.MapPost($"{prefix}/asset-transactions", (CreateAssetTransactionRequest request, IPortfolioRepository repo, ITransactionValidator validator) =>
         {
+            if (!Enum.TryParse<TransactionCategory>(request.Category, ignoreCase: true, out TransactionCategory category))
+            {
+                return Results.BadRequest(new { message = $"Invalid category: {request.Category}" });
+            }
+
+            if (!Enum.TryParse<AssetTransactionType>(request.Type, ignoreCase: true, out AssetTransactionType type))
+            {
+                return Results.BadRequest(new { message = $"Invalid type: {request.Type}" });
+            }
+
             Money money = new(request.Amount, request.Currency);
-            TransactionCategory category = Enum.Parse<TransactionCategory>(request.Category);
             Transaction transaction = new(request.Date, request.Description, money, category);
 
             ValidationResult validation = validator.Validate(transaction);
@@ -126,7 +143,6 @@ public static class TransactionsEndpoints
                 return Results.BadRequest(validation.Errors);
             }
 
-            AssetTransactionType type = Enum.Parse<AssetTransactionType>(request.Type);
             AssetTransaction assetTx = new(transaction, request.Symbol, request.Quantity, type);
             repo.AddOrUpdate(assetTx);
             return Results.Created($"/api/asset-transactions/{transaction.Id}", assetTx.ToDto());
@@ -140,8 +156,17 @@ public static class TransactionsEndpoints
                 return Results.NotFound(new { id, message = "Asset transaction not found" });
             }
 
+            if (!Enum.TryParse<TransactionCategory>(request.Category, ignoreCase: true, out TransactionCategory category))
+            {
+                return Results.BadRequest(new { message = $"Invalid category: {request.Category}" });
+            }
+
+            if (!Enum.TryParse<AssetTransactionType>(request.Type, ignoreCase: true, out AssetTransactionType type))
+            {
+                return Results.BadRequest(new { message = $"Invalid type: {request.Type}" });
+            }
+
             Money money = new(request.Amount, request.Currency);
-            TransactionCategory category = Enum.Parse<TransactionCategory>(request.Category);
             Transaction transaction = new(id, request.Date, request.Description, money, category);
 
             ValidationResult validation = validator.Validate(transaction);
@@ -150,7 +175,6 @@ public static class TransactionsEndpoints
                 return Results.BadRequest(validation.Errors);
             }
 
-            AssetTransactionType type = Enum.Parse<AssetTransactionType>(request.Type);
             AssetTransaction assetTx = new(transaction, request.Symbol, request.Quantity, type);
             repo.AddOrUpdate(assetTx);
             return Results.Ok(assetTx.ToDto());
@@ -232,10 +256,18 @@ public static class TransactionsEndpoints
                 return Results.NotFound(new { id, message = "Option transaction not found" });
             }
 
+            if (!Enum.TryParse<TransactionCategory>(request.Category, ignoreCase: true, out TransactionCategory category))
+            {
+                return Results.BadRequest(new { message = $"Invalid category: {request.Category}" });
+            }
+
+            if (!Enum.TryParse<AssetTransactionType>(request.Type, ignoreCase: true, out AssetTransactionType type))
+            {
+                return Results.BadRequest(new { message = $"Invalid type: {request.Type}" });
+            }
+
             Money money = new(request.Amount, request.Currency);
-            TransactionCategory category = Enum.Parse<TransactionCategory>(request.Category);
             Transaction transaction = new(id, request.Date, request.Description, money, category);
-            AssetTransactionType type = Enum.Parse<AssetTransactionType>(request.Type);
             OptionTransaction updated = new(transaction, request.Symbol, request.Isin, request.Quantity, type);
             repo.Update(updated);
             return Results.Ok(updated.ToDto());

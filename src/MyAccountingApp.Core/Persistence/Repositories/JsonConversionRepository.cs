@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using MyAccountingApp.Core.Vault;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Interfaces;
 
@@ -11,14 +12,17 @@ namespace MyAccountingApp.Core.Persistence;
 public class JsonConversionRepository : IConversionRepository
 {
     private readonly string _filePath;
+    private readonly IVaultService? _vaultService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JsonConversionRepository"/> class.
     /// </summary>
     /// <param name="filePath">The path to the JSON file.</param>
-    public JsonConversionRepository(string filePath)
+    /// <param name="vaultService">Optional vault service for encryption.</param>
+    public JsonConversionRepository(string filePath, IVaultService? vaultService = null)
     {
         this._filePath = filePath;
+        this._vaultService = vaultService;
     }
 
     /// <summary>
@@ -41,9 +45,9 @@ public class JsonConversionRepository : IConversionRepository
     /// <returns>An enumerable of all conversions.</returns>
     public IEnumerable<Conversion> GetAll()
     {
-        if (File.Exists(this._filePath) && new FileInfo(this._filePath).Length > 0)
+        string json = EncryptedJsonFileStorage.ReadText(this._filePath, this._vaultService);
+        if (!string.IsNullOrWhiteSpace(json))
         {
-            string json = File.ReadAllText(this._filePath);
             JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true, Converters = { new JsonStringEnumConverter() } };
             List<Conversion>? conversions = JsonSerializer.Deserialize<List<Conversion>>(json, options);
 
@@ -53,7 +57,7 @@ public class JsonConversionRepository : IConversionRepository
             }
         }
 
-        return new List<Conversion>();
+        return Enumerable.Empty<Conversion>();
     }
 
     /// <summary>
@@ -90,6 +94,6 @@ public class JsonConversionRepository : IConversionRepository
 
         string json = JsonSerializer.Serialize(conversions, options);
 
-        File.WriteAllText(this._filePath, json);
+        EncryptedJsonFileStorage.WriteText(this._filePath, json, this._vaultService);
     }
 }
