@@ -33,15 +33,16 @@ public static class BackupEndpoints
             byte[] bodyBytes = ms.ToArray();
 
             byte[] payload = bodyBytes;
-            if (vault.IsUnlocked)
+            if (!TryParseJson(bodyBytes) && vault.IsUnlocked)
             {
                 try
                 {
                     payload = vault.Decrypt(bodyBytes);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Not encrypted: accept plaintext backups, e.g. created while the vault was disabled.
+                    logger.LogWarning("Backup restore rejected: not JSON and decryption failed ({ErrorType})", ex.GetType().Name);
+                    return Results.BadRequest(new { error = "Backup is neither valid JSON nor a vault-encrypted backup." });
                 }
             }
 
@@ -107,6 +108,19 @@ public static class BackupEndpoints
                 return Results.Ok(new List<object>());
             }
         });
+    }
+
+    private static bool TryParseJson(byte[] bytes)
+    {
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(bytes);
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 }
 

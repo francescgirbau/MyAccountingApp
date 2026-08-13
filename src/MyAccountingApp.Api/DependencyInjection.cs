@@ -28,7 +28,7 @@ public static class DependencyInjection
     {
         bool isDev = builder.Environment.IsDevelopment();
 
-        bool vaultEnabled = builder.Configuration.GetValue<bool>("Vault:Enabled");
+        bool vaultEnabled = VaultStartupPolicy.ResolveEnabled(builder.Environment.EnvironmentName, builder.Configuration.GetValue<bool>("Vault:Enabled"));
         IVaultService vaultService = vaultEnabled ? new VaultService("data") : new DisabledVaultService();
         builder.Services.AddSingleton<IVaultService>(vaultService);
 
