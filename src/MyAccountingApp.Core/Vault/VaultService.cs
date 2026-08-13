@@ -12,10 +12,18 @@ public class VaultService : IVaultService
     private bool _isUnlocked;
 
     public VaultService(string dataDirectory)
+        : this(dataDirectory, enabled: true)
     {
+    }
+
+    public VaultService(string dataDirectory, bool enabled)
+    {
+        this.IsEnabled = enabled;
         Directory.CreateDirectory(dataDirectory);
         this._metaFilePath = Path.Combine(dataDirectory, "vault.meta");
     }
+
+    public bool IsEnabled { get; }
 
     public bool IsInitialized
     {

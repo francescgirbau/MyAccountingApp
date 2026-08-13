@@ -28,7 +28,8 @@ public static class DependencyInjection
     {
         bool isDev = builder.Environment.IsDevelopment();
 
-        IVaultService vaultService = new VaultService("data");
+        bool vaultEnabled = builder.Configuration.GetValue<bool>("Vault:Enabled");
+        IVaultService vaultService = vaultEnabled ? new VaultService("data") : new DisabledVaultService();
         builder.Services.AddSingleton<IVaultService>(vaultService);
 
         builder.Services.AddCors(options =>

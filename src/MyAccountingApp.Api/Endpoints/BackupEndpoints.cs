@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
+using MyAccountingApp.Core.Vault;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Interfaces;
 
@@ -12,24 +13,41 @@ public static class BackupEndpoints
     {
         const string prefix = ApiEndpoints.ApiPrefix;
 
-        app.MapGet($"{prefix}/backup", (ITransactionRepository txRepo, IPortfolioRepository pfRepo, IOptionTransactionRepository optRepo) =>
+        app.MapGet($"{prefix}/backup", (IVaultService vault, ITransactionRepository txRepo, IPortfolioRepository pfRepo, IOptionTransactionRepository optRepo) =>
         {
             List<Transaction> transactions = txRepo.GetAll().ToList();
             List<AssetTransaction> assetTransactions = pfRepo.GetAllTransactions().ToList();
             List<OptionTransaction> optionTransactions = optRepo.GetAll().ToList();
             string json = JsonSerializer.Serialize(new { transactions, assetTransactions, optionTransactions }, new JsonSerializerOptions { WriteIndented = true });
-            byte[] bytes = Encoding.UTF8.GetBytes(json);
-            return Results.File(bytes, "application/json", $"myaccounting-backup-{DateTime.Now:yyyyMMdd}.json");
+
+            bool encrypted = vault.IsUnlocked;
+            byte[] payload = encrypted ? vault.Encrypt(Encoding.UTF8.GetBytes(json)) : Encoding.UTF8.GetBytes(json);
+            string fileName = $"myaccounting-backup-{DateTime.Now:yyyyMMdd}.{(encrypted ? "bin" : "json")}";
+            return Results.File(payload, encrypted ? "application/octet-stream" : "application/json", fileName);
         });
 
-        app.MapPost($"{prefix}/backup", async (HttpRequest request, ITransactionRepository txRepo, IPortfolioRepository pfRepo, IOptionTransactionRepository optRepo, ILogger<Program> logger) =>
+        app.MapPost($"{prefix}/backup", async (HttpRequest request, IVaultService vault, ITransactionRepository txRepo, IPortfolioRepository pfRepo, IOptionTransactionRepository optRepo, ILogger<Program> logger) =>
         {
-            using StreamReader reader = new(request.Body);
-            string body = await reader.ReadToEndAsync();
+            using MemoryStream ms = new();
+            await request.Body.CopyToAsync(ms);
+            byte[] bodyBytes = ms.ToArray();
+
+            byte[] payload = bodyBytes;
+            if (vault.IsUnlocked)
+            {
+                try
+                {
+                    payload = vault.Decrypt(bodyBytes);
+                }
+                catch
+                {
+                    // Not encrypted: accept plaintext backups, e.g. created while the vault was disabled.
+                }
+            }
 
             try
             {
-                var backup = JsonSerializer.Deserialize<BackupData>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                var backup = JsonSerializer.Deserialize<BackupData>(Encoding.UTF8.GetString(payload), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 if (backup?.Transactions is null)
                 {
                     return Results.BadRequest(new { error = "Invalid backup file format: 'transactions' array is required" });

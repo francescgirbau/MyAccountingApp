@@ -14,6 +14,7 @@ public static class AuthEndpoints
         {
             return Results.Ok(new
             {
+                isEnabled = vault.IsEnabled,
                 isInitialized = vault.IsInitialized,
                 isUnlocked = vault.IsUnlocked,
             });
@@ -21,6 +22,11 @@ public static class AuthEndpoints
 
         app.MapPost($"{prefix}/auth/setup", (AuthRequest request, IVaultService vault) =>
         {
+            if (!vault.IsEnabled)
+            {
+                return Results.BadRequest(new { message = "The vault is disabled." });
+            }
+
             if (vault.IsInitialized)
             {
                 return Results.BadRequest(new { message = "Vault is already initialized." });
@@ -54,8 +60,12 @@ public static class AuthEndpoints
 
         app.MapPost($"{prefix}/auth/lock", (IVaultService vault, IVaultSessionListener sessionListener) =>
         {
-            vault.Lock();
-            sessionListener.OnLocked();
+            if (vault.IsInitialized)
+            {
+                vault.Lock();
+                sessionListener.OnLocked();
+            }
+
             return Results.Ok(new { success = true });
         });
     }
