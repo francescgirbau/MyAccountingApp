@@ -19,10 +19,29 @@ namespace MyAccountingApp.Core.Persistence
                 List<AssetTransaction> transactions = this._jsonRepo.GetAllTransactions().ToList();
                 this._memoryRepo.Initialize(transactions);
             }
-            catch
+            catch (InvalidOperationException)
             {
+                // Vault is locked at startup: memory stays empty until the vault is unlocked and Reload is called.
                 this._memoryRepo.Initialize(Enumerable.Empty<AssetTransaction>());
             }
+        }
+
+        /// <summary>
+        /// Reloads all asset transactions from the JSON repository into memory.
+        /// </summary>
+        /// <remarks>Requires the vault to be unlocked when encryption is enabled.</remarks>
+        public void Reload()
+        {
+            List<AssetTransaction> transactions = this._jsonRepo.GetAllTransactions().ToList();
+            this._memoryRepo.Initialize(transactions);
+        }
+
+        /// <summary>
+        /// Clears all asset transactions from memory.
+        /// </summary>
+        public void Clear()
+        {
+            this._memoryRepo.Initialize(Enumerable.Empty<AssetTransaction>());
         }
 
         public void AddOrUpdate(AssetTransaction assetTransaction)

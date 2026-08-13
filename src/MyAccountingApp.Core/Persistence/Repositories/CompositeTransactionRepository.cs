@@ -26,10 +26,28 @@ public class CompositeTransactionRepository : ITransactionRepository
         {
             this._memoryRepo.Initialize(this._jsonRepo.GetAll());
         }
-        catch
+        catch (InvalidOperationException)
         {
+            // Vault is locked at startup: memory stays empty until the vault is unlocked and Reload is called.
             this._memoryRepo.Initialize(Enumerable.Empty<Transaction>());
         }
+    }
+
+    /// <summary>
+    /// Reloads all transactions from the JSON repository into memory.
+    /// </summary>
+    /// <remarks>Requires the vault to be unlocked when encryption is enabled.</remarks>
+    public void Reload()
+    {
+        this._memoryRepo.Initialize(this._jsonRepo.GetAll());
+    }
+
+    /// <summary>
+    /// Clears all transactions from memory.
+    /// </summary>
+    public void Clear()
+    {
+        this._memoryRepo.Initialize(Enumerable.Empty<Transaction>());
     }
 
     /// <summary>

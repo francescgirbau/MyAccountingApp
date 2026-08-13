@@ -1,0 +1,96 @@
+﻿@page "/unlock"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Unlock vault</PageTitle>
+
+@if (_checking)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
+        <MudPaper Class="pa-6" Elevation="2">
+            <MudText Typo="Typo.h4">Unlock your vault</MudText>
+            <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">
+                Enter your password to access your encrypted financial data.
+            </MudText>
+
+            <MudTextField @bind-Value="_password" Label="Password" InputType="InputType.Password" Variant="Variant.Outlined" Class="mt-4"
+                          OnKeyDown="@OnKeyDownAsync" />
+
+            @if (_error != null)
+            {
+                <MudText Class="red--text mt-2" role="alert">@_error</MudText>
+            }
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" Disabled="_busy" OnClick="@UnlockAsync">
+                Unlock
+            </MudButton>
+        </MudPaper>
+    </MudContainer>
+}
+
+@code {
+    private string _password = string.Empty;
+    private string? _error;
+    private bool _busy;
+    private bool _checking = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            AuthStatusDto status = await Http.GetFromJsonAsync<AuthStatusDto>("/api/auth/status") ?? new AuthStatusDto();
+            if (!status.IsInitialized)
+            {
+                Navigation.NavigateTo("/setup");
+            }
+            else if (status.IsUnlocked)
+            {
+                Navigation.NavigateTo("/");
+            }
+        }
+        finally
+        {
+            this._checking = false;
+        }
+    }
+
+    private async Task OnKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await this.UnlockAsync();
+        }
+    }
+
+    private async Task UnlockAsync()
+    {
+        this._error = null;
+
+        if (string.IsNullOrWhiteSpace(this._password))
+        {
+            return;
+        }
+
+        this._busy = true;
+        try
+        {
+            HttpResponseMessage response = await Http.PostAsJsonAsync("/api/auth/unlock", new { password = this._password });
+            if (response.IsSuccessStatusCode)
+            {
+                Navigation.NavigateTo("/", forceLoad: true);
+            }
+            else
+            {
+                this._error = "Invalid password.";
+            }
+        }
+        finally
+        {
+            this._busy = false;
+        }
+    }
+}

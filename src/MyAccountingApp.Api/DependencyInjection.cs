@@ -126,10 +126,11 @@ public static class DependencyInjection
                 currencyOptions.ProviderName,
                 sp.GetRequiredService<ILogger<CurrencyRateService>>());
         });
-        builder.Services.AddSingleton<ITransactionRepository>(
-            new CompositeTransactionRepository("data/transactions.json", vaultService));
-        builder.Services.AddSingleton<IPortfolioRepository>(
-            new CompositePortfolioRepository("data/portfolio.json", vaultService));
+        CompositeTransactionRepository transactionRepo = new CompositeTransactionRepository("data/transactions.json", vaultService);
+        CompositePortfolioRepository portfolioRepo = new CompositePortfolioRepository("data/portfolio.json", vaultService);
+        builder.Services.AddSingleton<ITransactionRepository>(transactionRepo);
+        builder.Services.AddSingleton<IPortfolioRepository>(portfolioRepo);
+        builder.Services.AddSingleton<IVaultSessionListener>(new VaultSessionService(repo, transactionRepo, portfolioRepo));
         builder.Services.AddSingleton<IOptionTransactionRepository>(
             new JsonOptionTransactionRepository("data/options.json", vaultService));
         builder.Services.AddSingleton<InteractiveBrokersImportService>(sp =>

@@ -85,11 +85,14 @@ docker compose up --build -d
 - Swagger: `http://localhost:8080/swagger`
 - Logs: mounted to `./logs/` (Serilog, 7-day retention)
 
-## Security model (localhost-first)
-- The API has **no authentication**: by design the Docker port is bound to `127.0.0.1` only (`docker-compose.yml`), so the app is reachable solely from the machine running the container.
-- **Do not publish port 8080 beyond localhost** (no `0.0.0.0`/LAN/VPN) until the v2.0 auth gate (unlock + encrypted vault) exists. Anyone who can reach the port can read `GET /api/transactions`, download backups and reset data.
-- The financial data itself is stored **in plain JSON** on disk (`data/*.json`): a reader with filesystem access can read them. Encryption at rest is planned for v2.0 (`data/*.json.enc`, AES-GCM + unlock password). There is **no password recovery**: if you forget the vault password and have no backup, the data is unrecoverable.
-- Threat model (v1): a sibling/colleague opening the browser on this machine and reading files on this machine can see your data. The current defenses are: localhost-only port binding and normal OS filesystem permissions.
+## Security model (vault + localhost-first)
+- **Encrypted at rest**: financial data is stored as `data/*.json.enc` (AES-GCM, 256-bit key derived with PBKDF2-SHA256). A reader with filesystem access cannot read the data without the password.
+- **Unlock required**: on first run the UI asks to create a vault (**Setup**, password ≥ 12 chars); after that, every start requires **Unlock**. While the vault is locked, all `/api/*` endpoints (except `/api/health` and `/api/auth/*`) return **401** and the UI shows the unlock screen.
+- **Plaintext only in memory**: decrypted data lives in RAM only while unlocked; locking the vault clears both the derived key and the in-memory repositories.
+- **No password recovery**: if you forget the vault password and have no backup, the data is unrecoverable (by design).
+- **Migration**: on first unlock after upgrading, existing plaintext `data/*.json` files are encrypted in place and a `*.json.bak` copy is left behind — delete the `.bak` files once you have confirmed the migration worked (`.bak` files are plaintext).
+- **Localhost-first**: the Docker port is bound to `127.0.0.1` only (`docker-compose.yml`). **Do not publish port 8080 beyond localhost** (no `0.0.0.0`/LAN/VPN): anyone who can reach the port can attempt to unlock the vault.
+- **Threat model**: a sibling/colleague with the same OS session who opens the browser on this machine can interact with the UI, but cannot read the data on disk. The remaining surface is the machine itself: while unlocked, a process running under the same user could read the plaintext from RAM. Single-user local app by design.
 
 ## How to run without CURRENCY_API_KEY
 Frankfurter is the default provider and requires **no key, no account, no quota**. Just run the API/ConsoleApp as-is.

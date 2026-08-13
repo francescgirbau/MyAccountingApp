@@ -1,4 +1,7 @@
-﻿<MudNavMenu>
+﻿@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<MudNavMenu>
     <MudText Typo="Typo.h6" Class="px-4 py-4">Navigation</MudText>
     <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
 
@@ -22,4 +25,18 @@
         <MudNavLink Href="data-quality" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Checklist">Data quality</MudNavLink>
         <MudNavLink Href="settings" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">Settings</MudNavLink>
     </MudNavGroup>
+
+    <div class="px-4 py-2">
+        <MudButton Variant="Variant.Outlined" Color="Color.Error" FullWidth="true" StartIcon="@Icons.Material.Filled.Lock" OnClick="@LockAsync">
+            Lock
+        </MudButton>
+    </div>
 </MudNavMenu>
+
+@code {
+    private async Task LockAsync()
+    {
+        await Http.PostAsJsonAsync("/api/auth/lock", new { });
+        Navigation.NavigateTo("/unlock");
+    }
+}

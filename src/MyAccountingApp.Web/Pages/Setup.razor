@@ -1,0 +1,99 @@
+﻿@page "/setup"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Set up your vault</PageTitle>
+
+@if (_checking)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
+        <MudPaper Class="pa-6" Elevation="2">
+            <MudText Typo="Typo.h4">Set up your vault</MudText>
+            <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">
+                Choose a password to encrypt your financial data. There is no recovery: if you lose this password, the data cannot be decrypted.
+            </MudText>
+
+            <MudTextField @bind-Value="_password" Label="Password" InputType="InputType.Password" Variant="Variant.Outlined" Class="mt-4" />
+            <MudTextField @bind-Value="_confirm" Label="Confirm password" InputType="InputType.Password" Variant="Variant.Outlined" Class="mt-2" />
+
+            @if (_error != null)
+            {
+                <MudText Class="red--text mt-2" role="alert">@_error</MudText>
+            }
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" Disabled="_busy" OnClick="@CreateAsync">
+                Create vault
+            </MudButton>
+        </MudPaper>
+    </MudContainer>
+}
+
+@code {
+    private string _password = string.Empty;
+    private string _confirm = string.Empty;
+    private string? _error;
+    private bool _busy;
+    private bool _checking = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            AuthStatusDto status = await Http.GetFromJsonAsync<AuthStatusDto>("/api/auth/status") ?? new AuthStatusDto();
+            if (status.IsInitialized)
+            {
+                Navigation.NavigateTo(status.IsUnlocked ? "/" : "/unlock");
+            }
+        }
+        finally
+        {
+            this._checking = false;
+        }
+    }
+
+    private async Task CreateAsync()
+    {
+        this._error = null;
+
+        AuthStatusDto status = await Http.GetFromJsonAsync<AuthStatusDto>("/api/auth/status") ?? new AuthStatusDto();
+        if (status.IsInitialized)
+        {
+            Navigation.NavigateTo("/unlock");
+            return;
+        }
+
+        if (this._password.Length < 12)
+        {
+            this._error = "Password must be at least 12 characters.";
+            return;
+        }
+
+        if (this._password != this._confirm)
+        {
+            this._error = "Passwords do not match.";
+            return;
+        }
+
+        this._busy = true;
+        try
+        {
+            HttpResponseMessage response = await Http.PostAsJsonAsync("/api/auth/setup", new { password = this._password });
+            if (response.IsSuccessStatusCode)
+            {
+                Navigation.NavigateTo("/", forceLoad: true);
+            }
+            else
+            {
+                this._error = "Could not create the vault. Please try again.";
+            }
+        }
+        finally
+        {
+            this._busy = false;
+        }
+    }
+}
