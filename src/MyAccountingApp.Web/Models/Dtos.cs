@@ -111,6 +111,15 @@ public class ValidationResponseDto
     public List<ValidationError> Warnings { get; set; } = new();
 }
 
+public class TransferMatchingResultDto
+{
+    public int TransferCount { get; set; }
+    public int MatchedPairs { get; set; }
+    public int UnmatchedTransfers { get; set; }
+    public int ChangedTransactions { get; set; }
+    public DateTime CalculatedAtUtc { get; set; }
+}
+
 public class BatchPatchFailureDto
 {
     public Guid Id { get; set; }

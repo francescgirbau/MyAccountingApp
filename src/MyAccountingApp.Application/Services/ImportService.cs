@@ -1,7 +1,6 @@
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using MyAccountingApp.Application.Interfaces;
-using MyAccountingApp.Core.Imports.Common;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
@@ -192,74 +191,5 @@ public class ImportService : IImportService
         }
 
         return skipped;
-    }
-
-    private int MatchTransferPairs()
-    {
-        List<Domain.Entities.Transaction> all = this._transactionRepo.GetAll().ToList();
-        List<Domain.Entities.Transaction> transfers = all
-            .Where(t => BankCsvImportService.IsTransfer(t.Description))
-            .ToList();
-
-        List<Domain.Entities.Transaction> expenses = transfers
-            .Where(t => t.Money.Amount > 0 && t.Category != Domain.Enums.TransactionCategory.TRANSFER)
-            .ToList();
-
-        List<Domain.Entities.Transaction> incomes = transfers
-            .Where(t => t.Money.Amount > 0 && t.Category != Domain.Enums.TransactionCategory.TRANSFER)
-            .ToList();
-
-        int matched = 0;
-        bool changed = false;
-
-        foreach (Domain.Entities.Transaction expense in expenses)
-        {
-            if (expense.Category != Domain.Enums.TransactionCategory.EXPENSE)
-            {
-                continue;
-            }
-
-            Domain.Entities.Transaction? match = incomes.FirstOrDefault(inc =>
-                inc.Category == Domain.Enums.TransactionCategory.INCOME &&
-                inc.Money.Amount == expense.Money.Amount &&
-                inc.Money.Currency == expense.Money.Currency &&
-                Math.Abs((inc.Date - expense.Date).TotalDays) <= 3 &&
-                inc.Id != expense.Id);
-
-            if (match != null)
-            {
-                this.ReplaceCategoryInList(all, expense, Domain.Enums.TransactionCategory.TRANSFER);
-                this.ReplaceCategoryInList(all, match, Domain.Enums.TransactionCategory.TRANSFER);
-                matched++;
-                changed = true;
-            }
-        }
-
-        if (changed)
-        {
-            this._transactionRepo.Initialize(all);
-        }
-
-        return matched;
-    }
-
-    private void ReplaceCategoryInList(
-        List<Domain.Entities.Transaction> all,
-        Domain.Entities.Transaction transaction,
-        Domain.Enums.TransactionCategory newCategory)
-    {
-        Domain.Entities.Transaction updated = new Domain.Entities.Transaction(
-            transaction.Id,
-            transaction.Date,
-            transaction.Description,
-            transaction.Money,
-            newCategory,
-            transaction.Source);
-
-        int index = all.FindIndex(t => t.Id == transaction.Id);
-        if (index >= 0)
-        {
-            all[index] = updated;
-        }
     }
 }

@@ -17,6 +17,7 @@ public static class ApiEndpoints
         app.MapConversionEndpoints();
         app.MapBackupEndpoints();
         app.MapDashboardEndpoints();
+        app.MapDataQualityEndpoints();
         app.MapReportsEndpoints();
     }
 }

@@ -169,6 +169,7 @@ public static class DependencyInjection
         builder.Services.AddSingleton<IMarketPriceService, YahooMarketPriceService>();
         builder.Services.AddSingleton<IImportService, ImportService>();
         builder.Services.AddSingleton<ITransactionValidator, TransactionValidator>();
+        builder.Services.AddSingleton<ITransferMatchingService, TransferMatchingService>();
         builder.Services.AddSingleton<IAssetTransactionCommandService, AssetTransactionCommandService>();
         builder.Services.AddSingleton<IOptionTransactionCommandService, OptionTransactionCommandService>();
         builder.Services.AddSingleton<ITransactionCommandService, TransactionCommandService>();
