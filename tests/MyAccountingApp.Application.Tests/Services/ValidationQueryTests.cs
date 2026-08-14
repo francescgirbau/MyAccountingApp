@@ -96,7 +96,22 @@ public class ValidationQueryTests
     }
 
     [Fact]
-    public void ValidateAll_DoesNotFlagTransfer_WhenPairExists()
+    public void ValidateAll_DoesNotFlagTransfer_WhenDepositPairExists()
+    {
+        FakeTxRepo txRepo = new();
+        DateTime date = new(2025, 1, 10);
+        txRepo.AddOrUpdate(new Transaction(Guid.NewGuid(), date, "Transfer to bank", new Money(500m, "EUR"), TransactionCategory.TRANSFER));
+        txRepo.AddOrUpdate(new Transaction(Guid.NewGuid(), date.AddDays(1), "Top-up from bank", new Money(500m, "EUR"), TransactionCategory.DEPOSIT));
+        FakePfRepo pfRepo = new();
+        ValidationQuery query = new(txRepo, pfRepo, new TransactionValidator(), new FakeConversionRepo(), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        Assert.DoesNotContain(result.Warnings, w => w.Field == "UNMATCHED_TRANSFER");
+    }
+
+    [Fact]
+    public void ValidateAll_FlagsTransferWithSameAmountTransfer_AsUnmatched()
     {
         FakeTxRepo txRepo = new();
         DateTime date = new(2025, 1, 10);
@@ -107,7 +122,7 @@ public class ValidationQueryTests
 
         ValidationResult result = query.ValidateAll();
 
-        Assert.DoesNotContain(result.Warnings, w => w.Field == "UNMATCHED_TRANSFER");
+        Assert.Equal(2, result.Warnings.Count(w => w.Field == "UNMATCHED_TRANSFER"));
     }
 
     [Fact]
