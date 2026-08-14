@@ -70,7 +70,7 @@ else
                         <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
                                    OnClick="@(() => Navigation.NavigateTo(context.DeepLink!))"
                                    StartIcon="@Icons.Material.Filled.OpenInNew">
-                            View @(context.EntityIds.Count > 0 ? $"{context.EntityIds.Count} {(context.EntityIds.Count == 1 ? "transaction" : "transactions")}" : "movements")
+                            View @(context.EntityIds is { Count: > 0 } ids ? $"{ids.Count} {(ids.Count == 1 ? "transaction" : "transactions")}" : "movements")
                         </MudButton>
                     }
                     else
