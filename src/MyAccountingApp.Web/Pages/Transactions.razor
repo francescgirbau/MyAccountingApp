@@ -1,4 +1,5 @@
 @page "/transactions"
+@using MyAccountingApp.Application.Services
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
@@ -43,17 +44,31 @@
             </MudSelect>
         </MudItem>
         <MudItem xs="12" sm="6" md="3">
-            <MudSelect @bind-Value="_selectedCategory" @bind-Value:after="ApplyFilters" Label="Category" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+            <MudSelect T="string" Label="Categories" Variant="Variant.Outlined" FullWidth="true"
+                       MultiSelection="true"
+                       SelectedValues="@_selectedCategories"
+                       SelectedValuesChanged="@OnCategoriesChanged"
+                       ToStringFunc="@(value => value ?? string.Empty)"
+                       MultiSelectionTextFunc="@CategoriesSelectionText">
                 @foreach (var cat in _categories)
                 {
-                    <MudSelectItem Value="cat">@cat</MudSelectItem>
+                    <MudSelectItem T="string" Value="@cat">@cat</MudSelectItem>
                 }
             </MudSelect>
+            @if (_selectedCategories.Count > 0)
+            {
+                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" OnClick="@ClearCategories" Class="mt-1">
+                    Clear categories
+                </MudButton>
+            }
         </MudItem>
         <MudItem xs="12" sm="6" md="3">
             <MudTextField @bind-Value="_searchText" @bind-Value:after="ApplyFilters" Label="Search description" Variant="Variant.Outlined" FullWidth="true" Immediate="true" Placeholder="Type to search..." />
         </MudItem>
     </MudGrid>
+    <MudText Typo="Typo.caption" Class="mud-text-secondary mt-2">
+        Select multiple categories to review deposits and transfers together.
+    </MudText>
 </MudPaper>
 
 @if (_loading)
@@ -280,7 +295,7 @@ else
 
     private int? _selectedYear { get; set; }
     private int? _selectedMonth { get; set; }
-    private string? _selectedCategory { get; set; }
+    private HashSet<string> _selectedCategories = new(StringComparer.OrdinalIgnoreCase);
     private string? _searchText { get; set; }
 
     private static readonly string[] _categories = { "INCOME", "EXPENSE", "TRANSFER", "DEPOSIT", "DIVIDEND", "FEE", "WITHHOLDING_TAX", "INTEREST", "INVESTMENT" };
@@ -304,6 +319,9 @@ else
     [SupplyParameterFromQuery(Name = "issue")]
     public string? IssueFromQuery { get; set; }
 
+    [SupplyParameterFromQuery(Name = "categories")]
+    public string? CategoriesFromQuery { get; set; }
+
     private List<Guid> _impactedIds = new();
     private string? _issueContext;
 
@@ -316,7 +334,25 @@ else
     protected override async Task OnInitializedAsync()
     {
         this.ApplyIssueFilterFromQuery();
+        this.ApplyCategoriesFromQuery();
         await this.LoadDataAsync();
+    }
+
+    private void ApplyCategoriesFromQuery()
+    {
+        if (string.IsNullOrWhiteSpace(this.CategoriesFromQuery))
+        {
+            return;
+        }
+
+        foreach (string raw in this.CategoriesFromQuery.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            string? category = _categories.FirstOrDefault(c => string.Equals(c, raw, StringComparison.OrdinalIgnoreCase));
+            if (category is not null)
+            {
+                _selectedCategories.Add(category);
+            }
+        }
     }
 
     private void ApplyIssueFilterFromQuery()
@@ -378,6 +414,30 @@ else
         ApplyFilters();
     }
 
+    private void OnCategoriesChanged(IEnumerable<string> values)
+    {
+        _selectedCategories.Clear();
+        foreach (string value in values)
+        {
+            _selectedCategories.Add(value);
+        }
+
+        ApplyFilters();
+    }
+
+    private void ClearCategories()
+    {
+        _selectedCategories.Clear();
+        ApplyFilters();
+    }
+
+    private static string CategoriesSelectionText(IReadOnlyList<string> values) => values.Count switch
+    {
+        0 => "All categories",
+        1 => "1 category",
+        _ => $"{values.Count} categories",
+    };
+
     private void ApplyFilters()
     {
         var query = _allTransactions.AsEnumerable();
@@ -389,8 +449,8 @@ else
         if (_selectedYear.HasValue && _selectedMonth.HasValue)
             query = query.Where(t => t.Date.Month == _selectedMonth.Value);
 
-        if (!string.IsNullOrWhiteSpace(_selectedCategory))
-            query = query.Where(t => t.Category == _selectedCategory);
+        if (_selectedCategories.Count > 0)
+            query = TransactionCategoryFilter.FilterByCategories(query, _selectedCategories, t => t.Category);
 
         if (!string.IsNullOrWhiteSpace(_searchText))
             query = query.Where(t => t.Description.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
