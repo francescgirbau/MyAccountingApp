@@ -11,10 +11,13 @@
            OnClick="@LoadDataAsync" Disabled="@_loading" Class="mb-4">
     Re-check
 </MudButton>
-<MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.SwapHoriz"
-           OnClick="@RecalculateTransferMatchesAsync" Disabled="@_recalculating" Class="mb-4 ml-4">
-    @(_recalculating ? "Calculating…" : "Recalculate transfer matches")
-</MudButton>
+@if (ShowAdvancedMatching)
+{
+    <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.SwapHoriz"
+               OnClick="@RecalculateTransferMatchesAsync" Disabled="@_recalculating" Class="mb-4 ml-4">
+        @(_recalculating ? "Calculating…" : "Recalculate transfer matches")
+    </MudButton>
+}
 
 @if (_loading || _recalculating)
 {
@@ -84,6 +87,8 @@ else
 }
 
 @code {
+    private static bool ShowAdvancedMatching = false;
+
     private ValidationResponseDto? _result;
     private List<ValidationError> _issues = new();
     private bool _loading = true;

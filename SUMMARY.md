@@ -64,7 +64,7 @@ Rules of thumb: Domain has no external dependencies; Application depends only on
 | GET | `/api/summary` | Annual summaries |
 | POST | `/api/import` | Folder import |
 | POST | `/api/import/upload` | CSV file upload |
-| POST | `/api/data-quality/transfer-matches/recalculate` | Re-run transfer matching (idempotent). Response: `{transferCount, matchedPairs, unmatchedTransfers, changedTransactions, calculatedAtUtc}`. Returns `401` while the vault is locked |
+| POST | `/api/data-quality/transfer-matches/recalculate` | Re-run transfer matching (idempotent, read-only since the matching no longer re-categorizes). Response: `{transferCount, matchedPairs, unmatchedTransfers, changedTransactions, calculatedAtUtc}` (`changedTransactions` is always `0`). Returns `401` while the vault is locked |
 
 ## Persistence
 - **JSON files** mounted as Docker volumes (`./data:/app/data`)
@@ -116,7 +116,17 @@ Data Quality → View N transactions → filtered + preselected rows → bulk ed
 - Every `ValidationError` includes `entityType`, `entityIds`, optional `symbol` and a `deepLink` (`/transactions?ids=...`, `/asset-transactions?symbol=...`).
 - Rule mapping: `DUPLICATE_FINGERPRINT` → all ids of the duplicated group; `UNMATCHED_TRANSFER` → the orphan transfer id; `MISSING_FX` → grouped by date+currency with all affected ids; `FIFO_SHORTFALL` → symbol + all asset ids; `SYMBOL_NO_PRICE` → symbol deep link; field errors (`Date`, `Description`, …) → the single affected id.
 - The Transactions / Asset Transactions pages accept `?ids=` (and `?issue=` for the banner) and preselect the rows so bulk category/symbol edit applies immediately; `?symbol=` filters asset transactions by ticker. A "Clear filter / Back to Data Quality" banner sits on top of the filtered view. The Transactions page also accepts `?categories=DEPOSIT,TRANSFER` (OR semantics, case-insensitive, validated against known categories) and its filter bar supports multi-category selection with OR filtering, a "Clear categories" button, and a caption hinting at the deposits-and-transfers review flow.
-- **Recalculate transfer matches** button runs `POST /api/data-quality/transfer-matches/recalculate`, which re-scans every transaction whose description looks like a bank transfer (keywords `FRANCESC`/`F GIRBAU`), pairs equal-amount transfers within ±3 days, and re-categorizes both sides to `TRANSFER`. It is idempotent (a second run reports `changedTransactions: 0`), safe (non-transfer transactions are never touched, amounts/dates/descriptions are preserved), and persists with a single atomic write. The page then re-runs `GET /api/validate` automatically.
+```text
+Internal cash movement:
+  TRANSFER = money leaving one of my accounts
+  DEPOSIT  = money arriving in another of my accounts
+Matching: TRANSFER ↔ DEPOSIT, same amount/currency, ±3 days, one-to-one.
+This is a bookkeeping adjustment, not income/expense.
+INVESTMENT / sells are out of scope for this matcher.
+```
+
+- The matching rule lives in a single shared helper (`TransferDepositPairing`): Data Quality (`ValidationQuery`) and the recalculate endpoint (`TransferMatchingService`) both use it, so they cannot diverge. Matching is deterministic (sorted by date then id, first-match-wins); a `TRANSFER` without a `DEPOSIT` counterpart within the window is reported as `UNMATCHED_TRANSFER`; an orphan `DEPOSIT` does not generate a warning. `TRANSFER↔TRANSFER` is never a pair.
+- The **Recalculate transfer matches** button is quarantined (behind `ShowAdvancedMatching = false` on the Data Quality page — the endpoint still exists for later use). Re-check after category edits is sufficient, since matching no longer re-categorizes anything.
 
 ## Currency Options (`appsettings.json` → `CurrencyApi`)
 | Key | Default | Description |

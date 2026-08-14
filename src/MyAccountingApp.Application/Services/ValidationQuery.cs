@@ -94,28 +94,17 @@ public class ValidationQuery : IValidationQuery
 
     private void AddUnmatchedTransferRules(List<ValidationError> warnings)
     {
-        List<Transaction> transfers = this._txRepo.GetAll()
-            .Where(t => t.Category == TransactionCategory.TRANSFER)
-            .ToList();
+        HashSet<Guid> unmatched = new HashSet<Guid>(TransferDepositPairing.UnmatchedTransferIds(this._txRepo.GetAll()));
 
-        foreach (Transaction transfer in transfers)
+        foreach (Transaction transfer in this._txRepo.GetAll().Where(t => unmatched.Contains(t.Id)))
         {
-            bool hasPair = transfers.Any(other =>
-                other.Id != transfer.Id &&
-                other.Money.Amount == transfer.Money.Amount &&
-                other.Money.Currency == transfer.Money.Currency &&
-                Math.Abs((other.Date - transfer.Date).TotalDays) <= 3);
-
-            if (!hasPair)
-            {
-                warnings.Add(new ValidationError(
-                    "UNMATCHED_TRANSFER",
-                    $"Transfer on {transfer.Date:yyyy-MM-dd} ({transfer.Description}) has no matching counterpart within 3 days",
-                    "warning",
-                    EntityType: "Transaction",
-                    EntityIds: new[] { transfer.Id },
-                    Date: DateOnly.FromDateTime(transfer.Date)));
-            }
+            warnings.Add(new ValidationError(
+                "UNMATCHED_TRANSFER",
+                $"Transfer on {transfer.Date:yyyy-MM-dd} ({transfer.Description}) has no matching DEPOSIT within 3 days",
+                "warning",
+                EntityType: "Transaction",
+                EntityIds: new[] { transfer.Id },
+                Date: DateOnly.FromDateTime(transfer.Date)));
         }
     }
 

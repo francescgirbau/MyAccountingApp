@@ -13,17 +13,17 @@ public class DataQualityEndpointsTests
           "transactions": [
             {
               "id": "11111111-1111-1111-1111-111111111111",
-              "date": "2025-01-10T00:00:00",
-              "description": "Transferencia a FRANCESC GIRBAU IBKR",
-              "money": { "amount": 1000, "currency": "EUR" },
-              "category": 0
+              "date": "2019-05-20T00:00:00",
+              "description": "TARGETA *9027 Revolut top-up",
+              "money": { "amount": 200, "currency": "EUR" },
+              "category": 2
             },
             {
               "id": "22222222-2222-2222-2222-222222222222",
-              "date": "2025-01-10T00:00:00",
-              "description": "Transferencia de FRANCESC a IBKR",
-              "money": { "amount": 1000, "currency": "EUR" },
-              "category": 1
+              "date": "2019-05-20T00:00:00",
+              "description": "Top-up by *9027",
+              "money": { "amount": 200, "currency": "EUR" },
+              "category": 3
             }
           ],
           "assetTransactions": [],
@@ -46,10 +46,10 @@ public class DataQualityEndpointsTests
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.Equal(2, document.RootElement.GetProperty("transferCount").GetInt32());
+        Assert.Equal(1, document.RootElement.GetProperty("transferCount").GetInt32());
         Assert.Equal(1, document.RootElement.GetProperty("matchedPairs").GetInt32());
         Assert.Equal(0, document.RootElement.GetProperty("unmatchedTransfers").GetInt32());
-        Assert.Equal(2, document.RootElement.GetProperty("changedTransactions").GetInt32());
+        Assert.Equal(0, document.RootElement.GetProperty("changedTransactions").GetInt32());
         Assert.True(document.RootElement.TryGetProperty("calculatedAtUtc", out _));
     }
 
@@ -68,8 +68,8 @@ public class DataQualityEndpointsTests
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.Equal(2, document.RootElement.GetProperty("transferCount").GetInt32());
-        Assert.Equal(0, document.RootElement.GetProperty("matchedPairs").GetInt32());
+        Assert.Equal(1, document.RootElement.GetProperty("transferCount").GetInt32());
+        Assert.Equal(1, document.RootElement.GetProperty("matchedPairs").GetInt32());
         Assert.Equal(0, document.RootElement.GetProperty("unmatchedTransfers").GetInt32());
         Assert.Equal(0, document.RootElement.GetProperty("changedTransactions").GetInt32());
     }
