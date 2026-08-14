@@ -151,6 +151,7 @@ else
     private string? _error;
     private List<ChartSeries<double>> _chartSeries = new();
     private string[] _chartLabels = Array.Empty<string>();
+    private int? _loadedYear;
 
     private Color NetCashFlowColor => (_summary?.NetCashFlow ?? 0) >= 0 ? Color.Success : Color.Error;
     private Color GetNetColor(decimal net) => net >= 0 ? Color.Success : Color.Error;
@@ -160,8 +161,20 @@ else
 
     private static string GetMonthName(int month) => CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month);
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
+        if (_loadedYear == Year)
+        {
+            return;
+        }
+
+        _loadedYear = Year;
+        _loading = true;
+        _error = null;
+        _summary = null;
+        _chartSeries = new List<ChartSeries<double>>();
+        _chartLabels = Array.Empty<string>();
+
         try
         {
             _summaries = await Http.GetFromJsonAsync<List<AnnualSummaryDto>>("/api/summary") ?? new();
