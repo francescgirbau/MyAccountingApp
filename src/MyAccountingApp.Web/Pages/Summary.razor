@@ -152,6 +152,7 @@ else
     private List<ChartSeries<double>> _chartSeries = new();
     private string[] _chartLabels = Array.Empty<string>();
     private int? _loadedYear;
+    private bool _initialized;
 
     private Color NetCashFlowColor => (_summary?.NetCashFlow ?? 0) >= 0 ? Color.Success : Color.Error;
     private Color GetNetColor(decimal net) => net >= 0 ? Color.Success : Color.Error;
@@ -163,11 +164,12 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
-        if (_loadedYear == Year)
+        if (_initialized && _loadedYear == Year)
         {
             return;
         }
 
+        _initialized = true;
         _loadedYear = Year;
         _loading = true;
         _error = null;
