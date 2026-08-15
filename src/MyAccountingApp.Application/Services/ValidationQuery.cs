@@ -156,16 +156,27 @@ public class ValidationQuery : IValidationQuery
                 continue;
             }
 
-            Money? cachedPrice = this._marketPriceService.GetCachedPriceAsync(group.Key).GetAwaiter().GetResult();
+            string symbol = group.Key;
+            CachedQuote? lastQuote = this._marketPriceService.GetLastQuoteAsync(symbol).GetAwaiter().GetResult();
+            Money? freshPrice = this._marketPriceService.GetCachedPriceAsync(symbol).GetAwaiter().GetResult();
 
-            if (cachedPrice is null)
+            if (lastQuote is null)
             {
                 warnings.Add(new ValidationError(
                     "SYMBOL_NO_PRICE",
-                    $"Symbol {group.Key} has an open position but no market price cached",
+                    $"Symbol {symbol} has an open position but no market price cached",
                     "info",
                     EntityType: "AssetTransaction",
-                    Symbol: group.Key));
+                    Symbol: symbol));
+            }
+            else if (freshPrice is null)
+            {
+                warnings.Add(new ValidationError(
+                    "SYMBOL_MARKET_CLOSED",
+                    $"Symbol {symbol}: market closed, using last close from {lastQuote.AsOfUtc:yyyy-MM-dd HH:mm} UTC",
+                    "info",
+                    EntityType: "AssetTransaction",
+                    Symbol: symbol));
             }
         }
     }

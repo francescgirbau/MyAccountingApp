@@ -30,6 +30,21 @@ public class MarketPriceCache
         return false;
     }
 
+    public bool TryGetLast(string symbol, out CachedQuote quote)
+    {
+        lock (this._lock)
+        {
+            if (this._entries.TryGetValue(symbol, out CacheEntry? entry))
+            {
+                quote = new CachedQuote(entry.Price, entry.FetchedAt);
+                return true;
+            }
+        }
+
+        quote = default!;
+        return false;
+    }
+
     public void Set(string symbol, Money price, DateTimeOffset now)
     {
         lock (this._lock)
