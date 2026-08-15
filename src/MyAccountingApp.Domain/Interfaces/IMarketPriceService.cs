@@ -23,4 +23,11 @@ public interface IMarketPriceService
     /// <param name="symbol">Ticker</param>
     /// <returns>Cached price, or null if not cached</returns>
     Task<Money?> GetCachedPriceAsync(string symbol);
+
+    /// <summary>
+    /// Return el last valid cached quote (even if stale) with its AsOfUtc, without fetching
+    /// </summary>
+    /// <param name="symbol">Ticker</param>
+    /// <returns>Last valid cached quote, or null if the symbol never had a price</returns>
+    Task<CachedQuote?> GetLastQuoteAsync(string symbol);
 }

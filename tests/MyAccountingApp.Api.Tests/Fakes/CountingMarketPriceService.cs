@@ -25,4 +25,6 @@ public class CountingMarketPriceService : IMarketPriceService
     }
 
     public Task<Money?> GetCachedPriceAsync(string symbol) => Task.FromResult<Money?>(null);
+
+    public Task<CachedQuote?> GetLastQuoteAsync(string symbol) => Task.FromResult<CachedQuote?>(null);
 }
