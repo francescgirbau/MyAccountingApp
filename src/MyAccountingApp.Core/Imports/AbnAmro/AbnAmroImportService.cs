@@ -151,6 +151,11 @@ public class AbnAmroImportService : IBrokerImportService
             return TransactionCategory.INCOME;
         }
 
+        if (descUpper.Contains("SEPA OVERBOEKING"))
+        {
+            return TransactionCategory.TRANSFER;
+        }
+
         if (descUpper.Contains("FRANCESC GIRBAU LLISTUELLA") || descUpper.Contains("F GIRBAU"))
         {
             return TransactionCategory.TRANSFER;
