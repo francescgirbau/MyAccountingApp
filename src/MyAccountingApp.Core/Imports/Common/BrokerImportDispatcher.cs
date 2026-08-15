@@ -27,6 +27,7 @@ public class BrokerImportDispatcher : IBrokerImportService
     private const string MyInvestorAccountCsvHeaderPrefix = "Fecha de operaci";
     private const string MyInvestorFundCsvHeaderPrefix = "Fecha de la orden;ISIN;Importe estimado";
     private const string CoinbaseCsvHeaderPrefix = "User,";
+    private const string CoinbaseCsvHeaderLinePrefix = "ID,Timestamp";
 
     private readonly InteractiveBrokersImportService ibkrService;
     private readonly BankCsvImportService bankService;
@@ -92,17 +93,53 @@ public class BrokerImportDispatcher : IBrokerImportService
         return this.ibkrService.ParseCorporateActionsAsync(filePath, cancellationToken);
     }
 
-    private static string? ReadFirstLine(string filePath)
+    private static string? ReadFirstContentLine(string filePath)
     {
         try
         {
             using StreamReader reader = new StreamReader(filePath);
-            return reader.ReadLine();
+            string? line;
+            while ((line = reader.ReadLine()) != null)
+            {
+                if (!string.IsNullOrWhiteSpace(line))
+                {
+                    return line.TrimStart('\uFEFF');
+                }
+            }
         }
         catch
         {
-            return null;
         }
+
+        return null;
+    }
+
+    private static bool HasCoinbaseSignature(string filePath)
+    {
+        try
+        {
+            using StreamReader reader = new StreamReader(filePath);
+            for (int i = 0; i < 10; i++)
+            {
+                string? line = reader.ReadLine();
+                if (line == null)
+                {
+                    return false;
+                }
+
+                string trimmed = line.TrimStart('\uFEFF');
+                if (trimmed.StartsWith(CoinbaseCsvHeaderPrefix, StringComparison.OrdinalIgnoreCase)
+                    || trimmed.StartsWith(CoinbaseCsvHeaderLinePrefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        return false;
     }
 
     private IBrokerImportService SelectService(string filePath)
@@ -139,14 +176,14 @@ public class BrokerImportDispatcher : IBrokerImportService
             return this.bankService;
         }
 
-        string? header = ReadFirstLine(filePath);
+        if (HasCoinbaseSignature(filePath))
+        {
+            return this.coinbaseService;
+        }
+
+        string? header = ReadFirstContentLine(filePath);
         if (header != null)
         {
-            if (header.StartsWith(CoinbaseCsvHeaderPrefix, StringComparison.OrdinalIgnoreCase))
-            {
-                return this.coinbaseService;
-            }
-
             if (header.StartsWith(BankCsvHeader, StringComparison.OrdinalIgnoreCase))
             {
                 return this.bankService;

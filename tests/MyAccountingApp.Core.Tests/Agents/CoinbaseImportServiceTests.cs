@@ -12,6 +12,8 @@ namespace MyAccountingApp.Core.Tests.Agents;
 public class CoinbaseImportServiceTests
 {
     private const string FixtureCsv = """"
+
+        Transactions
         User,Francesc Girbau Llistuella,919bdb40-bca7-58ba-b521-babd4b341ec4
         ID,Timestamp,Transaction Type,Asset,Quantity Transacted,Price Currency,Price at Transaction,Subtotal,Total (inclusive of fees and/or spread),Fees and/or Spread,Notes,Sender Address,Recipient Address
         61cf7881dcb36d00016f97c6,2021-12-31 21:39:13 UTC,Buy,ADA,212.524476,EUR,€1.1511997794,€244.65813,€250.00,1.6718701116994,Bought 212.524476 ADA for 250 EUR using EUR Wallet,,

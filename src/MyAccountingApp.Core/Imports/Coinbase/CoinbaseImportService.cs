@@ -24,8 +24,15 @@ public class CoinbaseImportService : IBrokerImportService
         List<Transaction> transactions = new List<Transaction>(lines.Length);
         List<AssetTransaction> assetTransactions = new List<AssetTransaction>(lines.Length);
 
-        foreach (string line in lines.Skip(2))
+        int dataStart = FindHeaderIndex(lines);
+        if (dataStart < 0)
         {
+            return (transactions, assetTransactions, Enumerable.Empty<OptionTransaction>());
+        }
+
+        for (int i = dataStart; i < lines.Length; i++)
+        {
+            string line = lines[i];
             if (string.IsNullOrWhiteSpace(line))
             {
                 continue;
@@ -85,6 +92,25 @@ public class CoinbaseImportService : IBrokerImportService
         CancellationToken cancellationToken = default)
     {
         return Task.FromResult(Enumerable.Empty<AssetTransaction>());
+    }
+
+    private static int FindHeaderIndex(string[] lines)
+    {
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(lines[i]))
+            {
+                continue;
+            }
+
+            string line = lines[i].TrimStart('\uFEFF');
+            if (line.StartsWith("ID,Timestamp", StringComparison.OrdinalIgnoreCase))
+            {
+                return i + 1;
+            }
+        }
+
+        return -1;
     }
 
     private static AssetTransaction CreateAssetTransaction(

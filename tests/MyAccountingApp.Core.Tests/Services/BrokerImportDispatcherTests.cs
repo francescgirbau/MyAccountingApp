@@ -85,7 +85,7 @@ public class BrokerImportDispatcherTests
     [Fact]
     public async Task ParseAllAsync_CoinbaseUserHeader_UsesCoinbaseService()
     {
-        string csv = "User,Francesc Girbau Llistuella,919bdb40-bca7-58ba-b521-babd4b341ec4\nID,Timestamp,Transaction Type,Asset,Quantity Transacted,Price Currency,Price at Transaction,Subtotal,Total (inclusive of fees and/or spread),Fees and/or Spread,Notes,Sender Address,Recipient Address\n61aa7acddc3e590001a6258f,2021-12-03 20:15:09 UTC,Deposit,EUR,1000,EUR,€1.00,€1000.00,€1000.00,€0.00,Deposit from ABN AMRO BANK NV (NL29 ABNA 0889 7749 27),,";
+        string csv = "\nTransactions\nUser,Francesc Girbau Llistuella,919bdb40-bca7-58ba-b521-babd4b341ec4\nID,Timestamp,Transaction Type,Asset,Quantity Transacted,Price Currency,Price at Transaction,Subtotal,Total (inclusive of fees and/or spread),Fees and/or Spread,Notes,Sender Address,Recipient Address\n61aa7acddc3e590001a6258f,2021-12-03 20:15:09 UTC,Deposit,EUR,1000,EUR,€1.00,€1000.00,€1000.00,€0.00,Deposit from ABN AMRO BANK NV (NL29 ABNA 0889 7749 27),,";
         string file = Path.GetTempFileName();
         try
         {
