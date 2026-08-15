@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using MyAccountingApp.Core.Imports.AbnAmro;
 using MyAccountingApp.Core.Imports.Cobas;
+using MyAccountingApp.Core.Imports.Coinbase;
 using MyAccountingApp.Core.Imports.Degiro;
 using MyAccountingApp.Core.Imports.IBKR;
 using MyAccountingApp.Core.Imports.MyInvestor;
@@ -25,6 +26,7 @@ public class BrokerImportDispatcher : IBrokerImportService
     private const string CobasCsvHeaderPrefix = "Operacion,Producto,Fecha";
     private const string MyInvestorAccountCsvHeaderPrefix = "Fecha de operaci";
     private const string MyInvestorFundCsvHeaderPrefix = "Fecha de la orden;ISIN;Importe estimado";
+    private const string CoinbaseCsvHeaderPrefix = "User,";
 
     private readonly InteractiveBrokersImportService ibkrService;
     private readonly BankCsvImportService bankService;
@@ -39,6 +41,7 @@ public class BrokerImportDispatcher : IBrokerImportService
     private readonly MyInvestorFundImportService myInvestorFundService;
     private readonly SelfBankAccountImportService selfBankAccountService;
     private readonly SelfBankFundImportService selfBankFundService;
+    private readonly CoinbaseImportService coinbaseService;
 
     public BrokerImportDispatcher(
         InteractiveBrokersImportService ibkrService,
@@ -53,7 +56,8 @@ public class BrokerImportDispatcher : IBrokerImportService
         MyInvestorAccountImportService myInvestorAccountService,
         MyInvestorFundImportService myInvestorFundService,
         SelfBankAccountImportService selfBankAccountService,
-        SelfBankFundImportService selfBankFundService)
+        SelfBankFundImportService selfBankFundService,
+        CoinbaseImportService coinbaseService)
     {
         this.ibkrService = ibkrService ?? throw new ArgumentNullException(nameof(ibkrService));
         this.bankService = bankService ?? throw new ArgumentNullException(nameof(bankService));
@@ -68,6 +72,7 @@ public class BrokerImportDispatcher : IBrokerImportService
         this.myInvestorFundService = myInvestorFundService ?? throw new ArgumentNullException(nameof(myInvestorFundService));
         this.selfBankAccountService = selfBankAccountService ?? throw new ArgumentNullException(nameof(selfBankAccountService));
         this.selfBankFundService = selfBankFundService ?? throw new ArgumentNullException(nameof(selfBankFundService));
+        this.coinbaseService = coinbaseService ?? throw new ArgumentNullException(nameof(coinbaseService));
     }
 
     public Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions, IEnumerable<OptionTransaction> OptionTransactions)> ParseAllAsync(
@@ -137,6 +142,11 @@ public class BrokerImportDispatcher : IBrokerImportService
         string? header = ReadFirstLine(filePath);
         if (header != null)
         {
+            if (header.StartsWith(CoinbaseCsvHeaderPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return this.coinbaseService;
+            }
+
             if (header.StartsWith(BankCsvHeader, StringComparison.OrdinalIgnoreCase))
             {
                 return this.bankService;
