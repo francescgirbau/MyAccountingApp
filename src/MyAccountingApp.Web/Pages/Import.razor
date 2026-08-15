@@ -227,6 +227,34 @@
 </MudPaper>
 
 <MudPaper Class="pa-6 mb-4" Outlined="true">
+    <MudText Typo="Typo.h6" GutterBottom="true">Import Coinbase CSV</MudText>
+    <MudText Typo="Typo.body2" Class="mb-4">
+        Upload a CSV exported from Coinbase (Transaction History). Crypto buys/sells, deposits and withdrawals are detected automatically.
+    </MudText>
+    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+        <strong>Format detected automatically.</strong> Expected columns: User, ID, Timestamp, Transaction Type, Asset, Quantity Transacted, Price Currency, Price at Transaction, Subtotal, Total (inclusive of fees and/or spread), Fees and/or Spread, Notes, Sender Address, Recipient Address.<br />
+        <strong>Buy</strong> / <strong>Sell</strong> rows become portfolio entries with the asset symbol. <strong>Deposit</strong> rows become cash deposits. <strong>Withdrawal</strong> rows become transfers. Convert, Receive, Send and other rows are skipped.
+    </MudAlert>
+    <MudGrid>
+        <MudItem xs="12" sm="8">
+            <InputFile OnChange="@OnCoinbaseFileSelected" accept=".csv" class="mud-input-outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="4" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Tertiary" Size="Size.Large"
+                       OnClick="@UploadCoinbaseAsync" Disabled="@(_coinbaseFile is null || _loading)"
+                       StartIcon="@Icons.Material.Filled.FileUpload"
+                       FullWidth="true">
+                Import Coinbase
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+    @if (_coinbaseFile is not null)
+    {
+        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">Selected: @_coinbaseFile.Name</MudText>
+    }
+</MudPaper>
+
+<MudPaper Class="pa-6 mb-4" Outlined="true">
     <MudText Typo="Typo.h6" GutterBottom="true">Import Raw CSV</MudText>
     <MudText Typo="Typo.body2" Class="mb-4">
         Upload a CSV with your own format. No transformations applied.
@@ -388,6 +416,7 @@
     private IBrowserFile? _cobasFile;
     private IBrowserFile? _myInvestorFile;
     private IBrowserFile? _selfBankFile;
+    private IBrowserFile? _coinbaseFile;
 
     private void OnFileSelected(InputFileChangeEventArgs args)
     {
@@ -434,6 +463,12 @@
     private void OnSelfBankFileSelected(InputFileChangeEventArgs args)
     {
         _selfBankFile = args.File;
+        _result = null;
+    }
+
+    private void OnCoinbaseFileSelected(InputFileChangeEventArgs args)
+    {
+        _coinbaseFile = args.File;
         _result = null;
     }
 
@@ -668,6 +703,35 @@
         catch (Exception ex)
         {
             Snackbar.Add($"SelfBank import failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task UploadCoinbaseAsync()
+    {
+        if (_coinbaseFile is null) return;
+
+        _loading = true;
+        _result = null;
+        _editableSymbols = new();
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            using var stream = _coinbaseFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            content.Add(new StreamContent(stream), "file", _coinbaseFile.Name);
+
+            var response = await Http.PostAsync("/api/import/upload", content);
+            _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
+            InitEditableSymbols();
+            Snackbar.Add("Coinbase import completed.", Severity.Success);
+            _coinbaseFile = null;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Coinbase import failed: {ex.Message}", Severity.Error);
         }
         finally
         {
