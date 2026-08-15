@@ -191,6 +191,45 @@ public class ValidationQueryTests
     }
 
     [Fact]
+    public void ValidateAll_FlagsMarketClosed_WhenOnlyStaleQuoteExists()
+    {
+        FakeTxRepo txRepo = new();
+        FakePfRepo pfRepo = new();
+        pfRepo.AddOrUpdate(new AssetTransaction(
+            new Transaction(Guid.NewGuid(), new DateTime(2025, 1, 15), "Buy AAPL", new Money(100m, "USD"), TransactionCategory.INVESTMENT),
+            "AAPL",
+            5,
+            AssetTransactionType.Buy));
+        FakeMarketPriceService priceService = new(new Dictionary<string, Money> { { "AAPL", new Money(150.25m, "USD") } }, new HashSet<string> { "AAPL" });
+        ValidationQuery query = new(txRepo, pfRepo, new TransactionValidator(), new FakeConversionRepo(), priceService);
+
+        ValidationResult result = query.ValidateAll();
+
+        ValidationError warning = Assert.Single(result.Warnings);
+        Assert.Equal("SYMBOL_MARKET_CLOSED", warning.Field);
+        Assert.Equal("info", warning.Severity);
+        Assert.Equal("AAPL", warning.Symbol);
+        Assert.Contains("last close", warning.Message);
+    }
+
+    [Fact]
+    public void ValidateAll_DoesNotFlagSymbol_WhenFreshPriceExists()
+    {
+        FakeTxRepo txRepo = new();
+        FakePfRepo pfRepo = new();
+        pfRepo.AddOrUpdate(new AssetTransaction(
+            new Transaction(Guid.NewGuid(), new DateTime(2025, 1, 15), "Buy AAPL", new Money(100m, "USD"), TransactionCategory.INVESTMENT),
+            "AAPL",
+            5,
+            AssetTransactionType.Buy));
+        ValidationQuery query = new(txRepo, pfRepo, new TransactionValidator(), new FakeConversionRepo(), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        Assert.DoesNotContain(result.Warnings, w => w.Field == "SYMBOL_NO_PRICE" || w.Field == "SYMBOL_MARKET_CLOSED");
+    }
+
+    [Fact]
     public void ValidateAll_DuplicateFingerprint_IncludesAllIdsOfGroup()
     {
         FakeTxRepo txRepo = new();

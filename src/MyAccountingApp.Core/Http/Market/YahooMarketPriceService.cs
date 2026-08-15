@@ -13,38 +13,72 @@ public class YahooMarketPriceService : IMarketPriceService
 
     public Task<Money?> GetCachedPriceAsync(string symbol)
     {
-        if (!LooksLikeListedEquity(symbol))
+        string normalized = NormalizeSymbol(symbol);
+
+        if (!LooksLikeListedEquity(normalized))
         {
             return Task.FromResult<Money?>(null);
         }
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
-        Money? cached = this._cache.TryGetFresh(symbol, now, out Money? price) ? price : null;
+        Money? cached = this._cache.TryGetFresh(normalized, now, out Money? price) ? price : null;
         return Task.FromResult(cached);
+    }
+
+    public Task<CachedQuote?> GetLastQuoteAsync(string symbol)
+    {
+        string normalized = NormalizeSymbol(symbol);
+
+        if (!LooksLikeListedEquity(normalized))
+        {
+            return Task.FromResult<CachedQuote?>(null);
+        }
+
+        return Task.FromResult(this._cache.TryGetLast(normalized, out CachedQuote? quote) ? quote : null);
     }
 
     private async Task<Money?> FetchAsync(string symbol, bool useCache)
     {
-        if (!LooksLikeListedEquity(symbol))
+        string normalized = NormalizeSymbol(symbol);
+
+        if (!LooksLikeListedEquity(normalized))
         {
             return null;
         }
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
 
-        if (useCache && this._cache.TryGetFresh(symbol, now, out Money? cachedPrice))
+        if (useCache && this._cache.TryGetFresh(normalized, now, out Money? cachedPrice))
         {
             return cachedPrice;
         }
 
-        Money? price = await FetchFromYahooAsync(symbol);
+        Money? price = await this.FetchFromYahooAsync(normalized);
 
         if (price is not null)
         {
-            this._cache.Set(symbol, price, now);
+            this._cache.Set(normalized, price, now);
+        }
+        else if (this._cache.TryGetLast(normalized, out CachedQuote? last))
+        {
+            price = last.Price;
         }
 
         return price;
+    }
+
+    /// <summary>
+    /// Normalizes a ticker before it hits the provider or the cache (e.g. HIMAX -&gt; HIMX).
+    /// </summary>
+    public static string NormalizeSymbol(string? symbol)
+    {
+        if (string.IsNullOrWhiteSpace(symbol))
+        {
+            return string.Empty;
+        }
+
+        string trimmed = symbol.Trim();
+        return trimmed.Equals("HIMAX", StringComparison.OrdinalIgnoreCase) ? "HIMX" : trimmed;
     }
 
     /// <summary>
@@ -53,15 +87,15 @@ public class YahooMarketPriceService : IMarketPriceService
     public static bool LooksLikeListedEquity(string? symbol) =>
         !string.IsNullOrWhiteSpace(symbol) && !symbol.Contains('_');
 
-    private static async Task<Money?> FetchFromYahooAsync(string symbol)
+    protected virtual async Task<Money?> FetchFromYahooAsync(string symbol)
     {
         try
         {
-            IReadOnlyDictionary<string, Security> securities = await Yahoo.Symbols(symbol).Fields(Field.Symbol, Field.RegularMarketPrice).QueryAsync();
+            IReadOnlyDictionary<string, Security> securities = await Yahoo.Symbols(symbol).Fields(Field.Symbol, Field.RegularMarketPrice, Field.Currency).QueryAsync();
 
             if (securities.TryGetValue(symbol, out Security? security))
             {
-                string currency = MapYahooMarketIntoCurrency(security.Market);
+                string currency = ResolveCurrency(security.Currency, security.Market);
                 decimal amount = (decimal)security.RegularMarketPrice;
 
                 return new Money(amount, currency);
@@ -74,6 +108,20 @@ public class YahooMarketPriceService : IMarketPriceService
             Console.WriteLine($"Error fetching price for {symbol}: {ex.Message}");
             return null;
         }
+    }
+
+    /// <summary>
+    /// Resolves the quote currency: prefers Yahoo's explicit currency field (crypto pairs like
+    /// ADA-USD report it), falling back to the market-based mapping for listed equities.
+    /// </summary>
+    public static string ResolveCurrency(string? yahooCurrency, string market)
+    {
+        if (!string.IsNullOrWhiteSpace(yahooCurrency))
+        {
+            return yahooCurrency.Trim().ToUpperInvariant();
+        }
+
+        return MapYahooMarketIntoCurrency(market);
     }
 
     private static string MapYahooMarketIntoCurrency(string market)

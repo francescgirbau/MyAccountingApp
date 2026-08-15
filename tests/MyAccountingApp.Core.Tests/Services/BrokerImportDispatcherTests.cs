@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using MyAccountingApp.Core.Imports.AbnAmro;
 using MyAccountingApp.Core.Imports.Cobas;
+using MyAccountingApp.Core.Imports.Coinbase;
 using MyAccountingApp.Core.Imports.Common;
 using MyAccountingApp.Core.Imports.Degiro;
 using MyAccountingApp.Core.Imports.IBKR;
@@ -73,6 +74,27 @@ public class BrokerImportDispatcherTests
             var (txs, assets, _) = await dispatcher.ParseAllAsync(file);
 
             Assert.NotEmpty(txs);
+            Assert.Empty(assets);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_CoinbaseUserHeader_UsesCoinbaseService()
+    {
+        string csv = "\nTransactions\nUser,Francesc Girbau Llistuella,919bdb40-bca7-58ba-b521-babd4b341ec4\nID,Timestamp,Transaction Type,Asset,Quantity Transacted,Price Currency,Price at Transaction,Subtotal,Total (inclusive of fees and/or spread),Fees and/or Spread,Notes,Sender Address,Recipient Address\n61aa7acddc3e590001a6258f,2021-12-03 20:15:09 UTC,Deposit,EUR,1000,EUR,€1.00,€1000.00,€1000.00,€0.00,Deposit from ABN AMRO BANK NV (NL29 ABNA 0889 7749 27),,";
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            BrokerImportDispatcher dispatcher = CreateDispatcher();
+
+            var (txs, assets, _) = await dispatcher.ParseAllAsync(file);
+
+            Assert.Single(txs);
             Assert.Empty(assets);
         }
         finally
@@ -352,7 +374,7 @@ public class BrokerImportDispatcherTests
     {
         InteractiveBrokersImportService ibkr = new(Parser, new FakeLogger<InteractiveBrokersImportService>());
         IBKRFlexQueryImportService flexQuery = new(Array.Empty<IIBKRStatementAgent>());
-        return new BrokerImportDispatcher(ibkr, new BankCsvImportService(), new AssetTransactionCsvImportService(), new DegiroImportService(), new DegiroTransactionImportService(), flexQuery, new RevolutImportService(), new AbnAmroImportService(), new CobasImportService(), new MyInvestorAccountImportService(), new MyInvestorFundImportService(), new SelfBankAccountImportService(), new SelfBankFundImportService());
+        return new BrokerImportDispatcher(ibkr, new BankCsvImportService(), new AssetTransactionCsvImportService(), new DegiroImportService(), new DegiroTransactionImportService(), flexQuery, new RevolutImportService(), new AbnAmroImportService(), new CobasImportService(), new MyInvestorAccountImportService(), new MyInvestorFundImportService(), new SelfBankAccountImportService(), new SelfBankFundImportService(), new CoinbaseImportService());
     }
 }
 
