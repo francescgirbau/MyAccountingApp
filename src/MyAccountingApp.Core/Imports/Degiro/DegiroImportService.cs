@@ -23,6 +23,7 @@ public class DegiroImportService : IBrokerImportService
         string[] lines = await File.ReadAllLinesAsync(filePath, cancellationToken);
         List<Transaction> transactions = new();
         List<AssetTransaction> assetTransactions = new();
+        List<FxRow> fxRows = new();
 
         foreach (string line in lines.Skip(1))
         {
@@ -54,6 +55,21 @@ public class DegiroImportService : IBrokerImportService
                     continue;
                 }
 
+                if (IsFxDescription(description))
+                {
+                    fxRows.Add(new FxRow(
+                        Date: date,
+                        Time: fields[1],
+                        ValueDate: TryParseValueDate(fields[2]),
+                        Product: fields[3],
+                        Rate: ParseNullableRate(fields[6]),
+                        Currency: currency,
+                        Amount: amount,
+                        OrderId: fields[11],
+                        IsIn: description.StartsWith("Ingreso", StringComparison.OrdinalIgnoreCase)));
+                    continue;
+                }
+
                 Transaction? tx = CreateCashTransaction(date, description, amount, currency);
                 if (tx is not null)
                 {
@@ -65,6 +81,8 @@ public class DegiroImportService : IBrokerImportService
             }
         }
 
+        transactions.AddRange(this.BuildFxConversions(fxRows));
+
         return (transactions, assetTransactions, Enumerable.Empty<OptionTransaction>());
     }
 
@@ -73,6 +91,151 @@ public class DegiroImportService : IBrokerImportService
         CancellationToken cancellationToken = default)
     {
         return Task.FromResult(Enumerable.Empty<AssetTransaction>());
+    }
+
+    private List<Transaction> BuildFxConversions(List<FxRow> rows)
+    {
+        List<Transaction> result = new();
+        List<FxRow> remaining = rows
+            .OrderBy(r => r.Date)
+            .ThenBy(r => r.Time, StringComparer.Ordinal)
+            .ThenBy(r => r.OrderId, StringComparer.Ordinal)
+            .ToList();
+
+        while (remaining.Count > 0)
+        {
+            FxRow first = remaining[0];
+            remaining.RemoveAt(0);
+            FxRow? match = remaining.FirstOrDefault(candidate => TryMatchFxRows(first, candidate));
+
+            if (match is null)
+            {
+                result.Add(CreateSingleFxLeg(first));
+                continue;
+            }
+
+            remaining.Remove(match);
+            Guid pairId = Guid.NewGuid();
+            result.Add(CreatePairLeg(pairId, first, match));
+            result.Add(CreatePairLeg(pairId, match, first));
+        }
+
+        return result;
+    }
+
+    private static bool TryMatchFxRows(FxRow a, FxRow b)
+    {
+        if (a.IsIn == b.IsIn)
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(a.OrderId) && a.OrderId == b.OrderId)
+        {
+            return true;
+        }
+
+        if (a.Date == b.Date && string.Equals(a.Time, b.Time, StringComparison.Ordinal) && a.Currency != b.Currency)
+        {
+            return true;
+        }
+
+        if ((a.ValueDate is null || b.ValueDate is null) ||
+            Math.Abs((a.ValueDate.Value - b.ValueDate.Value).TotalDays) > 1)
+        {
+            return false;
+        }
+
+        decimal? rate = a.Rate ?? b.Rate;
+        if (rate is null)
+        {
+            return false;
+        }
+
+        decimal inAmount = Math.Abs(a.Amount);
+        decimal outAmount = Math.Abs(b.Amount);
+        return MatchesRate(inAmount / outAmount, rate.Value) || MatchesRate(outAmount / inAmount, rate.Value);
+    }
+
+    private static bool MatchesRate(decimal implied, decimal rate)
+    {
+        return Math.Abs(implied - rate) / rate <= RateTolerance;
+    }
+
+    private static Transaction CreateSingleFxLeg(FxRow row)
+    {
+        Transaction tx = new(
+            row.Date,
+            BuildFxDescription(row.Currency, null, row.Product),
+            new Money(Math.Abs(row.Amount), row.Currency),
+            TransactionCategory.FX_CONVERSION);
+        tx.SetFxPair(
+            Guid.NewGuid(),
+            row.IsIn ? FxLeg.In : FxLeg.Out,
+            row.Rate,
+            string.IsNullOrWhiteSpace(row.OrderId) ? null : row.OrderId);
+        return tx;
+    }
+
+    private static Transaction CreatePairLeg(Guid pairId, FxRow self, FxRow other)
+    {
+        string outCurrency = self.IsIn ? other.Currency : self.Currency;
+        string inCurrency = self.IsIn ? self.Currency : other.Currency;
+        Transaction tx = new(
+            self.Date,
+            BuildFxDescription(outCurrency, inCurrency, self.Product),
+            new Money(Math.Abs(self.Amount), self.Currency),
+            TransactionCategory.FX_CONVERSION);
+        tx.SetFxPair(
+            pairId,
+            self.IsIn ? FxLeg.In : FxLeg.Out,
+            self.Rate ?? other.Rate,
+            string.IsNullOrWhiteSpace(self.OrderId) ? null : self.OrderId);
+        return tx;
+    }
+
+    private static string BuildFxDescription(string outCurrency, string? inCurrency, string? product)
+    {
+        string exchange = inCurrency is null
+            ? $"FX {outCurrency}"
+            : $"FX {outCurrency}→{inCurrency}";
+        return string.IsNullOrWhiteSpace(product) ? exchange : $"{exchange} · {product}";
+    }
+
+    private const decimal RateTolerance = 0.005m;
+
+    private sealed record FxRow(
+        DateTime Date,
+        string Time,
+        DateTime? ValueDate,
+        string? Product,
+        decimal? Rate,
+        string Currency,
+        decimal Amount,
+        string? OrderId,
+        bool IsIn);
+
+    private static DateTime? TryParseValueDate(string value)
+    {
+        try
+        {
+            return ParseDate(value);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static decimal? ParseNullableRate(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        decimal rate = CsvParsing.ParseEuropeanDecimal(value);
+        return rate == 0 ? null : rate;
     }
 
     private static DateTime ParseDate(string value)
@@ -110,6 +273,11 @@ public class DegiroImportService : IBrokerImportService
     {
         return description.StartsWith("Compra ", StringComparison.OrdinalIgnoreCase)
             || description.StartsWith("Venta ", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsFxDescription(string description)
+    {
+        return description.Contains("CAMBIO DE DIVISA", StringComparison.OrdinalIgnoreCase);
     }
 
     private static Transaction? CreateCashTransaction(

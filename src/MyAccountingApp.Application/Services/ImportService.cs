@@ -130,7 +130,19 @@ public class ImportService : IImportService
         if (pendingTransactions.Count > 0)
         {
             List<Domain.Entities.Transaction> merged = this._transactionRepo.GetAll().ToList();
-            merged.AddRange(pendingTransactions);
+            HashSet<(string ExternalKey, FxLeg? Leg, string Currency, decimal Amount, DateTime Date)> seenFxLegs = new(
+                merged.Where(IsFxLeg).Select(ToFxLegKey));
+
+            foreach (Domain.Entities.Transaction tx in pendingTransactions)
+            {
+                if (IsFxLeg(tx) && !seenFxLegs.Add(ToFxLegKey(tx)))
+                {
+                    continue;
+                }
+
+                merged.Add(tx);
+            }
+
             this._transactionRepo.Initialize(merged);
         }
 
@@ -169,6 +181,17 @@ public class ImportService : IImportService
 
         return result;
     }
+
+    private static bool IsFxLeg(Domain.Entities.Transaction tx) =>
+        tx.Category == TransactionCategory.FX_CONVERSION && tx.FxPairId is not null && tx.FxLeg is not null;
+
+    private static (string ExternalKey, FxLeg? Leg, string Currency, decimal Amount, DateTime Date) ToFxLegKey(Domain.Entities.Transaction tx) =>
+        (
+            tx.FxExternalKey ?? string.Empty,
+            tx.FxLeg,
+            tx.Money.Currency,
+            tx.Money.Amount,
+            tx.Date.Date);
 
     private static int DeduplicateByFingerprint(
         List<Domain.Entities.Transaction> candidates,
