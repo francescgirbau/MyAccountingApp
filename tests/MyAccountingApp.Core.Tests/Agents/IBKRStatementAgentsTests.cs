@@ -1,6 +1,7 @@
 using MyAccountingApp.Core.Imports.IBKR;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
+using MyAccountingApp.Domain.ValueObjects;
 
 namespace MyAccountingApp.Core.Tests.Agents;
 
@@ -232,6 +233,125 @@ public class IBKRStatementAgentsTests
         Assert.Equal(TransactionCategory.FEE, transaction.Category);
         Assert.Equal("USD", transaction.Money.Currency);
         Assert.Equal(2.5m, transaction.Money.Amount);
+    }
+
+    [Fact]
+    public void TradeAgent_ParsesForexSell_AsFxPairWithFee()
+    {
+        TradeAgent agent = new();
+        List<Transaction> tx = new();
+        List<AssetTransaction> assets = new();
+        List<OptionTransaction> options = new();
+        List<string> errors = new();
+
+        List<string[]> rows = new()
+        {
+            new[] { "Trades", "Data", "Order", "Forex", "USD", "EUR.USD", "2023-02-02, 11:55:21", "-916", "1.0912", string.Empty, "999.5392", "-1.81986", string.Empty, string.Empty, "0.127654" },
+        };
+
+        agent.Parse(rows, tx, assets, options, errors);
+
+        Assert.Equal(3, tx.Count);
+        Assert.Empty(assets);
+        Assert.Empty(options);
+
+        Transaction outLeg = tx[0];
+        Transaction inLeg = tx[1];
+        Assert.Equal(TransactionCategory.FX_CONVERSION, outLeg.Category);
+        Assert.Equal(FxLeg.Out, outLeg.FxLeg);
+        Assert.Equal(new Money(916, "EUR"), outLeg.Money);
+        Assert.Equal(FxLeg.In, inLeg.FxLeg);
+        Assert.Equal(new Money(999.5392m, "USD"), inLeg.Money);
+        Assert.Equal(outLeg.FxPairId, inLeg.FxPairId);
+        Assert.Equal(1.0912m, outLeg.FxBrokerRate);
+        Assert.Equal(inLeg.FxBrokerRate, outLeg.FxBrokerRate);
+        Assert.Equal("2023-02-02T11:55:21|EUR.USD|-916|1.0912", outLeg.FxExternalKey);
+        Assert.Equal(outLeg.FxExternalKey, inLeg.FxExternalKey);
+        Assert.Equal("FX EUR→USD · EUR.USD", outLeg.Description);
+
+        Transaction fee = tx[2];
+        Assert.Equal(TransactionCategory.FEE, fee.Category);
+        Assert.Equal(new Money(1.81986m, "USD"), fee.Money);
+    }
+
+    [Fact]
+    public void TradeAgent_ParsesForexBuy_AsFxPairWithFee()
+    {
+        TradeAgent agent = new();
+        List<Transaction> tx = new();
+        List<AssetTransaction> assets = new();
+        List<OptionTransaction> options = new();
+        List<string> errors = new();
+
+        List<string[]> rows = new()
+        {
+            new[] { "Trades", "Data", "Order", "Forex", "USD", "EUR.USD", "2023-02-27, 15:14:35", "2", "1.06085", string.Empty, "-2.1217", "-1.89666", string.Empty, string.Empty, "0.000149" },
+        };
+
+        agent.Parse(rows, tx, assets, options, errors);
+
+        Assert.Equal(3, tx.Count);
+
+        Transaction inLeg = tx[0];
+        Transaction outLeg = tx[1];
+        Assert.Equal(FxLeg.In, inLeg.FxLeg);
+        Assert.Equal(new Money(2, "EUR"), inLeg.Money);
+        Assert.Equal(FxLeg.Out, outLeg.FxLeg);
+        Assert.Equal(new Money(2.1217m, "USD"), outLeg.Money);
+        Assert.Equal(inLeg.FxPairId, outLeg.FxPairId);
+        Assert.Equal(1.06085m, inLeg.FxBrokerRate);
+        Assert.Equal("2023-02-27T15:14:35|EUR.USD|2|1.06085", inLeg.FxExternalKey);
+    }
+
+    [Fact]
+    public void TradeAgent_ParsesForexCadPair_WithoutFee()
+    {
+        TradeAgent agent = new();
+        List<Transaction> tx = new();
+        List<AssetTransaction> assets = new();
+        List<OptionTransaction> options = new();
+        List<string> errors = new();
+
+        List<string[]> rows = new()
+        {
+            new[] { "Trades", "Data", "Order", "Forex", "CAD", "EUR.CAD", "2023-03-16, 20:36:17", "0.1001", "1.45605", string.Empty, "-0.145750605", "0", string.Empty, string.Empty, "0.000579" },
+        };
+
+        agent.Parse(rows, tx, assets, options, errors);
+
+        Assert.Equal(2, tx.Count);
+
+        Transaction inLeg = tx[0];
+        Transaction outLeg = tx[1];
+        Assert.Equal(FxLeg.In, inLeg.FxLeg);
+        Assert.Equal(new Money(0.1001m, "EUR"), inLeg.Money);
+        Assert.Equal(FxLeg.Out, outLeg.FxLeg);
+        Assert.Equal(new Money(0.145750605m, "CAD"), outLeg.Money);
+        Assert.Equal(inLeg.FxPairId, outLeg.FxPairId);
+        Assert.Equal(1.45605m, inLeg.FxBrokerRate);
+    }
+
+    [Fact]
+    public void TradeAgent_SkipsInvalidForexRows()
+    {
+        TradeAgent agent = new();
+        List<Transaction> tx = new();
+        List<AssetTransaction> assets = new();
+        List<OptionTransaction> options = new();
+        List<string> errors = new();
+
+        List<string[]> rows = new()
+        {
+            new[] { "Trades", "Data", "Order", "Forex", "USD", "EURUSD", "2023-02-02, 11:55:21", "-916", "1.0912", string.Empty, "999.5392", "-1.81986", string.Empty, string.Empty, "0.127654" },
+            new[] { "Trades", "Data", "Order", "Forex", "USD", "EUR.USD", "2023-02-02, 11:55:21", "-916", string.Empty, string.Empty, "999.5392", "-1.81986", string.Empty, string.Empty, "0.127654" },
+            new[] { "Trades", "Data", "Order", "Forex", "USD", "EUR.USD", "2023-02-02, 11:55:21", "-916", "1.0912", string.Empty, "500.00", "-1.81986", string.Empty, string.Empty, "0.127654" },
+        };
+
+        agent.Parse(rows, tx, assets, options, errors);
+
+        Assert.Empty(tx);
+        Assert.Empty(assets);
+        Assert.Empty(options);
     }
 
     [Fact]
