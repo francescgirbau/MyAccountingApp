@@ -87,7 +87,8 @@ public class TradeAgent : IIBKRStatementAgent
         }
 
         string baseCurrency = symbol[..separatorIdx];
-        string quoteCurrency = symbol[(separatorIdx + 1)..];
+        int quoteStart = separatorIdx + 1;
+        string quoteCurrency = symbol[quoteStart..];
         FxLeg baseLeg = quantity > 0 ? FxLeg.In : FxLeg.Out;
         FxLeg quoteLeg = quantity > 0 ? FxLeg.Out : FxLeg.In;
         Guid pairId = Guid.NewGuid();
