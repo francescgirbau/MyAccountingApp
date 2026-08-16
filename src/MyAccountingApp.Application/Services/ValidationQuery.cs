@@ -132,7 +132,7 @@ public class ValidationQuery : IValidationQuery
 
         foreach (IGrouping<(DateOnly Date, string Currency), Transaction> group in nonEur.GroupBy(t => (DateOnly.FromDateTime(t.Date), t.Money.Currency)))
         {
-            if (this._conversionRepo.GetByDate(group.Key.Date.ToDateTime(TimeOnly.MinValue)) is null)
+            if (FxRateResolver.Resolve(this._conversionRepo, group.Key.Date) is null)
             {
                 warnings.Add(new ValidationError(
                     "MISSING_FX",

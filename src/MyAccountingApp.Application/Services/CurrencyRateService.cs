@@ -234,6 +234,7 @@ public class CurrencyRateService : ICurrencyRateService
                 end.ToString("yyyy-MM-dd"),
                 rates.Count,
                 this._sourceProvider);
+
             return true;
         }
         catch (CurrencyApiQuotaExceededException)
@@ -242,6 +243,30 @@ public class CurrencyRateService : ICurrencyRateService
             await this._quotaManager.MarkExhaustedAsync(cancellationToken);
             return false;
         }
+        catch (Exception ex)
+        {
+            this._logger.LogError(ex, "Failed to sync conversions {Start}..{End}", start.ToString("yyyy-MM-dd"), end.ToString("yyyy-MM-dd"));
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> SyncDatesAsync(IEnumerable<DateOnly> dates, CancellationToken cancellationToken = default)
+    {
+        List<DateOnly> ordered = dates.Distinct().OrderBy(d => d).ToList();
+        int syncedDays = 0;
+
+        foreach ((DateOnly start, DateOnly end) in GroupIntoRanges(ordered, this._maxTimeseriesDays))
+        {
+            if (!await this.SyncRangeAsync(start, end, cancellationToken))
+            {
+                break;
+            }
+
+            syncedDays += (end.DayNumber - start.DayNumber) + 1;
+        }
+
+        return syncedDays;
     }
 
     /// <inheritdoc/>
@@ -403,7 +428,6 @@ public class CurrencyRateService : ICurrencyRateService
 
     private Conversion? FindFallback(DateOnly day)
     {
-        DateTime date = day.ToDateTime(TimeOnly.MinValue);
-        return this._repository.GetLatestOnOrBefore(date);
+        return FxRateResolver.Resolve(this._repository, day, FxRateResolver.DefaultMaxLookbackDays);
     }
 }

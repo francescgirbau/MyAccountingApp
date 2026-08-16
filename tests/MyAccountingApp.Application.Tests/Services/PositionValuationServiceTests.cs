@@ -22,13 +22,13 @@ public class PositionValuationServiceTests
         return new AssetTransaction(tx, symbol, quantity, AssetTransactionType.Buy);
     }
 
-    private static PositionValuationService CreateService(FakePortfolioRepo repo, FakeApiQuotaManager quota)
+    private static PositionValuationService CreateService(FakePortfolioRepo repo, FakeApiQuotaManager quota, FakeConversionRepository? conversionRepo = null)
     {
         FakeMarketPriceService priceService = new();
         PositionEngine engine = new(repo, priceService);
-        FakeConversionRepository conversionRepo = new();
+        FakeConversionRepository conversions = conversionRepo ?? new FakeConversionRepository();
         FakePendingConversionQueue queue = new();
-        CurrencyRateService rateService = new(conversionRepo, new FakeCurrencyConverter(), Currencies.EUR, quota, queue);
+        CurrencyRateService rateService = new(conversions, new FakeCurrencyConverter(), Currencies.EUR, quota, queue);
         ToEurConverter converter = new(rateService);
         return new PositionValuationService(repo, engine, converter);
     }
@@ -76,13 +76,15 @@ public class PositionValuationServiceTests
     {
         FakePortfolioRepo repo = new();
         repo.AddOrUpdate(Buy("AAPL", "USD", 150, 10, new DateTime(2024, 1, 15)));
-        PositionValuationService service = CreateService(repo, new FakeApiQuotaManager() { CanConsumeResult = false });
+        FakeConversionRepository conversionRepo = new();
+        conversionRepo.Initialize(new[] { new Conversion(new DateTime(2023, 11, 29), Currencies.EUR, new Dictionary<Currencies, decimal> { { Currencies.USD, 1.1m } }) });
+        PositionValuationService service = CreateService(repo, new FakeApiQuotaManager() { CanConsumeResult = false }, conversionRepo);
 
         IReadOnlyList<PositionValuationDto> result = await service.GetValuationsAsync(new DateOnly(2023, 12, 1));
 
         PositionValuationDto valuation = Assert.Single(result);
         Assert.True(valuation.IsStale);
-        Assert.Equal(new DateOnly(2005, 12, 1), valuation.RateDate);
+        Assert.Equal(new DateOnly(2023, 11, 29), valuation.RateDate);
     }
 
     [Fact]

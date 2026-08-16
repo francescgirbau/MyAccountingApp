@@ -61,6 +61,15 @@ public interface ICurrencyRateService
     Task<bool> BackfillIfEmptyAsync(int days, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Fetches and persists conversions for the given dates, grouped into consecutive
+    /// timeseries ranges, stopping when the API quota is exhausted.
+    /// </summary>
+    /// <param name="dates">The dates to fetch; non-consecutive dates are grouped into separate requests.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The number of calendar days covered by the synced ranges.</returns>
+    Task<int> SyncDatesAsync(IEnumerable<DateOnly> dates, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Fetches and persists conversions for any gap between the last cached day and yesterday,
     /// chunked into timeseries ranges of the configured maximum size.
     /// </summary>

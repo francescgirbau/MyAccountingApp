@@ -32,6 +32,11 @@ public sealed class FakeCurrencyRateService : ICurrencyRateService
         return Task.FromResult(true);
     }
 
+    public Task<int> SyncDatesAsync(IEnumerable<DateOnly> dates, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(dates.Distinct().Count());
+    }
+
     public Task<PendingProcessingResult> ProcessPendingAsync(CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new PendingProcessingResult(2, 1, 0));

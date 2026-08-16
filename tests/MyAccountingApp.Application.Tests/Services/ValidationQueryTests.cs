@@ -172,6 +172,42 @@ public class ValidationQueryTests
     }
 
     [Fact]
+    public void ValidateAll_DoesNotFlagMissingFx_WhenPreviousRateWithinFiveDays()
+    {
+        // Arrange: Friday transaction, stored rate from the day before (Thursday).
+        FakeTxRepo txRepo = new();
+        txRepo.AddOrUpdate(new Transaction(Guid.NewGuid(), new DateTime(2025, 1, 10), "Buy in USD", new Money(100m, "USD"), TransactionCategory.EXPENSE));
+        FakePfRepo pfRepo = new();
+        FakeConversionRepository conversionRepo = new();
+        conversionRepo.Initialize(new[] { new Conversion(new DateTime(2025, 1, 9), Currencies.EUR, new Dictionary<Currencies, decimal> { { Currencies.USD, 1.08m } }) });
+        ValidationQuery query = new(txRepo, pfRepo, new TransactionValidator(), conversionRepo, new FakeMarketPriceService());
+
+        // Act
+        ValidationResult result = query.ValidateAll();
+
+        // Assert
+        Assert.DoesNotContain(result.Warnings, w => w.Field == "MISSING_FX");
+    }
+
+    [Fact]
+    public void ValidateAll_FlagsMissingFx_WhenPreviousRateOlderThanFiveDays()
+    {
+        // Arrange: Friday transaction, stored rate 7 calendar days earlier.
+        FakeTxRepo txRepo = new();
+        txRepo.AddOrUpdate(new Transaction(Guid.NewGuid(), new DateTime(2025, 1, 10), "Buy in USD", new Money(100m, "USD"), TransactionCategory.EXPENSE));
+        FakePfRepo pfRepo = new();
+        FakeConversionRepository conversionRepo = new();
+        conversionRepo.Initialize(new[] { new Conversion(new DateTime(2025, 1, 3), Currencies.EUR, new Dictionary<Currencies, decimal> { { Currencies.USD, 1.08m } }) });
+        ValidationQuery query = new(txRepo, pfRepo, new TransactionValidator(), conversionRepo, new FakeMarketPriceService());
+
+        // Act
+        ValidationResult result = query.ValidateAll();
+
+        // Assert
+        Assert.Contains(result.Warnings, w => w.Field == "MISSING_FX");
+    }
+
+    [Fact]
     public void ValidateAll_FlagsSymbolWithoutCachedPrice_AsInfo()
     {
         FakeTxRepo txRepo = new();

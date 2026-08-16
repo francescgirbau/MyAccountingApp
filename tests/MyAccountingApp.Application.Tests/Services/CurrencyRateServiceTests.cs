@@ -52,6 +52,7 @@ public class CurrencyRateServiceTests
     {
         // Arrange
         FakeConversionRepository repo = new();
+        repo.Initialize(new[] { new Conversion(new DateTime(2023, 11, 29), Currencies.EUR, new Dictionary<Currencies, decimal> { { Currencies.USD, 1.1m } }) });
         FakeApiQuotaManager quota = new() { CanConsumeResult = false };
         FakePendingConversionQueue queue = new();
         FakeCurrencyConverter converter = new();
@@ -65,8 +66,24 @@ public class CurrencyRateServiceTests
         Assert.Equal(0, quota.Consumed);
         Assert.Equal(0, converter.FetchAllCalls);
         Assert.Contains(new DateOnly(2023, 12, 1), queue.Enqueued);
-        Assert.Equal(new DateTime(2005, 12, 1), result.Date);
+        Assert.Equal(new DateTime(2023, 11, 29), result.Date);
         Assert.Equal(1.1m, result.Quotes[Currencies.USD]);
+    }
+
+    [Fact]
+    public async Task GetConversionAsync_Throws_WhenFallbackIsOlderThanFiveDays()
+    {
+        // Arrange: stored rate is 11 calendar days before the requested date.
+        FakeConversionRepository repo = new();
+        repo.Initialize(new[] { new Conversion(new DateTime(2023, 11, 20), Currencies.EUR, new Dictionary<Currencies, decimal> { { Currencies.USD, 1.1m } }) });
+        FakeApiQuotaManager quota = new() { CanConsumeResult = false };
+        FakePendingConversionQueue queue = new();
+        CurrencyRateService service = new(repo, new FakeCurrencyConverter(), Currencies.EUR, quota, queue);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ConversionNotAvailableException>(() => service.GetConversionAsync(new DateTime(2023, 12, 1)));
+        Assert.Contains(new DateOnly(2023, 12, 1), queue.Enqueued);
+        Assert.Equal(0, quota.Consumed);
     }
 
     [Fact]
@@ -234,6 +251,43 @@ public class CurrencyRateServiceTests
     }
 
     [Fact]
+    public async Task SyncDatesAsync_GroupsContiguousDates_IntoSingleRequest()
+    {
+        // Arrange
+        FakeConversionRepository repo = new();
+        repo.Initialize(Array.Empty<Conversion>());
+        FakeApiQuotaManager quota = new();
+        FakePendingConversionQueue queue = new();
+        CurrencyRateService service = CreateService(repo, quota, queue);
+
+        // Act
+        int synced = await service.SyncDatesAsync(new[] { new DateOnly(2023, 12, 1), new DateOnly(2023, 12, 2), new DateOnly(2023, 12, 10) });
+
+        // Assert
+        Assert.Equal(3, synced);
+        Assert.Equal(2, quota.Consumed);
+        Assert.Equal(3, repo.GetAll().Count());
+    }
+
+    [Fact]
+    public async Task SyncDatesAsync_ReturnsZero_WhenNoDates()
+    {
+        // Arrange
+        FakeConversionRepository repo = new();
+        repo.Initialize(Array.Empty<Conversion>());
+        FakeApiQuotaManager quota = new();
+        FakePendingConversionQueue queue = new();
+        CurrencyRateService service = CreateService(repo, quota, queue);
+
+        // Act
+        int synced = await service.SyncDatesAsync(Array.Empty<DateOnly>());
+
+        // Assert
+        Assert.Equal(0, synced);
+        Assert.Equal(0, quota.Consumed);
+    }
+
+    [Fact]
     public async Task BackfillIfEmptyAsync_FetchesRange_WhenRepoEmpty()
     {
         // Arrange
@@ -289,6 +343,7 @@ public class CurrencyRateServiceTests
     {
         // Arrange
         FakeConversionRepository repo = new();
+        repo.Initialize(new[] { new Conversion(new DateTime(2023, 11, 29), Currencies.EUR, new Dictionary<Currencies, decimal> { { Currencies.USD, 1.1m } }) });
         FakeApiQuotaManager quota = new();
         FakePendingConversionQueue queue = new();
         CurrencyRateService service = new(repo, new FailingCurrencyConverter(), Currencies.EUR, quota, queue);
@@ -301,7 +356,7 @@ public class CurrencyRateServiceTests
         Assert.Equal(0, quota.Consumed);
         Assert.False(quota.Exhausted);
         Assert.Contains(new DateOnly(2023, 12, 1), queue.Enqueued);
-        Assert.Equal(new DateTime(2005, 12, 1), result.Date);
+        Assert.Equal(new DateTime(2023, 11, 29), result.Date);
     }
 
     [Fact]
@@ -309,6 +364,7 @@ public class CurrencyRateServiceTests
     {
         // Arrange
         FakeConversionRepository repo = new();
+        repo.Initialize(new[] { new Conversion(new DateTime(2023, 11, 29), Currencies.EUR, new Dictionary<Currencies, decimal> { { Currencies.USD, 1.1m } }) });
         FakeApiQuotaManager quota = new();
         FakePendingConversionQueue queue = new();
         CurrencyRateService service = new(repo, new QuotaExceededCurrencyConverter(), Currencies.EUR, quota, queue);
@@ -321,7 +377,7 @@ public class CurrencyRateServiceTests
         Assert.True(quota.Exhausted);
         Assert.Equal(0, quota.Consumed);
         Assert.Contains(new DateOnly(2023, 12, 1), queue.Enqueued);
-        Assert.Equal(new DateTime(2005, 12, 1), result.Date);
+        Assert.Equal(new DateTime(2023, 11, 29), result.Date);
     }
 
     [Fact]
@@ -423,6 +479,7 @@ public class CurrencyRateServiceTests
     public async Task GetFxQuotesAsync_ExposesFallbackRateDate_WhenStale()
     {
         FakeConversionRepository repo = new();
+        repo.Initialize(new[] { new Conversion(new DateTime(2023, 11, 29), Currencies.EUR, new Dictionary<Currencies, decimal> { { Currencies.USD, 1.1m } }) });
         FakeApiQuotaManager quota = new() { CanConsumeResult = false };
         FakePendingConversionQueue queue = new();
         CurrencyRateService service = CreateService(repo, quota, queue);
@@ -431,7 +488,7 @@ public class CurrencyRateServiceTests
 
         FxQuoteDto usd = Assert.Single(quotes, q => q.Quote == "USD");
         Assert.Equal(new DateOnly(2023, 12, 1), usd.RequestedDate);
-        Assert.Equal(new DateOnly(2005, 12, 1), usd.RateDate);
+        Assert.Equal(new DateOnly(2023, 11, 29), usd.RateDate);
         Assert.True(usd.IsStale);
         Assert.Equal(1.1m, usd.Rate);
         Assert.Equal(0, quota.Consumed);
@@ -441,15 +498,16 @@ public class CurrencyRateServiceTests
     public async Task GetFxQuotesAsync_DoesNotCorruptCachedEntity_WhenStale()
     {
         FakeConversionRepository repo = new();
+        repo.Initialize(new[] { new Conversion(new DateTime(2023, 11, 29), Currencies.EUR, new Dictionary<Currencies, decimal> { { Currencies.USD, 1.1m } }) });
         FakeApiQuotaManager quota = new() { CanConsumeResult = false };
         FakePendingConversionQueue queue = new();
         CurrencyRateService service = CreateService(repo, quota, queue);
 
         await service.GetFxQuotesAsync(new DateTime(2023, 12, 1));
 
-        Conversion cached = repo.GetByDate(new DateTime(2005, 12, 1)) !;
+        Conversion cached = repo.GetByDate(new DateTime(2023, 11, 29)) !;
         Assert.False(cached.IsStale);
-        Assert.Equal(new DateTime(2005, 12, 1), cached.Date);
+        Assert.Equal(new DateTime(2023, 11, 29), cached.Date);
     }
 
     private static CurrencyRateService CreateService(
