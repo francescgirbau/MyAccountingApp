@@ -16,7 +16,11 @@ public static class DtoMapper
             transaction.Description,
             transaction.Money.ToDto(),
             transaction.Category.ToString(),
-            transaction.Source);
+            transaction.Source,
+            transaction.FxPairId,
+            transaction.FxLeg?.ToString(),
+            transaction.FxBrokerRate,
+            transaction.FxExternalKey);
 
     public static AssetTransactionDto ToDto(this AssetTransaction assetTransaction) =>
         new(

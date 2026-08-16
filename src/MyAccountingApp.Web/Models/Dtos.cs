@@ -14,6 +14,10 @@ public class TransactionDto
     public MoneyDto Money { get; set; } = new();
     public string Category { get; set; } = string.Empty;
     public string? Source { get; set; }
+    public Guid? FxPairId { get; set; }
+    public string? FxLeg { get; set; }
+    public decimal? FxBrokerRate { get; set; }
+    public string? FxExternalKey { get; set; }
 }
 
 public class AssetTransactionDto

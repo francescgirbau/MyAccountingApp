@@ -388,6 +388,83 @@ public class ValidationQueryTests
         Assert.Equal("/asset-transactions?symbol=UNKN", warning.DeepLink);
     }
 
+    [Fact]
+    public void ValidateAll_DoesNotFlagUnmatchedFx_WhenPairComplete()
+    {
+        FakeTxRepo txRepo = new();
+        Guid pairId = Guid.NewGuid();
+        Transaction outLeg = new(new DateTime(2025, 1, 10), "FX EUR->USD", new Money(490.24m, "EUR"), TransactionCategory.FX_CONVERSION);
+        outLeg.SetFxPair(pairId, FxLeg.Out, 1.1121m);
+        Transaction inLeg = new(new DateTime(2025, 1, 10), "FX EUR->USD", new Money(545.20m, "USD"), TransactionCategory.FX_CONVERSION);
+        inLeg.SetFxPair(pairId, FxLeg.In, 1.1121m);
+        txRepo.AddOrUpdate(outLeg);
+        txRepo.AddOrUpdate(inLeg);
+        ValidationQuery query = new(txRepo, new FakePfRepo(), new TransactionValidator(), new FakeConversionRepo(), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        Assert.DoesNotContain(result.Warnings, w => w.Field == "UNMATCHED_FX");
+        Assert.DoesNotContain(result.Warnings, w => w.Field == "MISSING_FX");
+        Assert.Empty(result.Errors);
+    }
+
+    [Fact]
+    public void ValidateAll_FlagsOrphanFxLeg_AsWarningWithDeepLink()
+    {
+        FakeTxRepo txRepo = new();
+        Guid pairId = Guid.NewGuid();
+        Transaction outLeg = new(new DateTime(2025, 1, 10), "FX EUR->USD", new Money(490.24m, "EUR"), TransactionCategory.FX_CONVERSION);
+        outLeg.SetFxPair(pairId, FxLeg.Out);
+        txRepo.AddOrUpdate(outLeg);
+        ValidationQuery query = new(txRepo, new FakePfRepo(), new TransactionValidator(), new FakeConversionRepo(), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        ValidationError warning = Assert.Single(result.Warnings);
+        Assert.Equal("UNMATCHED_FX", warning.Field);
+        Assert.Equal("warning", warning.Severity);
+        Assert.Equal("Transaction", warning.EntityType);
+        Assert.Equal(outLeg.Id, Assert.Single(warning.EntityIds!));
+        Assert.Equal($"/transactions?ids={outLeg.Id}", warning.DeepLink);
+    }
+
+    [Fact]
+    public void ValidateAll_MissingFx_DoesNotFlagFxLegs_ButFlagsNonFxNonEur()
+    {
+        FakeTxRepo txRepo = new();
+        Guid pairId = Guid.NewGuid();
+        Transaction fxOutLeg = new(new DateTime(2025, 1, 10), "FX EUR->USD", new Money(490.24m, "EUR"), TransactionCategory.FX_CONVERSION);
+        fxOutLeg.SetFxPair(pairId, FxLeg.Out);
+        Transaction fxInLeg = new(new DateTime(2025, 1, 10), "FX EUR->USD", new Money(545.20m, "USD"), TransactionCategory.FX_CONVERSION);
+        fxInLeg.SetFxPair(pairId, FxLeg.In);
+        Transaction dividend = new(new DateTime(2025, 1, 10), "MSFT dividend", new Money(3.10m, "USD"), TransactionCategory.DIVIDEND);
+        txRepo.AddOrUpdate(fxOutLeg);
+        txRepo.AddOrUpdate(fxInLeg);
+        txRepo.AddOrUpdate(dividend);
+        ValidationQuery query = new(txRepo, new FakePfRepo(), new TransactionValidator(), new FakeConversionRepo(), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        ValidationError warning = Assert.Single(result.Warnings, w => w.Field == "MISSING_FX");
+        Assert.Equal(dividend.Id, Assert.Single(warning.EntityIds!));
+        Assert.DoesNotContain(fxInLeg.Id, warning.EntityIds!);
+        Assert.DoesNotContain(result.Warnings, w => w.Field == "UNMATCHED_FX");
+    }
+
+    [Fact]
+    public void ValidateAll_FlagsFxWithoutPairOrLeg_AsError()
+    {
+        FakeTxRepo txRepo = new();
+        Transaction tx = new(new DateTime(2025, 1, 10), "Corrupted FX", new Money(100m, "USD"), TransactionCategory.FX_CONVERSION);
+        txRepo.AddOrUpdate(tx);
+        ValidationQuery query = new(txRepo, new FakePfRepo(), new TransactionValidator(), new FakeConversionRepo(), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        ValidationError error = Assert.Single(result.Errors);
+        Assert.Equal("FxPairId", error.Field);
+    }
+
     private sealed class FakeTxRepo : ITransactionRepository
     {
         private readonly List<Transaction> _transactions = new();

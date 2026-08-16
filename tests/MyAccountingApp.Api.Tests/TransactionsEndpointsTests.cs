@@ -172,4 +172,125 @@ public class TransactionsEndpointsTests
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Fx_ShouldCreateLinkedOutAndInLegs()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/transactions/fx",
+            new { date = new DateTime(2025, 1, 10), fromCurrency = "EUR", fromAmount = 490.24m, toCurrency = "USD", toAmount = 545.20m, rate = 1.1121m });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        JsonElement outLeg = document.RootElement.GetProperty("outTransaction");
+        JsonElement inLeg = document.RootElement.GetProperty("inTransaction");
+        Assert.Equal("FX_CONVERSION", outLeg.GetProperty("category").GetString());
+        Assert.Equal("FX_CONVERSION", inLeg.GetProperty("category").GetString());
+        Assert.Equal("Out", outLeg.GetProperty("fxLeg").GetString());
+        Assert.Equal("In", inLeg.GetProperty("fxLeg").GetString());
+        Assert.Equal(outLeg.GetProperty("fxPairId").GetGuid(), inLeg.GetProperty("fxPairId").GetGuid());
+        Assert.Equal(1.1121m, outLeg.GetProperty("fxBrokerRate").GetDecimal());
+        Assert.Equal(1.1121m, inLeg.GetProperty("fxBrokerRate").GetDecimal());
+    }
+
+    [Fact]
+    public async Task Fx_ShouldRejectRateOutOfTolerance()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/transactions/fx",
+            new { date = new DateTime(2025, 1, 10), fromCurrency = "EUR", fromAmount = 100m, toCurrency = "USD", toAmount = 100m, rate = 1.10m });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Fx_ShouldRejectSameCurrency()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/transactions/fx",
+            new { date = new DateTime(2025, 1, 10), fromCurrency = "EUR", fromAmount = 100m, toCurrency = "EUR", toAmount = 100m });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_FxConversion_WithoutPair_ShouldReturnBadRequest()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/transactions",
+            new { date = new DateTime(2025, 1, 10), description = "FX attempt", amount = 100m, currency = "EUR", category = "FX_CONVERSION" });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Get_CategoriesFilter_ShouldReturnOnlyFxRows()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        DateTime date = new(2025, 1, 10);
+        await client.PostAsJsonAsync("/api/transactions", CreateTransactionBody(date));
+        await client.PostAsJsonAsync(
+            "/api/transactions/fx",
+            new { date, fromCurrency = "EUR", fromAmount = 490.24m, toCurrency = "USD", toAmount = 545.20m, rate = 1.1121m });
+
+        // Act
+        HttpResponseMessage response = await client.GetAsync("/api/transactions?categories=FX_CONVERSION");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        JsonElement.ArrayEnumerator rows = document.RootElement.EnumerateArray();
+        Assert.Equal(2, rows.Count());
+        Assert.All(rows, row => Assert.Equal("FX_CONVERSION", row.GetProperty("category").GetString()));
+    }
+
+    [Fact]
+    public async Task BatchPatch_ToFxWithoutPair_ShouldFail()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        HttpResponseMessage created = await client.PostAsJsonAsync("/api/transactions", CreateTransactionBody(new DateTime(2025, 1, 10)));
+        string location = created.Headers.Location!.ToString();
+        Guid id = Guid.Parse(location.Split('/').Last());
+
+        // Act
+        HttpResponseMessage response = await client.PatchAsJsonAsync(
+            "/api/transactions/batch",
+            new { ids = new[] { id }, patch = new { category = "FX_CONVERSION" } });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(0, document.RootElement.GetProperty("updated").GetInt32());
+        JsonElement failure = Assert.Single(document.RootElement.GetProperty("failures").EnumerateArray());
+        Assert.Equal(id, failure.GetProperty("id").GetGuid());
+        Assert.Contains("FX_CONVERSION requires a pair", failure.GetProperty("error").GetString());
+    }
 }

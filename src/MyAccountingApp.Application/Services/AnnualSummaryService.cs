@@ -82,11 +82,11 @@ public class AnnualSummaryService : IAnnualSummaryService
             .Sum(t => t.Money.Amount);
 
         decimal transfers = yearEurCashTxs
-            .Where(t => t.Category == TransactionCategory.TRANSFER)
+            .Where(t => t.Category == TransactionCategory.TRANSFER || (t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out))
             .Sum(t => t.Money.Amount);
 
         decimal deposits = yearEurCashTxs
-            .Where(t => t.Category == TransactionCategory.DEPOSIT)
+            .Where(t => t.Category == TransactionCategory.DEPOSIT || (t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In))
             .Sum(t => t.Money.Amount);
 
         decimal investmentPurchases = yearAssetTxs
@@ -151,11 +151,11 @@ public class AnnualSummaryService : IAnnualSummaryService
                 .Sum(t => t.Money.Amount);
 
             decimal transfers = monthEurCashTxs
-                .Where(t => t.Category == TransactionCategory.TRANSFER)
+                .Where(t => t.Category == TransactionCategory.TRANSFER || (t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out))
                 .Sum(t => t.Money.Amount);
 
             decimal deposits = monthEurCashTxs
-                .Where(t => t.Category == TransactionCategory.DEPOSIT)
+                .Where(t => t.Category == TransactionCategory.DEPOSIT || (t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In))
                 .Sum(t => t.Money.Amount);
 
             decimal investmentPurchases = monthAssetTxs

@@ -155,6 +155,10 @@ else
                        OnClick="@OpenCreateDialog" StartIcon="@Icons.Material.Filled.Add">
                 New
             </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" Class="ml-2"
+                       OnClick="@OpenFxDialog" StartIcon="@Icons.Material.Filled.SwapHoriz">
+                New FX
+            </MudButton>
             <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@LoadDataAsync" Size="Size.Small" aria-label="Refresh" />
         </ToolBarContent>
         <ColGroup>
@@ -182,6 +186,10 @@ else
             <MudTd DataLabel="Curr.">@context.Money.Currency</MudTd>
             <MudTd DataLabel="Category">
                 <MudChip T="string" Size="Size.Small" Color="@GetCategoryColor(context.Category)">@context.Category</MudChip>
+                @if (!string.IsNullOrEmpty(context.FxLeg))
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Class="ml-1">FX @(context.FxLeg == "Out" ? "out" : "in")</MudChip>
+                }
             </MudTd>
             <MudTd DataLabel="Source">
                 @if (!string.IsNullOrEmpty(context.Source))
@@ -191,6 +199,10 @@ else
                 else
                 {
                     <MudText Typo="Typo.caption">—</MudText>
+                }
+                @if (context.FxPairId is not null)
+                {
+                    <MudText Typo="Typo.caption" Class="text-medium-emphasis">@GetCounterText(context)</MudText>
                 }
             </MudTd>
             <MudTd DataLabel="Actions">
@@ -229,7 +241,7 @@ else
             </MudItem>
             <MudItem xs="12">
                 <MudSelect @bind-Value="_formCategory" Label="Category" Variant="Variant.Outlined">
-                    @foreach (var cat in _categories)
+                    @foreach (var cat in _categories.Where(c => c != "FX_CONVERSION"))
                     {
                         <MudSelectItem Value="cat">@cat</MudSelectItem>
                     }
@@ -269,6 +281,50 @@ else
     </DialogActions>
 </MudDialog>
 
+<MudDialog @bind-Visible="_showFxDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">New FX Conversion</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudDatePicker @bind-Date="_fxDate" Label="Date" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="decimal" @bind-Value="_fxFromAmount" Label="From amount" Variant="Variant.Outlined" Min="@(0.01m)" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect @bind-Value="_fxFromCurrency" Label="From currency" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("EUR")">EUR</MudSelectItem>
+                    <MudSelectItem Value="@("USD")">USD</MudSelectItem>
+                    <MudSelectItem Value="@("GBP")">GBP</MudSelectItem>
+                    <MudSelectItem Value="@("CHF")">CHF</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="decimal" @bind-Value="_fxToAmount" Label="To amount" Variant="Variant.Outlined" Min="@(0.01m)" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect @bind-Value="_fxToCurrency" Label="To currency" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("EUR")">EUR</MudSelectItem>
+                    <MudSelectItem Value="@("USD")">USD</MudSelectItem>
+                    <MudSelectItem Value="@("GBP")">GBP</MudSelectItem>
+                    <MudSelectItem Value="@("CHF")">CHF</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12">
+                <MudNumericField T="decimal?" @bind-Value="_fxRate" Label="Rate (quote per base, optional)" Variant="Variant.Outlined" Min="@(0.000001m)" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@CloseFxDialog">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@SaveFxAsync" Disabled="@IsFxFormInvalid()">
+            Save
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
 <MudDialog @bind-Visible="_showDeleteDialog">
     <TitleContent>
         <MudText Typo="Typo.h6">Delete Transaction</MudText>
@@ -298,7 +354,7 @@ else
     private HashSet<string> _selectedCategories = new(StringComparer.OrdinalIgnoreCase);
     private string? _searchText { get; set; }
 
-    private static readonly string[] _categories = { "INCOME", "EXPENSE", "TRANSFER", "DEPOSIT", "DIVIDEND", "FEE", "WITHHOLDING_TAX", "INTEREST", "INVESTMENT" };
+    private static readonly string[] _categories = { "INCOME", "EXPENSE", "TRANSFER", "DEPOSIT", "DIVIDEND", "FEE", "WITHHOLDING_TAX", "INTEREST", "INVESTMENT", "FX_CONVERSION" };
     private static readonly string[] _monthNames =
     {
         "January", "February", "March", "April", "May", "June",
@@ -306,12 +362,20 @@ else
     };
 
     private bool _showFormDialog;
+    private bool _showFxDialog;
     private bool _showDeleteDialog;
     private bool _showBulkCategoryDialog;
     private Guid? _editingId;
     private TransactionDto? _deletingTx;
     private HashSet<TransactionDto> _selected = new();
     private string _bulkCategory = "";
+
+    private DateTime? _fxDate;
+    private decimal _fxFromAmount;
+    private string _fxFromCurrency = "EUR";
+    private decimal _fxToAmount;
+    private string _fxToCurrency = "USD";
+    private decimal? _fxRate;
 
     [SupplyParameterFromQuery(Name = "ids")]
     public string? IdsFromQuery { get; set; }
@@ -481,8 +545,8 @@ else
             {
                 decimal income = g.Where(t => t.Category is "INCOME" or "DIVIDEND" or "INTEREST").Sum(t => t.Money.Amount);
                 decimal expense = g.Where(t => t.Category is "EXPENSE" or "FEE" or "WITHHOLDING_TAX").Sum(t => t.Money.Amount);
-                decimal transfer = g.Where(t => t.Category == "TRANSFER").Sum(t => t.Money.Amount);
-                decimal deposit = g.Where(t => t.Category == "DEPOSIT").Sum(t => t.Money.Amount);
+                decimal transfer = g.Where(t => t.Category == "TRANSFER" || (t.Category == "FX_CONVERSION" && t.FxLeg == "Out")).Sum(t => t.Money.Amount);
+                decimal deposit = g.Where(t => t.Category == "DEPOSIT" || (t.Category == "FX_CONVERSION" && t.FxLeg == "In")).Sum(t => t.Money.Amount);
                 return new FilterCurrencySummary
                 {
                     Currency = g.Key,
@@ -516,8 +580,25 @@ else
         "EXPENSE" or "FEE" or "WITHHOLDING_TAX" => Color.Error,
         "TRANSFER" => Color.Warning,
         "DEPOSIT" or "INVESTMENT" => Color.Info,
+        "FX_CONVERSION" => Color.Secondary,
         _ => Color.Default,
     };
+
+    private string? GetCounterText(TransactionDto tx)
+    {
+        if (tx.FxPairId is null)
+        {
+            return null;
+        }
+
+        TransactionDto? sibling = _allTransactions.FirstOrDefault(t => t.FxPairId == tx.FxPairId && t.Id != tx.Id);
+        string arrow = tx.FxLeg == "Out" ? "->" : "<-";
+        string amount = sibling is null
+            ? "no counterpart"
+            : $"{arrow} {sibling.Money.Amount.ToString("N2")} {sibling.Money.Currency}";
+        string rate = tx.FxBrokerRate is not null ? $" @ {tx.FxBrokerRate:G}" : string.Empty;
+        return $"{amount}{rate}";
+    }
 
     private void OpenCreateDialog()
     {
@@ -544,6 +625,63 @@ else
     private void CloseFormDialog()
     {
         _showFormDialog = false;
+    }
+
+    private void OpenFxDialog()
+    {
+        _fxDate = DateTime.Today;
+        _fxFromAmount = 0;
+        _fxFromCurrency = "EUR";
+        _fxToAmount = 0;
+        _fxToCurrency = "USD";
+        _fxRate = null;
+        _showFxDialog = true;
+    }
+
+    private void CloseFxDialog()
+    {
+        _showFxDialog = false;
+    }
+
+    private bool IsFxFormInvalid() =>
+        _fxFromAmount <= 0 ||
+        _fxToAmount <= 0 ||
+        string.IsNullOrWhiteSpace(_fxFromCurrency) ||
+        string.IsNullOrWhiteSpace(_fxToCurrency) ||
+        string.Equals(_fxFromCurrency, _fxToCurrency, StringComparison.OrdinalIgnoreCase) ||
+        _fxRate is <= 0;
+
+    private async Task SaveFxAsync()
+    {
+        try
+        {
+            var payload = new
+            {
+                Date = _fxDate ?? DateTime.Today,
+                FromAmount = _fxFromAmount,
+                FromCurrency = _fxFromCurrency,
+                ToAmount = _fxToAmount,
+                ToCurrency = _fxToCurrency,
+                Rate = _fxRate,
+            };
+
+            HttpResponseMessage response = await Http.PostAsJsonAsync("/api/transactions/fx", payload);
+            if (response.IsSuccessStatusCode)
+            {
+                _showFxDialog = false;
+                Snackbar.Add("FX conversion created", Severity.Success);
+                await LoadDataAsync();
+            }
+            else
+            {
+                string error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Failed to save: {Trim(error)}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
     }
 
     private async Task SaveAsync()

@@ -6,4 +6,8 @@ public record TransactionDto(
     string Description,
     MoneyDto Money,
     string Category,
-    string? Source = null);
+    string? Source = null,
+    Guid? FxPairId = null,
+    string? FxLeg = null,
+    decimal? FxBrokerRate = null,
+    string? FxExternalKey = null);
