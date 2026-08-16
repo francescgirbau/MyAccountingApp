@@ -63,6 +63,7 @@ public class ValidationQuery : IValidationQuery
 
         this.AddFifoShortfallRules(allWarnings);
         this.AddUnmatchedTransferRules(allWarnings);
+        this.AddUnmatchedFxRules(allWarnings);
         this.AddDuplicateFingerprintRules(allErrors);
         this.AddMissingFxRules(allWarnings);
         this.AddSymbolNoPriceRules(allWarnings);
@@ -125,10 +126,24 @@ public class ValidationQuery : IValidationQuery
         }
     }
 
+    private void AddUnmatchedFxRules(List<ValidationError> warnings)
+    {
+        foreach (Transaction leg in FxConversionPairing.UnmatchedFxLegs(this._txRepo.GetAll()))
+        {
+            warnings.Add(new ValidationError(
+                "UNMATCHED_FX",
+                $"FX {leg.Money.Currency} leg on {leg.Date:yyyy-MM-dd} ({leg.Description}) has no complementary leg in its FxPairId",
+                "warning",
+                EntityType: "Transaction",
+                EntityIds: new[] { leg.Id },
+                Date: DateOnly.FromDateTime(leg.Date)));
+        }
+    }
+
     private void AddMissingFxRules(List<ValidationError> warnings)
     {
         IEnumerable<Transaction> nonEur = this._txRepo.GetAll()
-            .Where(t => t.Money.Currency != "EUR");
+            .Where(t => t.Money.Currency != "EUR" && t.Category != TransactionCategory.FX_CONVERSION);
 
         foreach (IGrouping<(DateOnly Date, string Currency), Transaction> group in nonEur.GroupBy(t => (DateOnly.FromDateTime(t.Date), t.Money.Currency)))
         {

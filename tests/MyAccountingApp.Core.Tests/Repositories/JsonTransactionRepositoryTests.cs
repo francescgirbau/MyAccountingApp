@@ -78,6 +78,51 @@ public class JsonTransactionRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void RoundTrip_ShouldPersistFxPairFields()
+    {
+        // Arrange
+        JsonTransactionRepository repo = new JsonTransactionRepository(this._tempFile);
+        Guid pairId = Guid.NewGuid();
+        Transaction outLeg = new(new DateTime(2025, 1, 10), "FX EUR->USD", new Money(490.24m, "EUR"), TransactionCategory.FX_CONVERSION);
+        outLeg.SetFxPair(pairId, FxLeg.Out, 1.1121m, "order-123");
+        Transaction inLeg = new(new DateTime(2025, 1, 10), "FX EUR->USD", new Money(545.20m, "USD"), TransactionCategory.FX_CONVERSION);
+        inLeg.SetFxPair(pairId, FxLeg.In, 1.1121m, "order-123");
+        repo.Initialize(new[] { outLeg, inLeg });
+
+        // Act
+        JsonTransactionRepository repoReloaded = new JsonTransactionRepository(this._tempFile);
+        List<Transaction> all = repoReloaded.GetAll().ToList();
+
+        // Assert
+        Transaction loadedOut = Assert.Single(all, t => t.Id == outLeg.Id);
+        Transaction loadedIn = Assert.Single(all, t => t.Id == inLeg.Id);
+        Assert.Equal(pairId, loadedOut.FxPairId);
+        Assert.Equal(pairId, loadedIn.FxPairId);
+        Assert.Equal(FxLeg.Out, loadedOut.FxLeg);
+        Assert.Equal(FxLeg.In, loadedIn.FxLeg);
+        Assert.Equal(1.1121m, loadedOut.FxBrokerRate);
+        Assert.Equal("order-123", loadedIn.FxExternalKey);
+    }
+
+    [Fact]
+    public void RoundTrip_OldJsonWithoutFxFields_LoadsWithNulls()
+    {
+        // Arrange
+        File.WriteAllText(this._tempFile, """[{"Id":"aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee","Date":"2025-01-10T00:00:00","Description":"Plain","Money":{"Amount":100,"Currency":"EUR"},"Category":"INCOME"}]""");
+        JsonTransactionRepository repo = new JsonTransactionRepository(this._tempFile);
+
+        // Act
+        Transaction loaded = Assert.Single(repo.GetAll());
+
+        // Assert
+        Assert.Equal(TransactionCategory.INCOME, loaded.Category);
+        Assert.Null(loaded.FxPairId);
+        Assert.Null(loaded.FxLeg);
+        Assert.Null(loaded.FxBrokerRate);
+        Assert.Null(loaded.FxExternalKey);
+    }
+
+    [Fact]
     public void Delete_ShouldRemoveTransactionFromFile()
     {
         JsonTransactionRepository repo = new JsonTransactionRepository(this._tempFile);

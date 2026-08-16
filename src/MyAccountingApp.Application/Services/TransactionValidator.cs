@@ -1,5 +1,6 @@
 using MyAccountingApp.Application.Interfaces;
 using MyAccountingApp.Domain.Entities;
+using MyAccountingApp.Domain.Enums;
 
 namespace MyAccountingApp.Application.Services;
 
@@ -47,6 +48,23 @@ public class TransactionValidator : ITransactionValidator
             errors.Add(new ValidationError(
                 "Currency",
                 $"Invalid currency code: '{transaction.Money.Currency}'",
+                "error"));
+        }
+
+        if (transaction.Category == TransactionCategory.FX_CONVERSION &&
+            (transaction.FxPairId is null || transaction.FxLeg is null))
+        {
+            errors.Add(new ValidationError(
+                "FxPairId",
+                "FX_CONVERSION requires both an FxPairId and an FxLeg",
+                "error"));
+        }
+
+        if (transaction.Category != TransactionCategory.FX_CONVERSION && transaction.FxPairId is not null)
+        {
+            errors.Add(new ValidationError(
+                "FxPairId",
+                $"Fx pair data is only allowed on FX_CONVERSION, got {transaction.Category}",
                 "error"));
         }
 

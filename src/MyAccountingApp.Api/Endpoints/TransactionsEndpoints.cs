@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using MyAccountingApp.Application.DTOs;
 using MyAccountingApp.Application.Interfaces;
+using MyAccountingApp.Application.Services;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
@@ -14,10 +15,20 @@ public static class TransactionsEndpoints
     {
         const string prefix = ApiEndpoints.ApiPrefix;
 
-        app.MapGet($"{prefix}/transactions", (ITransactionRepository repo) =>
+        app.MapGet($"{prefix}/transactions", (ITransactionRepository repo, string? categories = null) =>
         {
-            List<TransactionDto> transactions = repo.GetAll().Select(t => t.ToDto()).ToList();
-            return Results.Ok(transactions);
+            IEnumerable<Transaction> transactions = repo.GetAll();
+
+            if (!string.IsNullOrWhiteSpace(categories))
+            {
+                IReadOnlySet<string> parsed = categories
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                transactions = TransactionCategoryFilter.FilterByCategories(transactions, parsed, t => t.Category.ToString());
+            }
+
+            List<TransactionDto> result = transactions.Select(t => t.ToDto()).ToList();
+            return Results.Ok(result);
         });
 
         app.MapPost($"{prefix}/transactions", (CreateTransactionRequest request, ITransactionRepository repo, ITransactionValidator validator) =>
@@ -25,6 +36,11 @@ public static class TransactionsEndpoints
             if (!Enum.TryParse<TransactionCategory>(request.Category, ignoreCase: true, out TransactionCategory category))
             {
                 return Results.BadRequest(new { message = $"Invalid category: {request.Category}" });
+            }
+
+            if (category == TransactionCategory.FX_CONVERSION)
+            {
+                return Results.BadRequest(new { message = "FX_CONVERSION requires a pair; use POST /api/transactions/fx instead." });
             }
 
             Money money = new(request.Amount, request.Currency);
@@ -38,6 +54,56 @@ public static class TransactionsEndpoints
 
             repo.AddOrUpdate(transaction);
             return Results.Created($"/api/transactions/{transaction.Id}", transaction.ToDto());
+        });
+
+        app.MapPost($"{prefix}/transactions/fx", (CreateFxTransactionRequest request, ITransactionRepository repo, ITransactionValidator validator) =>
+        {
+            if (request.FromAmount <= 0 || request.ToAmount <= 0)
+            {
+                return Results.BadRequest(new { message = "fromAmount and toAmount must be positive." });
+            }
+
+            if (string.Equals(request.FromCurrency, request.ToCurrency, StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.BadRequest(new { message = "fromCurrency and toCurrency must differ." });
+            }
+
+            if (request.Rate is <= 0)
+            {
+                return Results.BadRequest(new { message = "rate must be positive when provided." });
+            }
+
+            Guid pairId = Guid.NewGuid();
+            string description = string.IsNullOrWhiteSpace(request.Description)
+                ? $"FX {request.FromCurrency}->{request.ToCurrency}"
+                : request.Description;
+
+            Transaction outLeg = new(request.Date, description, new Money(request.FromAmount, request.FromCurrency), TransactionCategory.FX_CONVERSION);
+            outLeg.SetFxPair(pairId, FxLeg.Out, request.Rate);
+            Transaction inLeg = new(request.Date, description, new Money(request.ToAmount, request.ToCurrency), TransactionCategory.FX_CONVERSION);
+            inLeg.SetFxPair(pairId, FxLeg.In, request.Rate);
+
+            if (request.Rate is not null)
+            {
+                decimal implied = request.ToAmount / request.FromAmount;
+                if (!MatchesRate(implied, request.Rate.Value) && !MatchesRate(1 / implied, request.Rate.Value))
+                {
+                    return Results.BadRequest(new { message = $"rate {request.Rate:G} does not match amounts (implied {implied:G}) within tolerance." });
+                }
+            }
+
+            ValidationResult outValidation = validator.Validate(outLeg);
+            ValidationResult inValidation = validator.Validate(inLeg);
+            if (!outValidation.IsValid || !inValidation.IsValid)
+            {
+                return Results.BadRequest(new { outErrors = outValidation.Errors, inErrors = inValidation.Errors });
+            }
+
+            repo.AddOrUpdate(outLeg);
+            repo.AddOrUpdate(inLeg);
+            return Results.Created(
+                $"/api/transactions?ids={outLeg.Id},{inLeg.Id}",
+                new { pairId, outTransaction = outLeg.ToDto(), inTransaction = inLeg.ToDto() });
         });
 
         app.MapPatch($"{prefix}/transactions/batch", (BatchTransactionPatchRequest request, ITransactionCommandService service) =>
@@ -291,9 +357,13 @@ public static class TransactionsEndpoints
             return Results.Ok(new { year, options = count });
         });
     }
+
+    private static bool MatchesRate(decimal implied, decimal rate) =>
+        Math.Abs(implied - rate) / rate <= FxConversionPairing.RateTolerance;
 }
 
 record CreateTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category);
+record CreateFxTransactionRequest(DateTime Date, string FromCurrency, decimal FromAmount, string ToCurrency, decimal ToAmount, decimal? Rate = null, string? Description = null);
 record CreateAssetTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, decimal Quantity, string Type);
 record UpdateOptionTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, string Isin, decimal Quantity, string Type);
 record BatchAssetTransactionPatchRequest(List<Guid> Ids, AssetTransactionPatch Patch);

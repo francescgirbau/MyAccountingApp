@@ -43,18 +43,18 @@ public class DashboardQuery : IDashboardQuery
         DateTime yearStart = new DateTime(asOf.Year, 1, 1);
         DateTime monthStart = new DateTime(asOf.Year, asOf.Month, 1);
 
-        decimal SumCategory(List<Transaction> txs, Func<TransactionCategory, bool> predicate) =>
-            txs.Where(t => predicate(t.Category) && string.Equals(t.Money.Currency, Eur, StringComparison.OrdinalIgnoreCase)).Sum(t => t.Money.Amount);
+        decimal SumCategory(List<Transaction> txs, Func<Transaction, bool> predicate) =>
+            txs.Where(t => string.Equals(t.Money.Currency, Eur, StringComparison.OrdinalIgnoreCase) && predicate(t)).Sum(t => t.Money.Amount);
 
         List<Transaction> ytd = allTransactions.Where(t => t.Date >= yearStart && t.Date <= end).ToList();
         List<Transaction> mtd = allTransactions.Where(t => t.Date >= monthStart && t.Date <= end).ToList();
 
-        decimal incomeYtd = SumCategory(ytd, c => c.IsCashIncome());
-        decimal expenseYtd = SumCategory(ytd, c => c.IsCashExpense());
-        decimal transfersYtd = SumCategory(ytd, c => c == TransactionCategory.TRANSFER);
-        decimal depositsYtd = SumCategory(ytd, c => c == TransactionCategory.DEPOSIT);
-        decimal incomeMtd = SumCategory(mtd, c => c.IsCashIncome());
-        decimal expenseMtd = SumCategory(mtd, c => c.IsCashExpense());
+        decimal incomeYtd = SumCategory(ytd, t => t.Category.IsCashIncome());
+        decimal expenseYtd = SumCategory(ytd, t => t.Category.IsCashExpense());
+        decimal transfersYtd = SumCategory(ytd, t => t.Category == TransactionCategory.TRANSFER || (t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out));
+        decimal depositsYtd = SumCategory(ytd, t => t.Category == TransactionCategory.DEPOSIT || (t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In));
+        decimal incomeMtd = SumCategory(mtd, t => t.Category.IsCashIncome());
+        decimal expenseMtd = SumCategory(mtd, t => t.Category.IsCashExpense());
 
         return new CashSnapshotDto(
             Math.Round(incomeMtd, 2),

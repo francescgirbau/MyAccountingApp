@@ -188,6 +188,33 @@ public class TransferDepositPairingTests
         Assert.False(TransferDepositPairing.IsValidPair(transfer, Tx(date, "D", 200, TransactionCategory.DEPOSIT, "USD")));
     }
 
+    [Fact]
+    public void Pair_IgnoresFxConversion_EvenWhenAmountAndDateMatchDeposit()
+    {
+        DateTime date = new DateTime(2019, 8, 12);
+        Transaction fxOut = new(date, "FX EUR->USD", new Money(200, "EUR"), TransactionCategory.FX_CONVERSION);
+        Transaction deposit = Tx(date, "Top-up by *9027", 200, TransactionCategory.DEPOSIT);
+
+        Assert.False(TransferDepositPairing.IsValidPair(fxOut, deposit));
+        Assert.Empty(TransferDepositPairing.Pair(new List<Transaction> { fxOut, deposit }));
+        Assert.Empty(TransferDepositPairing.UnmatchedTransferIds(new List<Transaction> { fxOut, deposit }));
+    }
+
+    [Fact]
+    public void Pair_FxConversionDeposit_DoesNotStealTransferMatch()
+    {
+        DateTime date = new DateTime(2019, 8, 12);
+        Transaction transfer = Tx(date, "Top-up", 200, TransactionCategory.TRANSFER);
+        Transaction fxIn = new(date, "FX USD->EUR", new Money(200, "EUR"), TransactionCategory.FX_CONVERSION);
+        Transaction deposit = Tx(date, "Top-up", 200, TransactionCategory.DEPOSIT);
+
+        IReadOnlyList<(Guid TransferId, Guid DepositId)> pairs = TransferDepositPairing.Pair(new List<Transaction> { transfer, fxIn, deposit });
+
+        Assert.Single(pairs);
+        Assert.Contains(pairs, p => p.TransferId == transfer.Id && p.DepositId == deposit.Id);
+        Assert.Empty(TransferDepositPairing.UnmatchedTransferIds(new List<Transaction> { transfer, fxIn, deposit }));
+    }
+
     private static Transaction Tx(DateTime date, string description, decimal amount, TransactionCategory category, string currency = "EUR")
     {
         return new Transaction(Guid.NewGuid(), date, description, new Money(amount, currency), category);

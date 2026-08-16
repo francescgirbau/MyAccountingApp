@@ -11,4 +11,5 @@ public enum TransactionCategory
     WITHHOLDING_TAX = 6,
     INTEREST = 7,
     INVESTMENT = 8,
+    FX_CONVERSION = 9,
 }

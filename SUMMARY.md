@@ -128,6 +128,17 @@ INVESTMENT / sells are out of scope for this matcher.
 - The matching rule lives in a single shared helper (`TransferDepositPairing`): Data Quality (`ValidationQuery`) and the recalculate endpoint (`TransferMatchingService`) both use it, so they cannot diverge. Matching is deterministic (sorted by date then id, first-match-wins); a `TRANSFER` without a `DEPOSIT` counterpart within the window is reported as `UNMATCHED_TRANSFER`; an orphan `DEPOSIT` does not generate a warning. `TRANSFER↔TRANSFER` is never a pair.
 - The **Recalculate transfer matches** button is quarantined (behind `ShowAdvancedMatching = false` on the Data Quality page — the endpoint still exists for later use). Re-check after category edits is sufficient, since matching no longer re-categorizes anything.
 
+## FX conversions (two-leg operations)
+
+`FX_CONVERSION` is a two-leg operation (Out + In, different currencies), linked by `FxPairId`. It is not income/expense and is not a Revolut TRANSFER↔DEPOSIT (same amount and currency). It represents a real broker currency exchange and keeps the per-currency cash book balanced without touching the income/expense P/L.
+
+- Category `FX_CONVERSION = 9`; legs carry `FxLeg` (Out sells cash, In buys cash), `FxBrokerRate` (quote per base, as reported by the broker CSV) and `FxExternalKey` (broker order id / trade key). `Money` is always positive; direction comes from the leg.
+- Invariants (validated by `TransactionValidator` and `FxConversionPairing.ValidatePair`): legs of a pair share `FxPairId`, one Out + one In, different currencies, ≤ 3 days apart, and the broker rate must match the implied rate within ±0.5% (either orientation).
+- `FxConversionPairing.Group` reconstructs pairs from the two stored rows; `UnmatchedFxLegs` finds orphan legs → `UNMATCHED_FX` warning (deep link `/transactions?ids=...`).
+- `MISSING_FX` is NOT reported for FX legs (they have a real counterpart in the cash book); it still applies to non-EUR DIVIDEND / FEE / WITHHOLDING / EXPENSE / INCOME / INVESTMENT without an official rate.
+- Degiro `Cambio de Divisa` (for PR2) and IBKR `Forex` rows (for PR3) import as pairs; `POST /api/transactions/fx` creates a pair manually in one call. Bulk-recategorizing to `FX_CONVERSION` without a pair is rejected.
+- Broker rate stays on the pair; official EUR rates stay in `conversions.json` (Frankfurter / mark-to-market). They are different things.
+
 ## Currency Options (`appsettings.json` → `CurrencyApi`)
 | Key | Default | Description |
 |---|---|---|
