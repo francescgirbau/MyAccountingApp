@@ -286,6 +286,62 @@ public class ImportServiceTests
         Assert.Contains(allTxs, tx => tx.Category == TransactionCategory.INCOME);
     }
 
+    [Fact]
+    public async Task ImportFromFoldersAsync_ReimportingFxPair_DoesNotDuplicateLegs()
+    {
+        string dir = CreateTempDir();
+        string file = Path.Combine(dir, "fx.csv");
+        File.WriteAllText(file, "dummy");
+
+        Guid pairId = Guid.NewGuid();
+        Transaction outLeg = new(new DateTime(2022, 2, 24), "FX EUR->USD", new Money(490.24m, "EUR"), TransactionCategory.FX_CONVERSION);
+        outLeg.SetFxPair(pairId, FxLeg.Out, 1.1121m, "64900984-84e2-4611-923d-958f45aa2d55");
+        Transaction inLeg = new(new DateTime(2022, 2, 24), "FX EUR->USD", new Money(545.20m, "USD"), TransactionCategory.FX_CONVERSION);
+        inLeg.SetFxPair(pairId, FxLeg.In, 1.1121m, "64900984-84e2-4611-923d-958f45aa2d55");
+
+        FakeBroker broker = new();
+        broker.Transactions = new[] { outLeg, inLeg };
+        FakeTxRepo txRepo = new();
+        TransactionValidator validator = new();
+        FakeLogger<ImportService> logger = new();
+        ImportService service = new(broker, txRepo, new FakePfRepo(), new FakeOptionRepo(), validator, logger);
+
+        await service.ImportFromFoldersAsync(new[] { dir });
+        await service.ImportFromFoldersAsync(new[] { dir });
+
+        List<Transaction> all = txRepo.GetAll().ToList();
+        Assert.Equal(2, all.Count);
+        Assert.Single(all, t => t.FxLeg == FxLeg.Out);
+        Assert.Single(all, t => t.FxLeg == FxLeg.In);
+    }
+
+    [Fact]
+    public async Task ImportFromFoldersAsync_ReimportingOrdinaryTransaction_StillAppends()
+    {
+        string dir = CreateTempDir();
+        string file = Path.Combine(dir, "tx.csv");
+        File.WriteAllText(file, "dummy");
+
+        Transaction income = new(
+            Guid.NewGuid(),
+            new DateTime(2024, 1, 15),
+            "Test",
+            new Money(100, "EUR"),
+            TransactionCategory.INCOME);
+
+        FakeBroker broker = new();
+        broker.Transactions = new[] { income };
+        FakeTxRepo txRepo = new();
+        TransactionValidator validator = new();
+        FakeLogger<ImportService> logger = new();
+        ImportService service = new(broker, txRepo, new FakePfRepo(), new FakeOptionRepo(), validator, logger);
+
+        await service.ImportFromFoldersAsync(new[] { dir });
+        await service.ImportFromFoldersAsync(new[] { dir });
+
+        Assert.Equal(2, txRepo.GetAll().Count());
+    }
+
     private static string CreateTempDir(string suffix = "")
     {
         string dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString(), suffix);
