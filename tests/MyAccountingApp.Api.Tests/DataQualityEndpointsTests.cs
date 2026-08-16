@@ -94,6 +94,48 @@ public class DataQualityEndpointsTests
     }
 
     [Fact]
+    public async Task SyncMissingFx_FetchesWarningDates_WhenFxMissing()
+    {
+        // Arrange: a USD transaction with no stored conversion produces a MISSING_FX warning.
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        await client.PostAsJsonAsync("/api/transactions", new
+        {
+            date = new DateTime(2024, 3, 15),
+            description = "Buy in USD",
+            amount = 150m,
+            currency = "USD",
+            category = "EXPENSE",
+        });
+
+        // Act
+        HttpResponseMessage response = await client.PostAsync("/api/data-quality/sync-missing-fx", null);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(1, document.RootElement.GetProperty("requestedDates").GetInt32());
+        Assert.Equal(1, document.RootElement.GetProperty("syncedDates").GetInt32());
+    }
+
+    [Fact]
+    public async Task SyncMissingFx_ReturnsZero_WhenNoWarnings()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        // Act
+        HttpResponseMessage response = await client.PostAsync("/api/data-quality/sync-missing-fx", null);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(0, document.RootElement.GetProperty("requestedDates").GetInt32());
+        Assert.Equal(0, document.RootElement.GetProperty("syncedDates").GetInt32());
+    }
+
+    [Fact]
     public async Task Recalculate_LockedVault_Returns401()
     {
         // Arrange
