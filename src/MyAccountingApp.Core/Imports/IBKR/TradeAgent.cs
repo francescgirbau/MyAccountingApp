@@ -29,7 +29,9 @@ public class TradeAgent : IIBKRStatementAgent
             string symbol = fields[5];
             string dateTimeStr = fields[6];
             string qtyStr = fields[7];
+            string priceStr = fields[8];
             string proceedsStr = fields[10];
+            string commissionStr = fields[11];
 
             if (!TryParseDateTime(dateTimeStr, out DateTime date))
             {
@@ -59,8 +61,57 @@ public class TradeAgent : IIBKRStatementAgent
                 AssetTransaction assetTx = CreateAssetTransaction(date, symbol, currency, quantity, proceeds, isBuy);
                 assetTransactions.Add(assetTx);
             }
+            else if (assetCategory == "Forex")
+            {
+                CreateForexPair(date, symbol, currency, rawQuantity, priceStr, proceeds, commissionStr, transactions);
+            }
         }
     }
+
+    private static void CreateForexPair(DateTime date, string symbol, string currency, decimal quantity, string priceStr, decimal proceeds, string commissionStr, List<Transaction> transactions)
+    {
+        int separatorIdx = symbol.IndexOf('.');
+        bool hasCurrencyPair = separatorIdx > 0
+            && separatorIdx < symbol.Length - 1
+            && currency.Length == 3;
+
+        if (!hasCurrencyPair || !TryParseDecimal(priceStr, out decimal price) || price <= 0)
+        {
+            return;
+        }
+
+        decimal expectedProceeds = quantity * price;
+        if (expectedProceeds == 0 || Math.Abs(proceeds + expectedProceeds) / Math.Abs(expectedProceeds) > ProceedsTolerance)
+        {
+            return;
+        }
+
+        string baseCurrency = symbol[..separatorIdx];
+        int quoteStart = separatorIdx + 1;
+        string quoteCurrency = symbol[quoteStart..];
+        FxLeg baseLeg = quantity > 0 ? FxLeg.In : FxLeg.Out;
+        FxLeg quoteLeg = quantity > 0 ? FxLeg.Out : FxLeg.In;
+        Guid pairId = Guid.NewGuid();
+        string description = $"FX {baseCurrency}→{quoteCurrency} · {symbol}";
+        string externalKey = $"{date.ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture)}|{symbol}|{quantity.ToString(CultureInfo.InvariantCulture)}|{price.ToString(CultureInfo.InvariantCulture)}";
+
+        transactions.Add(CreateFxLeg(pairId, date, description, new Money(Math.Abs(quantity), baseCurrency), baseLeg, price, externalKey));
+        transactions.Add(CreateFxLeg(pairId, date, description, new Money(Math.Abs(proceeds), quoteCurrency), quoteLeg, price, externalKey));
+
+        if (TryParseDecimal(commissionStr, out decimal commission) && commission != 0)
+        {
+            transactions.Add(new Transaction(date, symbol, new Money(Math.Abs(commission), currency), TransactionCategory.FEE));
+        }
+    }
+
+    private static Transaction CreateFxLeg(Guid pairId, DateTime date, string description, Money money, FxLeg leg, decimal rate, string externalKey)
+    {
+        Transaction transaction = new(date, description, money, TransactionCategory.FX_CONVERSION);
+        transaction.SetFxPair(pairId, leg, rate, externalKey);
+        return transaction;
+    }
+
+    private const decimal ProceedsTolerance = 0.02m;
 
     private static OptionTransaction CreateOptionTransaction(DateTime date, string symbol, string currency, int quantity, decimal proceeds, bool isBuy)
     {
