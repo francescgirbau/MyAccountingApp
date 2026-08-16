@@ -105,6 +105,27 @@ public class PortfolioEndpointsTests
     }
 
     [Fact]
+    public async Task PortfolioOverview_ReturnsUnpricedPosition_WhenNoCachedQuote()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        await SeedBuyAsync(client);
+
+        // Act
+        HttpResponseMessage response = await client.GetAsync("/api/portfolio/overview");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        JsonElement position = Assert.Single(document.RootElement.GetProperty("positions").EnumerateArray());
+        Assert.Equal("AAPL", position.GetProperty("symbol").GetString());
+        Assert.Equal(1, document.RootElement.GetProperty("unpricedPositionCount").GetInt32());
+        Assert.Equal(0m, document.RootElement.GetProperty("investedCostEur").GetDecimal());
+        Assert.Empty(document.RootElement.GetProperty("purchaseAllocation").EnumerateArray());
+    }
+
+    [Fact]
     public async Task Portfolio_WithIncludePrices_FetchesMarketPrices()
     {
         // Arrange

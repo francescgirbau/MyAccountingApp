@@ -6,6 +6,182 @@
 
 <MudText Typo="Typo.h3" GutterBottom="true">Portfolio</MudText>
 
+@if (_overview is not null && _overview.Positions.Count > 0)
+{
+    <div class="d-flex flex-wrap gap-4 mb-4">
+        <MudPaper Class="pa-4 flex-1" Outlined="true">
+            <MudText Typo="Typo.body2">Market value (EUR)</MudText>
+            <MudText Typo="Typo.h5">@_overview.MarketValueEur.ToString("N2") €</MudText>
+        </MudPaper>
+        <MudPaper Class="pa-4 flex-1" Outlined="true">
+            <MudText Typo="Typo.body2">Invested / open cost (EUR)</MudText>
+            <MudText Typo="Typo.h5">@_overview.InvestedCostEur.ToString("N2") €</MudText>
+        </MudPaper>
+        <MudPaper Class="pa-4 flex-1" Outlined="true">
+            <MudText Typo="Typo.body2">Unrealized P&amp;L (EUR)</MudText>
+            <MudText Typo="Typo.h5" Class="@(_overview.UnrealizedPnLEur >= 0 ? "green--text" : "red--text")">
+                @(_overview.UnrealizedPnLEur >= 0 ? "+" : "")@_overview.UnrealizedPnLEur.ToString("N2") €
+                @if (_overview.UnrealizedPnLPct is not null)
+                {
+                    <span>(@(_overview.UnrealizedPnLPct >= 0 ? "+" : "")@_overview.UnrealizedPnLPct.Value.ToString("P2"))</span>
+                }
+            </MudText>
+            @if (_overview.PricesAsOfUtc is not null)
+            {
+                <MudText Typo="Typo.caption">Prices as of @FormatAsOf(_overview.PricesAsOfUtc.Value)</MudText>
+            }
+        </MudPaper>
+    </div>
+
+    @if (_overview.IsMarketClosed && _overview.PricesAsOfUtc is not null)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4">Market closed — using last close prices as of @FormatAsOf(_overview.PricesAsOfUtc.Value).</MudAlert>
+    }
+    @if (_overview.UnpricedPositionCount > 0)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-4">@_overview.UnpricedPositionCount unpriced position(s) excluded from valuation.</MudAlert>
+    }
+    @if (_overview.OptionSymbolCount > 0)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-4">@_overview.OptionSymbolCount option symbol(s) not included in allocation.</MudAlert>
+    }
+
+    <div class="d-flex flex-wrap gap-8 mb-4">
+        <div>
+            <MudText Typo="Typo.h6" GutterBottom="true">Allocation at purchase</MudText>
+            <svg viewBox="0 0 200 200" width="220" height="220" aria-label="Allocation at purchase">
+                @foreach (PieSliceDto slice in _purchasePie)
+                {
+                    <path d="@slice.Path" fill="@slice.Color" stroke="white" stroke-width="2"
+                          class="@(slice.IsNavigable ? "cursor-pointer" : "")" @onclick="() => NavigateToSlice(slice.Key)" />
+                }
+            </svg>
+        </div>
+        <div>
+            <MudText Typo="Typo.h6" GutterBottom="true">Current allocation</MudText>
+            <svg viewBox="0 0 200 200" width="220" height="220" aria-label="Current allocation">
+                @foreach (PieSliceDto slice in _currentPie)
+                {
+                    <path d="@slice.Path" fill="@slice.Color" stroke="white" stroke-width="2"
+                          class="@(slice.IsNavigable ? "cursor-pointer" : "")" @onclick="() => NavigateToSlice(slice.Key)" />
+                }
+            </svg>
+        </div>
+        <div class="flex-1">
+            <MudText Typo="Typo.h6" GutterBottom="true">Legend</MudText>
+            @foreach (LegendItemDto item in _legend)
+            {
+                <div class="d-flex align-center mb-1 @(item.IsNavigable ? "cursor-pointer" : "")" @onclick="() => NavigateToSlice(item.Key)">
+                    <span class="rounded-lg mr-2" style="width: 14px; height: 14px; background-color: @item.Color; display: inline-block;"></span>
+                    <span class="mr-2" style="min-width: 100px">@item.Key</span>
+                    <span class="mr-2" style="min-width: 90px">@item.ValueEur.ToString("N2") €</span>
+                    <span class="mr-2" style="min-width: 80px">@item.CurrentWeight.ToString("P1")</span>
+                    @if (item.PurchaseWeight is not null)
+                    {
+                        <span class="mr-2" style="min-width: 80px">
+                            purchase @item.PurchaseWeight.Value.ToString("P1")
+                            (@(item.WeightDelta >= 0 ? "+" : "")@item.WeightDelta.ToString("P1"))
+                        </span>
+                    }
+                    @if (item.PnLPct is not null)
+                    {
+                        <span class="@(item.PnLPct >= 0 ? "green--text" : "red--text")">@(item.PnLPct >= 0 ? "+" : "")@item.PnLPct.Value.ToString("P2")</span>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <MudTable Items="@SortedRows" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Class="mb-4" SortLabel="Sort by">
+        <ToolBarContent>
+            <MudText Typo="Typo.subtitle1">Allocation by position</MudText>
+            <MudSpacer />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="@RefreshPricesAsync" Disabled="@(_loading || _refreshing)">
+                @(_refreshing ? "Refreshing..." : "Refresh prices")
+            </MudButton>
+        </ToolBarContent>
+        <Columns>
+            <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => SortBy("Symbol"))">Symbol</MudButton></MudTh>
+            <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => SortBy("Quantity"))">Qty</MudButton></MudTh>
+            <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => SortBy("Cost"))">Cost</MudButton></MudTh>
+            <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => SortBy("MarketValue"))">Mkt value</MudButton></MudTh>
+            <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => SortBy("PnL"))">P&amp;L</MudButton></MudTh>
+            <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => SortBy("PnLPct"))">P&amp;L %</MudButton></MudTh>
+            <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => SortBy("PurchaseWeight"))">Purchase wt</MudButton></MudTh>
+            <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => SortBy("CurrentWeight"))">Current wt</MudButton></MudTh>
+            <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => SortBy("WeightDelta"))">Δ wt</MudButton></MudTh>
+            <MudTh>Last price</MudTh>
+        </Columns>
+        <RowTemplate>
+            <MudTd DataLabel="Symbol">
+                <span class="cursor-pointer" @onclick="() => NavigateToSlice(context.Symbol)">@context.Symbol</span>
+            </MudTd>
+            <MudTd DataLabel="Qty">@context.Quantity.ToString("G")</MudTd>
+            <MudTd DataLabel="Cost">@context.Cost.ToString("N2") @context.Currency</MudTd>
+            <MudTd DataLabel="Mkt value">
+                @if (context.MarketValue is not null)
+                {
+                    <MudTooltip Placement="Placement.Top">
+                        <ChildContent><span class="px-1">@context.MarketValue.Value.ToString("N2") @context.Currency</span></ChildContent>
+                        <TooltipContent>
+                            <span>@context.MarketValueEur?.ToString("N2") EUR
+                                @(context.IsStale ? "(last close)" : string.Empty)</span>
+                        </TooltipContent>
+                    </MudTooltip>
+                }
+                else
+                {
+                    <span>—</span>
+                }
+            </MudTd>
+            <MudTd DataLabel="P&amp;L">
+                <span class="@(context.UnrealizedPnL >= 0 ? "green--text" : "red--text")">
+                    @(context.UnrealizedPnL >= 0 ? "+" : "")@context.UnrealizedPnL?.ToString("N2")
+                </span>
+            </MudTd>
+            <MudTd DataLabel="P&amp;L %">
+                @if (context.UnrealizedPnLPct is not null)
+                {
+                    <span class="@(context.UnrealizedPnLPct >= 0 ? "green--text" : "red--text")">
+                        @(context.UnrealizedPnLPct >= 0 ? "+" : "")@context.UnrealizedPnLPct.Value.ToString("P2")
+                    </span>
+                }
+                else
+                {
+                    <span>—</span>
+                }
+            </MudTd>
+            <MudTd DataLabel="Purchase wt">@(context.PurchaseWeight?.ToString("P1") ?? "—")</MudTd>
+            <MudTd DataLabel="Current wt">@(context.CurrentWeight?.ToString("P1") ?? "—")</MudTd>
+            <MudTd DataLabel="Δ wt">
+                @if (context.WeightDelta is not null)
+                {
+                    <span class="@(context.WeightDelta >= 0 ? "green--text" : "red--text")">
+                        @(context.WeightDelta >= 0 ? "+" : "")@context.WeightDelta.Value.ToString("P1")
+                    </span>
+                }
+                else
+                {
+                    <span>—</span>
+                }
+            </MudTd>
+            <MudTd DataLabel="Last price">
+                @(context.LastPrice?.ToString("N4") ?? "—")
+                @if (context.IsStale)
+                {
+                    <MudTooltip Placement="Placement.Top">
+                        <ChildContent>
+                            <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Warning" Size="Size.Small" Class="ml-1" />
+                        </ChildContent>
+                        <TooltipContent><span>Market closed — last close price</span></TooltipContent>
+                    </MudTooltip>
+                }
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
 @if (_loading)
 {
     <MudProgressCircular Indeterminate="true" />
@@ -209,6 +385,19 @@ else
     private decimal _totalValueEur;
     private decimal _totalUnrealizedEur;
 
+    private PortfolioOverviewDto? _overview;
+    private List<PieSliceDto> _purchasePie = new();
+    private List<PieSliceDto> _currentPie = new();
+    private List<LegendItemDto> _legend = new();
+    private string _sortColumn = "CurrentWeight";
+    private bool _sortAscending;
+
+    private static readonly string[] Palette =
+    {
+        "#1976D2", "#DC004E", "#F57C00", "#388E3C", "#7B1FA2",
+        "#0097A7", "#C62828", "#6D4C41", "#455A64", "#AFB42B",
+    };
+
     protected override async Task OnInitializedAsync()
     {
         await LoadDataAsync();
@@ -221,6 +410,9 @@ else
         {
             _positions = await Http.GetFromJsonAsync<List<PortfolioPositionDto>>("/api/portfolio") ?? new();
             _hasPrices = false;
+            _overview = await Http.GetFromJsonAsync<PortfolioOverviewDto>("/api/portfolio/overview");
+            BuildPies();
+            BuildLegend();
             ComputeTotals();
         }
         finally
@@ -238,6 +430,9 @@ else
             _positions = await response.Content.ReadFromJsonAsync<List<PortfolioPositionDto>>() ?? new();
             _hasPrices = true;
             await LoadValuationsAsync();
+            _overview = await Http.GetFromJsonAsync<PortfolioOverviewDto>("/api/portfolio/overview");
+            BuildPies();
+            BuildLegend();
             ComputeTotals();
         }
         finally
@@ -275,5 +470,138 @@ else
     private void NavigateToMovements(string symbol)
     {
         Navigation.NavigateTo($"/asset-transactions?symbol={Uri.EscapeDataString(symbol)}");
+    }
+
+    private void NavigateToSlice(string key)
+    {
+        if (key == "Other")
+        {
+            return;
+        }
+
+        NavigateToMovements(key);
+    }
+
+    private void SortBy(string column)
+    {
+        if (_sortColumn == column)
+        {
+            _sortAscending = !_sortAscending;
+        }
+        else
+        {
+            _sortColumn = column;
+            _sortAscending = column == "Symbol";
+        }
+    }
+
+    private IEnumerable<PortfolioPositionRowDto> SortedRows
+    {
+        get
+        {
+            IEnumerable<PortfolioPositionRowDto> rows = _overview?.Positions ?? Enumerable.Empty<PortfolioPositionRowDto>();
+            IEnumerable<PortfolioPositionRowDto> sorted = _sortColumn switch
+            {
+                "Symbol" => rows.OrderBy(r => r.Symbol),
+                "Quantity" => rows.OrderBy(r => r.Quantity),
+                "Cost" => rows.OrderBy(r => r.Cost),
+                "MarketValue" => rows.OrderBy(r => r.MarketValue),
+                "PnL" => rows.OrderBy(r => r.UnrealizedPnL),
+                "PnLPct" => rows.OrderBy(r => r.UnrealizedPnLPct),
+                "PurchaseWeight" => rows.OrderBy(r => r.PurchaseWeight),
+                "CurrentWeight" => rows.OrderBy(r => r.CurrentWeight),
+                "WeightDelta" => rows.OrderBy(r => r.WeightDelta),
+                _ => rows,
+            };
+            return _sortAscending ? sorted : sorted.Reverse();
+        }
+    }
+
+    private void BuildPies()
+    {
+        _purchasePie = BuildPie(_overview?.PurchaseAllocation ?? new List<AllocationSliceDto>());
+        _currentPie = BuildPie(_overview?.CurrentAllocation ?? new List<AllocationSliceDto>());
+    }
+
+    private void BuildLegend()
+    {
+        List<AllocationSliceDto> current = _overview?.CurrentAllocation ?? new List<AllocationSliceDto>();
+        List<AllocationSliceDto> purchase = _overview?.PurchaseAllocation ?? new List<AllocationSliceDto>();
+        _legend = current
+            .GroupJoin(purchase, c => c.Key, p => p.Key,
+                (c, purchases) => new LegendItemDto(
+                    c.Key,
+                    c.ValueEur,
+                    c.Weight,
+                    purchases.FirstOrDefault()?.Weight,
+                    _overview?.Positions.FirstOrDefault(r => r.Symbol == c.Key)?.UnrealizedPnLPct,
+                    GetColor(c.Key)))
+            .ToList();
+    }
+
+    private static List<PieSliceDto> BuildPie(IReadOnlyList<AllocationSliceDto> slices)
+    {
+        const double cx = 100, cy = 100, outerR = 90, innerR = 55;
+        const double twoPi = Math.PI * 2;
+        List<PieSliceDto> result = new();
+        double start = -Math.PI / 2;
+
+        foreach (AllocationSliceDto slice in slices)
+        {
+            double sweep = (double)slice.Weight * twoPi;
+            if (sweep < 1e-9)
+            {
+                continue;
+            }
+
+            double end = start + sweep;
+            double x1 = cx + outerR * Math.Cos(start), y1 = cy + outerR * Math.Sin(start);
+            double x2 = cx + outerR * Math.Cos(end), y2 = cy + outerR * Math.Sin(end);
+            double i1 = cx + innerR * Math.Cos(end), j1 = cy + innerR * Math.Sin(end);
+            double i2 = cx + innerR * Math.Cos(start), j2 = cy + innerR * Math.Sin(start);
+            int largeArc = sweep > Math.PI ? 1 : 0;
+            string path = $"M {x1:F2} {y1:F2} A {outerR} {outerR} 0 {largeArc} 1 {x2:F2} {y2:F2} " +
+                          $"L {i1:F2} {j1:F2} A {innerR} {innerR} 0 {largeArc} 0 {i2:F2} {j2:F2} Z";
+
+            result.Add(new PieSliceDto(slice.Key, path, GetColor(slice.Key), slice.ValueEur, slice.Weight));
+            start = end;
+        }
+
+        return result;
+    }
+
+    private static string GetColor(string key)
+    {
+        if (key == "Other")
+        {
+            return "#9E9E9E";
+        }
+
+        int hash = 0;
+        foreach (char c in key)
+        {
+            hash += c;
+        }
+
+        return Palette[hash % Palette.Length];
+    }
+
+    private static string FormatAsOf(DateTimeOffset value) => value.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
+
+    private sealed record PieSliceDto(string Key, string Path, string Color, decimal ValueEur, decimal Weight)
+    {
+        public bool IsNavigable => this.Key != "Other";
+    }
+
+    private sealed record LegendItemDto(
+        string Key,
+        decimal ValueEur,
+        decimal CurrentWeight,
+        decimal? PurchaseWeight,
+        decimal? PnLPct,
+        string Color)
+    {
+        public decimal WeightDelta => this.CurrentWeight - (this.PurchaseWeight ?? 0);
+        public bool IsNavigable => this.Key != "Other";
     }
 }
