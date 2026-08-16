@@ -297,6 +297,29 @@ public class DegiroImportServiceTests
     }
 
     [Fact]
+    public async Task ParseAllAsync_SecuritiesLending_CreatesIncome()
+    {
+        string csv = "Fecha,Hora,Fecha valor,Producto,ISIN,Descripción,Tipo,Variación,,Saldo,,ID Orden\n" +
+            "01-11-2025,10:00,31-10-2025,,,Ingresos por Préstamo de Valores - Octubre,,EUR,\"5,00\",EUR,\"100,00\",\n";
+
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            var (txs, assets, _) = await this.service.ParseAllAsync(file);
+
+            Assert.Empty(assets);
+            var t = Assert.Single(txs);
+            Assert.Equal(5m, t.Money.Amount);
+            Assert.Equal(Domain.Enums.TransactionCategory.INCOME, t.Category);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
     public async Task ParseAllAsync_24FebMsftFx_CreatesPairedLegs()
     {
         string csv = "Fecha,Hora,Fecha valor,Producto,ISIN,Descripción,Tipo,Variación,,Saldo,,ID Orden\n" +

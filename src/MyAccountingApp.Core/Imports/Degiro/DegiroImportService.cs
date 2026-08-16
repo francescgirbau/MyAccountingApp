@@ -81,7 +81,7 @@ public class DegiroImportService : IBrokerImportService
             }
         }
 
-        transactions.AddRange(this.BuildFxConversions(fxRows));
+        transactions.AddRange(BuildFxConversions(fxRows));
 
         return (transactions, assetTransactions, Enumerable.Empty<OptionTransaction>());
     }
@@ -93,7 +93,7 @@ public class DegiroImportService : IBrokerImportService
         return Task.FromResult(Enumerable.Empty<AssetTransaction>());
     }
 
-    private List<Transaction> BuildFxConversions(List<FxRow> rows)
+    private static List<Transaction> BuildFxConversions(List<FxRow> rows)
     {
         List<Transaction> result = new();
         List<FxRow> remaining = rows
