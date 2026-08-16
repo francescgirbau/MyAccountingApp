@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using MyAccountingApp.Core.Imports.Degiro;
+using MyAccountingApp.Domain.Entities;
 using Xunit;
 
 public class DegiroImportServiceTests
@@ -311,6 +312,133 @@ public class DegiroImportServiceTests
             var t = Assert.Single(txs);
             Assert.Equal(5m, t.Money.Amount);
             Assert.Equal(Domain.Enums.TransactionCategory.INCOME, t.Category);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_24FebMsftFx_CreatesPairedLegs()
+    {
+        string csv = "Fecha,Hora,Fecha valor,Producto,ISIN,Descripción,Tipo,Variación,,Saldo,,ID Orden\n" +
+            "24-02-2022,15:30,24-02-2022,MICROSOFT CORP,US5949181045,Ingreso Cambio de Divisa,\"1,1121\",USD,\"545,20\",USD,\"0,00\",64900984-84e2-4611-923d-958f45aa2d55\n" +
+            "24-02-2022,15:30,24-02-2022,MICROSOFT CORP,US5949181045,Retirada Cambio de Divisa,,EUR,\"-490,24\",EUR,\"-126,06\",64900984-84e2-4611-923d-958f45aa2d55\n";
+
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            var (txs, assets, _) = await this.service.ParseAllAsync(file);
+
+            Assert.Empty(assets);
+            Assert.Equal(2, txs.Count());
+            Transaction outLeg = txs.Single(t => t.FxLeg == Domain.Enums.FxLeg.Out);
+            Transaction inLeg = txs.Single(t => t.FxLeg == Domain.Enums.FxLeg.In);
+            Assert.Equal(Domain.Enums.TransactionCategory.FX_CONVERSION, outLeg.Category);
+            Assert.Equal(490.24m, outLeg.Money.Amount);
+            Assert.Equal("EUR", outLeg.Money.Currency);
+            Assert.Equal(545.20m, inLeg.Money.Amount);
+            Assert.Equal("USD", inLeg.Money.Currency);
+            Assert.Equal(outLeg.FxPairId, inLeg.FxPairId);
+            Assert.Equal(1.1121m, outLeg.FxBrokerRate);
+            Assert.Equal(1.1121m, inLeg.FxBrokerRate);
+            Assert.Equal("64900984-84e2-4611-923d-958f45aa2d55", outLeg.FxExternalKey);
+            Assert.Equal("64900984-84e2-4611-923d-958f45aa2d55", inLeg.FxExternalKey);
+            Assert.Contains("FX EUR→USD", outLeg.Description);
+            Assert.Contains("MICROSOFT CORP", outLeg.Description);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_11MarDividendAndRetention_KeepsCurrentMapping()
+    {
+        string csv = "Fecha,Hora,Fecha valor,Producto,ISIN,Descripción,Tipo,Variación,,Saldo,,ID Orden\n" +
+            "11-03-2022,09:50,10-03-2022,MICROSOFT CORP,US5949181045,Dividendo,,USD,\"3,10\",USD,\"2,63\",\n" +
+            "11-03-2022,09:50,10-03-2022,MICROSOFT CORP,US5949181045,\"Retención del dividendo\",,USD,\"-0,47\",USD,\"-0,47\",\n";
+
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            var (txs, assets, _) = await this.service.ParseAllAsync(file);
+
+            Assert.Empty(assets);
+            Assert.Equal(2, txs.Count());
+            Assert.Equal(Domain.Enums.TransactionCategory.DIVIDEND, txs.First().Category);
+            Assert.Equal(3.10m, txs.First().Money.Amount);
+            Assert.Equal(Domain.Enums.TransactionCategory.EXPENSE, txs.Last().Category);
+            Assert.Equal(0.47m, txs.Last().Money.Amount);
+            Assert.Null(txs.First().FxPairId);
+            Assert.Null(txs.Last().FxPairId);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_12MarDividendNetFx_CreatesPairWithoutExtraIncomeRows()
+    {
+        string csv = "Fecha,Hora,Fecha valor,Producto,ISIN,Descripción,Tipo,Variación,,Saldo,,ID Orden\n" +
+            "11-03-2022,09:50,10-03-2022,MICROSOFT CORP,US5949181045,Dividendo,,USD,\"3,10\",USD,\"2,63\",\n" +
+            "11-03-2022,09:50,10-03-2022,MICROSOFT CORP,US5949181045,\"Retención del dividendo\",,USD,\"-0,47\",USD,\"-0,47\",\n" +
+            "12-03-2022,07:35,11-03-2022,,,Ingreso Cambio de Divisa,,EUR,\"2,40\",EUR,\"19,98\",\n" +
+            "12-03-2022,07:35,11-03-2022,,,Retirada Cambio de Divisa,\"1,0940\",USD,\"-2,63\",USD,\"0,00\",\n";
+
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            var (txs, assets, _) = await this.service.ParseAllAsync(file);
+
+            Assert.Empty(assets);
+            Assert.Equal(4, txs.Count());
+            Assert.Equal(2, txs.Count(t => t.Category == Domain.Enums.TransactionCategory.FX_CONVERSION));
+
+            Transaction outLeg = txs.Single(t => t.FxLeg == Domain.Enums.FxLeg.Out);
+            Transaction inLeg = txs.Single(t => t.FxLeg == Domain.Enums.FxLeg.In);
+            Assert.Equal(2.63m, outLeg.Money.Amount);
+            Assert.Equal("USD", outLeg.Money.Currency);
+            Assert.Equal(2.40m, inLeg.Money.Amount);
+            Assert.Equal("EUR", inLeg.Money.Currency);
+            Assert.Equal(outLeg.FxPairId, inLeg.FxPairId);
+            Assert.Equal(1.0940m, outLeg.FxBrokerRate);
+            Assert.Equal(1.0940m, inLeg.FxBrokerRate);
+            Assert.Null(outLeg.FxExternalKey);
+            Assert.Contains("FX USD→EUR", outLeg.Description);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_UnmatchedFxRow_CreatesSingleLegForDataQuality()
+    {
+        string csv = "Fecha,Hora,Fecha valor,Producto,ISIN,Descripción,Tipo,Variación,,Saldo,,ID Orden\n" +
+            "12-03-2022,07:35,11-03-2022,,,Ingreso Cambio de Divisa,,EUR,\"2,40\",EUR,\"19,98\",\n";
+
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv);
+            var (txs, assets, _) = await this.service.ParseAllAsync(file);
+
+            Assert.Empty(assets);
+            Transaction tx = Assert.Single(txs);
+            Assert.Equal(Domain.Enums.TransactionCategory.FX_CONVERSION, tx.Category);
+            Assert.Equal(Domain.Enums.FxLeg.In, tx.FxLeg);
+            Assert.NotNull(tx.FxPairId);
+            Assert.Equal(2.40m, tx.Money.Amount);
+            Assert.Equal("EUR", tx.Money.Currency);
         }
         finally
         {
