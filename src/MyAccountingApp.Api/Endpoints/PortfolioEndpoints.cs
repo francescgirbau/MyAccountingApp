@@ -18,6 +18,12 @@ public static class PortfolioEndpoints
             return Results.Ok(positions.Where(p => p is not null).ToList());
         });
 
+        app.MapGet($"{prefix}/portfolio/overview", async (IPortfolioOverviewQuery overviewQuery) =>
+        {
+            PortfolioOverviewDto overview = await overviewQuery.GetOverviewAsync(DateOnly.FromDateTime(DateTime.UtcNow));
+            return Results.Ok(overview);
+        });
+
         app.MapGet($"{prefix}/portfolio/{{symbol}}", async (string symbol, IPositionEngine positionEngine, bool includePrices = true) =>
         {
             PortfolioPositionDto? position = await positionEngine.GetPosition(symbol, includePrices);

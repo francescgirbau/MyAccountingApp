@@ -218,3 +218,45 @@ public class AuthStatusDto
     public bool IsInitialized { get; set; }
     public bool IsUnlocked { get; set; }
 }
+
+public class PortfolioOverviewDto
+{
+    public decimal MarketValueEur { get; set; }
+    public decimal InvestedCostEur { get; set; }
+    public decimal UnrealizedPnLEur { get; set; }
+    public decimal? UnrealizedPnLPct { get; set; }
+    public DateTimeOffset? PricesAsOfUtc { get; set; }
+    public bool IsMarketClosed { get; set; }
+    public int UnpricedPositionCount { get; set; }
+    public int OptionSymbolCount { get; set; }
+    public List<PortfolioPositionRowDto> Positions { get; set; } = new();
+    public List<AllocationSliceDto> PurchaseAllocation { get; set; } = new();
+    public List<AllocationSliceDto> CurrentAllocation { get; set; } = new();
+}
+
+public class PortfolioPositionRowDto
+{
+    public string Symbol { get; set; } = string.Empty;
+    public decimal Quantity { get; set; }
+    public decimal Cost { get; set; }
+    public string Currency { get; set; } = string.Empty;
+    public decimal? CostEur { get; set; }
+    public decimal? MarketValue { get; set; }
+    public decimal? MarketValueEur { get; set; }
+    public decimal? UnrealizedPnL { get; set; }
+    public decimal? UnrealizedPnLPct { get; set; }
+    public decimal? PurchaseWeight { get; set; }
+    public decimal? CurrentWeight { get; set; }
+    public decimal? WeightDelta { get; set; }
+    public decimal? LastPrice { get; set; }
+    public DateTimeOffset? PriceAsOfUtc { get; set; }
+    public bool IsPriced { get; set; }
+    public bool IsStale { get; set; }
+}
+
+public class AllocationSliceDto
+{
+    public string Key { get; set; } = string.Empty;
+    public decimal ValueEur { get; set; }
+    public decimal Weight { get; set; }
+}
