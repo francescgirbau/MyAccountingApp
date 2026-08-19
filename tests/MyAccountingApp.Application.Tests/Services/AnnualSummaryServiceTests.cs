@@ -187,6 +187,98 @@ public class AnnualSummaryServiceTests
         Assert.Equal(200m, month.Deposits);
     }
 
+    [Fact]
+    public void GetByYear_ExcludesFxLegsFromTransfersAndDeposits()
+    {
+        Guid pairId = Guid.NewGuid();
+        Transaction[] txs = new Transaction[]
+        {
+            Tx(2024, 200, TransactionCategory.TRANSFER),
+            Tx(2024, 200, TransactionCategory.DEPOSIT),
+            FxTx(2024, 490.24m, "EUR", FxLeg.Out, pairId),
+            FxTx(2024, 545.20m, "USD", FxLeg.In, pairId),
+        };
+        var svc = CreateService(txs, Array.Empty<AssetTransaction>());
+
+        AnnualSummaryDto? result = svc.GetByYear(2024);
+
+        Assert.NotNull(result);
+        Assert.Equal(200m, result.Transfers);
+        Assert.Equal(200m, result.Deposits);
+        Assert.Equal(490.24m, result.FxOut);
+        Assert.Equal(0m, result.FxIn);
+        Assert.Equal(-490.24m, result.FxNet);
+        Assert.Equal(1, result.FxPairCount);
+        Assert.Equal(0, result.FxUnmatchedLegCount);
+
+        MonthlySummaryDto month = Assert.Single(result.Months);
+        Assert.Equal(200m, month.Transfers);
+        Assert.Equal(200m, month.Deposits);
+        Assert.Equal(490.24m, month.FxOut);
+        Assert.Equal(0m, month.FxIn);
+        Assert.Equal(-490.24m, month.FxNet);
+    }
+
+    [Fact]
+    public void GetByYear_FxInEurIsNotDeposit()
+    {
+        Guid pairId = Guid.NewGuid();
+        Transaction[] txs = new Transaction[]
+        {
+            Tx(2024, 100, TransactionCategory.DEPOSIT),
+            FxTx(2024, 2.40m, "EUR", FxLeg.In, pairId),
+            FxTx(2024, 2.63m, "USD", FxLeg.Out, pairId),
+        };
+        var svc = CreateService(txs, Array.Empty<AssetTransaction>());
+
+        AnnualSummaryDto? result = svc.GetByYear(2024);
+
+        Assert.NotNull(result);
+        Assert.Equal(100m, result.Deposits);
+        Assert.Equal(0m, result.Transfers);
+        Assert.Equal(2.40m, result.FxIn);
+        Assert.Equal(0m, result.FxOut);
+        Assert.Equal(2.40m, result.FxNet);
+        Assert.Equal(1, result.FxPairCount);
+    }
+
+    [Fact]
+    public void GetByYear_CountsUnmatchedFxLegs()
+    {
+        Transaction[] txs = new Transaction[]
+        {
+            FxTx(2024, 100m, "EUR", FxLeg.Out, Guid.NewGuid()),
+        };
+        var svc = CreateService(txs, Array.Empty<AssetTransaction>());
+
+        AnnualSummaryDto? result = svc.GetByYear(2024);
+
+        Assert.NotNull(result);
+        Assert.Equal(1, result.FxPairCount);
+        Assert.Equal(1, result.FxUnmatchedLegCount);
+    }
+
+    [Fact]
+    public void GetByYear_FxDoesNotAffectIncomeOrExpense()
+    {
+        Guid pairId = Guid.NewGuid();
+        Transaction[] txs = new Transaction[]
+        {
+            Tx(2024, 3000, TransactionCategory.INCOME),
+            Tx(2024, 1000, TransactionCategory.EXPENSE),
+            FxTx(2024, 500m, "EUR", FxLeg.Out, pairId),
+            FxTx(2024, 545.20m, "USD", FxLeg.In, pairId),
+        };
+        var svc = CreateService(txs, Array.Empty<AssetTransaction>());
+
+        AnnualSummaryDto? result = svc.GetByYear(2024);
+
+        Assert.NotNull(result);
+        Assert.Equal(3000m, result.Income);
+        Assert.Equal(1000m, result.Expenses);
+        Assert.Equal(2000m, result.NetCashFlow);
+    }
+
     private static Transaction Tx(int year, decimal amount, TransactionCategory category = TransactionCategory.INCOME, int month = 6)
     {
         return new Transaction(
@@ -195,6 +287,18 @@ public class AnnualSummaryServiceTests
             "Test",
             new Money(amount, "EUR"),
             category);
+    }
+
+    private static Transaction FxTx(int year, decimal amount, string currency, FxLeg leg, Guid pairId, int month = 6)
+    {
+        return new Transaction(
+            Guid.NewGuid(),
+            new DateTime(year, month, 1),
+            "FX EUR->USD",
+            new Money(amount, currency),
+            TransactionCategory.FX_CONVERSION,
+            fxPairId: pairId,
+            fxLeg: leg);
     }
 
     private static AssetTransaction AssetTx(int year, decimal amount, AssetTransactionType type)

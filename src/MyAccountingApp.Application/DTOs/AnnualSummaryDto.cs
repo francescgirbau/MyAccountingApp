@@ -10,7 +10,10 @@ public record MonthlySummaryDto(
     int TransactionCount,
     int AssetTransactionCount,
     decimal Transfers,
-    decimal Deposits);
+    decimal Deposits,
+    decimal FxOut,
+    decimal FxIn,
+    decimal FxNet);
 
 public record AnnualSummaryDto(
     int Year,
@@ -24,4 +27,9 @@ public record AnnualSummaryDto(
     List<MonthlySummaryDto> Months,
     decimal Transfers,
     decimal Deposits,
-    bool IncludesAssetCashFlows);
+    bool IncludesAssetCashFlows,
+    decimal FxOut,
+    decimal FxIn,
+    decimal FxNet,
+    int FxPairCount,
+    int FxUnmatchedLegCount);

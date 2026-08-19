@@ -67,10 +67,37 @@ public class DashboardQueryTests
         Assert.Equal("/conversions", alert.Link);
     }
 
+    [Fact]
+    public async Task GetAsync_ExcludesFxLegsFromTransfersAndDeposits()
+    {
+        Guid pairId = Guid.NewGuid();
+        FakeTxRepo txRepo = new();
+        txRepo.Add(CreateFxLeg(new DateTime(2026, 2, 1), "FX out", 490.24m, "EUR", pairId, FxLeg.Out));
+        txRepo.Add(CreateFxLeg(new DateTime(2026, 2, 1), "FX in", 545.20m, "USD", pairId, FxLeg.In));
+        txRepo.Add(new Transaction(new DateTime(2026, 2, 2), "Transfer", new Money(200, "EUR"), TransactionCategory.TRANSFER));
+        txRepo.Add(new Transaction(new DateTime(2026, 2, 2), "Deposit", new Money(200, "EUR"), TransactionCategory.DEPOSIT));
+        DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeValidationQuery());
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        Assert.Equal(200, dashboard.Cash.TransfersYtd);
+        Assert.Equal(200, dashboard.Cash.DepositsYtd);
+        Assert.Equal(490.24m, dashboard.Cash.FxOutYtd);
+        Assert.Equal(0, dashboard.Cash.FxInYtd);
+        Assert.Equal(-490.24m, dashboard.Cash.FxNetYtd);
+    }
+
     private static AssetTransaction CreateAsset(string symbol, DateTime date, decimal quantity, decimal amount, AssetTransactionType type)
     {
         Transaction transaction = new(date, "Test " + symbol, new Money(amount, "EUR"), TransactionCategory.EXPENSE);
         return new AssetTransaction(transaction, symbol, quantity, type);
+    }
+
+    private static Transaction CreateFxLeg(DateTime date, string description, decimal amount, string currency, Guid pairId, FxLeg leg)
+    {
+        Transaction transaction = new(date, description, new Money(amount, currency), TransactionCategory.FX_CONVERSION);
+        transaction.SetFxPair(pairId, leg);
+        return transaction;
     }
 
     private sealed class FakeTxRepo : ITransactionRepository

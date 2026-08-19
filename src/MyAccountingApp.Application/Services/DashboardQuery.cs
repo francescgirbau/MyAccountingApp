@@ -51,8 +51,10 @@ public class DashboardQuery : IDashboardQuery
 
         decimal incomeYtd = SumCategory(ytd, t => t.Category.IsCashIncome());
         decimal expenseYtd = SumCategory(ytd, t => t.Category.IsCashExpense());
-        decimal transfersYtd = SumCategory(ytd, t => t.Category == TransactionCategory.TRANSFER || (t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out));
-        decimal depositsYtd = SumCategory(ytd, t => t.Category == TransactionCategory.DEPOSIT || (t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In));
+        decimal transfersYtd = SumCategory(ytd, t => t.Category == TransactionCategory.TRANSFER);
+        decimal depositsYtd = SumCategory(ytd, t => t.Category == TransactionCategory.DEPOSIT);
+        decimal fxOutYtd = SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out);
+        decimal fxInYtd = SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In);
         decimal incomeMtd = SumCategory(mtd, t => t.Category.IsCashIncome());
         decimal expenseMtd = SumCategory(mtd, t => t.Category.IsCashExpense());
 
@@ -64,7 +66,10 @@ public class DashboardQuery : IDashboardQuery
             Math.Round(expenseYtd, 2),
             Math.Round(incomeYtd - expenseYtd, 2),
             Math.Round(transfersYtd, 2),
-            Math.Round(depositsYtd, 2));
+            Math.Round(depositsYtd, 2),
+            Math.Round(fxOutYtd, 2),
+            Math.Round(fxInYtd, 2),
+            Math.Round(fxInYtd - fxOutYtd, 2));
     }
 
     private static PortfolioSnapshotDto BuildPortfolioSnapshot(List<AssetTransaction> allAssetTransactions, int year)

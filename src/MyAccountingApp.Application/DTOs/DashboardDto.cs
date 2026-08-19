@@ -14,7 +14,10 @@ public sealed record CashSnapshotDto(
     decimal ExpenseYtd,
     decimal NetCashFlowYtd,
     decimal TransfersYtd,
-    decimal DepositsYtd);
+    decimal DepositsYtd,
+    decimal FxOutYtd,
+    decimal FxInYtd,
+    decimal FxNetYtd);
 
 public sealed record PortfolioSnapshotDto(
     decimal TotalCostBasisEur,
