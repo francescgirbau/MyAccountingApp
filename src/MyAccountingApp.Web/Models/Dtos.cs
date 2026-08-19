@@ -155,6 +155,9 @@ public class CashSnapshotDto
     public decimal NetCashFlowYtd { get; set; }
     public decimal TransfersYtd { get; set; }
     public decimal DepositsYtd { get; set; }
+    public decimal FxOutYtd { get; set; }
+    public decimal FxInYtd { get; set; }
+    public decimal FxNetYtd { get; set; }
 }
 
 public class PortfolioSnapshotDto

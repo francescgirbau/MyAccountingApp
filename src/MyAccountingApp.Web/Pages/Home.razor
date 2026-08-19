@@ -55,6 +55,16 @@ else
                 </MudCardContent>
             </MudCard>
         </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Class="pa-4" Outlined="true">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">FX YTD (EUR)</MudText>
+                    <MudText Typo="Typo.h6" Class="mud-text-secondary">out @_dashboard.Cash.FxOutYtd.ToString("N2")</MudText>
+                    <MudText Typo="Typo.h6" Class="green--text">in @_dashboard.Cash.FxInYtd.ToString("N2")</MudText>
+                    <MudText Typo="Typo.h6" Class="@NetClass(_dashboard.Cash.FxNetYtd)">net @_dashboard.Cash.FxNetYtd.ToString("N2")</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
     </MudGrid>
 
     <MudText Typo="Typo.subtitle1" Class="mt-6 mb-2 mud-text-secondary">Investments</MudText>
