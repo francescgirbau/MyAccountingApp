@@ -299,6 +299,7 @@ else
                     <MudSelectItem Value="@("USD")">USD</MudSelectItem>
                     <MudSelectItem Value="@("GBP")">GBP</MudSelectItem>
                     <MudSelectItem Value="@("CHF")">CHF</MudSelectItem>
+                    <MudSelectItem Value="@("CAD")">CAD</MudSelectItem>
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" sm="6">
@@ -310,6 +311,7 @@ else
                     <MudSelectItem Value="@("USD")">USD</MudSelectItem>
                     <MudSelectItem Value="@("GBP")">GBP</MudSelectItem>
                     <MudSelectItem Value="@("CHF")">CHF</MudSelectItem>
+                    <MudSelectItem Value="@("CAD")">CAD</MudSelectItem>
                 </MudSelect>
             </MudItem>
             <MudItem xs="12">
@@ -629,13 +631,36 @@ else
 
     private void OpenFxDialog()
     {
-        _fxDate = DateTime.Today;
+        _fxDate = GetDefaultFxDate();
         _fxFromAmount = 0;
         _fxFromCurrency = "EUR";
         _fxToAmount = 0;
         _fxToCurrency = "USD";
         _fxRate = null;
         _showFxDialog = true;
+    }
+
+    private DateTime GetDefaultFxDate()
+    {
+        // 1. Year + month from filter → 1st of that month
+        if (_selectedYear.HasValue && _selectedMonth.HasValue)
+        {
+            return new DateTime(_selectedYear.Value, _selectedMonth.Value, 1);
+        }
+        
+        // 2. Year only, current year → today; otherwise Jan 1 of that year
+        if (_selectedYear.HasValue)
+        {
+            int year = _selectedYear.Value;
+            if (year == DateTime.Today.Year)
+            {
+                return DateTime.Today;
+            }
+            return new DateTime(year, 1, 1);
+        }
+        
+        // 3. Fallback: today
+        return DateTime.Today;
     }
 
     private void CloseFxDialog()
@@ -668,9 +693,31 @@ else
             HttpResponseMessage response = await Http.PostAsJsonAsync("/api/transactions/fx", payload);
             if (response.IsSuccessStatusCode)
             {
-                _showFxDialog = false;
-                Snackbar.Add("FX conversion created", Severity.Success);
-                await LoadDataAsync();
+                var result = await response.Content.ReadFromJsonAsync<FxCreateResponse>();
+                if (result is not null)
+                {
+                    _showFxDialog = false;
+                    Snackbar.Add("FX conversion created", Severity.Success);
+                    
+                    // Clear DQ id filter
+                    _impactedIds.Clear();
+                    _issueContext = null;
+                    
+                    // Set year/month from created pair date
+                    DateTime createdDate = result.OutTransaction.Date;
+                    _selectedYear = createdDate.Year;
+                    _selectedMonth = createdDate.Month;
+                    
+                    // Load data and select new rows
+                    await LoadDataAsync();
+                    
+                    // Select the newly created pair
+                    _selected.Clear();
+                    TransactionDto? outTx = _allTransactions.FirstOrDefault(t => t.Id == result.OutTransaction.Id);
+                    TransactionDto? inTx = _allTransactions.FirstOrDefault(t => t.Id == result.InTransaction.Id);
+                    if (outTx is not null) _selected.Add(outTx);
+                    if (inTx is not null) _selected.Add(inTx);
+                }
             }
             else
             {
@@ -682,6 +729,13 @@ else
         {
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
         }
+    }
+
+    private sealed class FxCreateResponse
+    {
+        public Guid PairId { get; set; }
+        public TransactionDto OutTransaction { get; set; } = new TransactionDto { Id = Guid.Empty, Date = DateTime.MinValue, Description = "", Money = new MoneyDto { Amount = 0, Currency = "" }, Category = "" };
+        public TransactionDto InTransaction { get; set; } = new TransactionDto { Id = Guid.Empty, Date = DateTime.MinValue, Description = "", Money = new MoneyDto { Amount = 0, Currency = "" }, Category = "" };
     }
 
     private async Task SaveAsync()
