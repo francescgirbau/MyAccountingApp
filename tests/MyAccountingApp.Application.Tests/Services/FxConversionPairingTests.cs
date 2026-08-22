@@ -39,6 +39,25 @@ public class FxConversionPairingTests
     }
 
     [Fact]
+    public void InvestmentAndDivestment_AreInvestingCashFlow()
+    {
+        Assert.True(TransactionCategory.INVESTMENT.IsInvestingCashFlow());
+        Assert.True(TransactionCategory.DIVESTMENT.IsInvestingCashFlow());
+        Assert.False(TransactionCategory.INCOME.IsInvestingCashFlow());
+        Assert.False(TransactionCategory.EXPENSE.IsInvestingCashFlow());
+        Assert.False(TransactionCategory.FX_CONVERSION.IsInvestingCashFlow());
+    }
+
+    [Fact]
+    public void InvestmentAndDivestment_AreNotOperatingIncomeOrExpense()
+    {
+        Assert.False(TransactionCategory.INVESTMENT.IsCashIncome());
+        Assert.False(TransactionCategory.INVESTMENT.IsCashExpense());
+        Assert.False(TransactionCategory.DIVESTMENT.IsCashIncome());
+        Assert.False(TransactionCategory.DIVESTMENT.IsCashExpense());
+    }
+
+    [Fact]
     public void Group_ReconstructsCompletePair()
     {
         Guid pairId = Guid.NewGuid();

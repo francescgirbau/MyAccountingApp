@@ -114,8 +114,9 @@ public class InteractiveBrokersImportServiceExtraTests
         List<AssetTransaction> list = assets.ToList();
         Assert.Equal(2, list.Count);
         Assert.Equal(AssetTransactionType.Sell, list[0].Type);
-        Assert.Equal(TransactionCategory.INCOME, list[0].Transaction.Category);
+        Assert.Equal(TransactionCategory.DIVESTMENT, list[0].Transaction.Category);
         Assert.Equal(AssetTransactionType.Buy, list[1].Type);
+        Assert.Equal(TransactionCategory.INVESTMENT, list[1].Transaction.Category);
     }
 
     [Fact]
@@ -160,7 +161,7 @@ public class InteractiveBrokersImportServiceExtraTests
         (IEnumerable<Transaction> tx, _, _) = await this.agent.ParseAllAsync("test.csv");
 
         Transaction transaction = Assert.Single(tx);
-        Assert.Equal(TransactionCategory.INCOME, transaction.Category);
+        Assert.Equal(TransactionCategory.DIVESTMENT, transaction.Category);
         Assert.Equal("VET", transaction.Description);
     }
 
@@ -188,7 +189,7 @@ public class InteractiveBrokersImportServiceExtraTests
         AssetTransaction asset = Assert.Single(result);
         Assert.Equal("CVO", asset.Symbol);
         Assert.Equal(AssetTransactionType.Sell, asset.Type);
-        Assert.Equal(TransactionCategory.INCOME, asset.Transaction.Category);
+        Assert.Equal(TransactionCategory.DIVESTMENT, asset.Transaction.Category);
         Assert.Equal(33, asset.Quantity);
     }
 

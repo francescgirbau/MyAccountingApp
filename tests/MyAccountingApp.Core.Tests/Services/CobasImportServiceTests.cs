@@ -55,7 +55,7 @@ public class CobasImportServiceTests
 
             AssetTransaction asset = Assert.Single(assets);
             Assert.Equal(AssetTransactionType.Sell, asset.Type);
-            Assert.Equal(TransactionCategory.INCOME, asset.Transaction.Category);
+            Assert.Equal(TransactionCategory.DIVESTMENT, asset.Transaction.Category);
             Assert.Equal(8.770893m, asset.Quantity);
             Assert.Equal(2560.32m, asset.Transaction.Money.Amount);
         }

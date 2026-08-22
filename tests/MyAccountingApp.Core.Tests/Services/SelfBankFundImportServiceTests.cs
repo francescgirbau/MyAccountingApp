@@ -101,7 +101,7 @@ public class SelfBankFundImportServiceTests
 
             AssetTransaction asset = Assert.Single(assets);
             Assert.Equal(AssetTransactionType.Sell, asset.Type);
-            Assert.Equal(TransactionCategory.INCOME, asset.Transaction.Category);
+            Assert.Equal(TransactionCategory.DIVESTMENT, asset.Transaction.Category);
             Assert.Equal(3.00000000m, asset.Quantity);
             Assert.Equal(60.00m, asset.Transaction.Money.Amount);
         }

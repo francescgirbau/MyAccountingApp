@@ -51,7 +51,7 @@ public class AssetTransactionCsvImportService : IBrokerImportService
 
                 bool isBuy = import < 0;
                 AssetTransactionType type = isBuy ? AssetTransactionType.Buy : AssetTransactionType.Sell;
-                TransactionCategory category = isBuy ? TransactionCategory.EXPENSE : TransactionCategory.INCOME;
+                TransactionCategory category = isBuy ? TransactionCategory.INVESTMENT : TransactionCategory.DIVESTMENT;
                 category = BankCsvImportService.DetectTransfer(description, category);
 
                 Money money = new Money(Math.Abs(import), currency);

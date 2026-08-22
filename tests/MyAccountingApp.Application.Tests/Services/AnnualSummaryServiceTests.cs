@@ -279,6 +279,33 @@ public class AnnualSummaryServiceTests
         Assert.Equal(2000m, result.NetCashFlow);
     }
 
+    [Fact]
+    public void GetByYear_InvestmentCashFlows_DoNotAffectOperatingPnL()
+    {
+        Guid pairId = Guid.NewGuid();
+        Transaction[] txs = new Transaction[]
+        {
+            Tx(2024, 3000, TransactionCategory.INCOME),        // salary
+            Tx(2024, 1000, TransactionCategory.EXPENSE),       // supermarket
+            FxTx(2024, 500m, "EUR", FxLeg.Out, pairId),        // MSFT buy (INVESTMENT)
+            FxTx(2024, 545.20m, "USD", FxLeg.In, pairId),
+        };
+        AssetTransaction[] assets = new AssetTransaction[]
+        {
+            AssetTx(2024, 500, AssetTransactionType.Buy),      // MSFT buy
+        };
+        var svc = CreateService(txs, assets);
+
+        AnnualSummaryDto? result = svc.GetByYear(2024);
+
+        Assert.NotNull(result);
+        Assert.Equal(3000m, result.Income);        // salary only
+        Assert.Equal(1000m, result.Expenses);      // supermarket only
+        Assert.Equal(2000m, result.NetCashFlow);   // income - expense only
+        Assert.Equal(500m, result.InvestmentPurchases); // from AssetTransaction
+        Assert.Equal(0m, result.InvestmentSales);
+    }
+
     private static Transaction Tx(int year, decimal amount, TransactionCategory category = TransactionCategory.INCOME, int month = 6)
     {
         return new Transaction(

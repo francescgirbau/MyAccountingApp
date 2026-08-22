@@ -58,9 +58,13 @@ public class MyInvestorFundImportService : IBrokerImportService
                     continue;
                 }
 
+                // MyInvestor CSV only contains buy transactions (suscripciones)
+                AssetTransactionType type = AssetTransactionType.Buy;
+                TransactionCategory category = TransactionCategory.INVESTMENT;
+
                 Money money = new Money(amount, currency);
-                Transaction transaction = new Transaction(date, isin, money, TransactionCategory.INVESTMENT);
-                AssetTransaction assetTx = new AssetTransaction(transaction, isin, quantity, AssetTransactionType.Buy);
+                Transaction transaction = new Transaction(date, isin, money, category);
+                AssetTransaction assetTx = new AssetTransaction(transaction, isin, quantity, type);
                 assetTransactions.Add(assetTx);
             }
             catch

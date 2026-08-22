@@ -119,7 +119,7 @@ public class TradeAgent : IIBKRStatementAgent
         string isin = string.Empty;
         string optionSymbol = ExtractUnderlyingSymbol(symbol);
         AssetTransactionType type = isBuy ? AssetTransactionType.Buy : AssetTransactionType.Sell;
-        TransactionCategory category = isBuy ? TransactionCategory.EXPENSE : TransactionCategory.INCOME;
+        TransactionCategory category = isBuy ? TransactionCategory.INVESTMENT : TransactionCategory.DIVESTMENT;
         Money premium = new Money(Math.Abs(proceeds), currency);
         Transaction transaction = new Transaction(date, description, premium, category);
 
@@ -130,7 +130,7 @@ public class TradeAgent : IIBKRStatementAgent
     {
         string description = symbol;
         AssetTransactionType type = isBuy ? AssetTransactionType.Buy : AssetTransactionType.Sell;
-        TransactionCategory category = isBuy ? TransactionCategory.EXPENSE : TransactionCategory.INCOME;
+        TransactionCategory category = isBuy ? TransactionCategory.INVESTMENT : TransactionCategory.DIVESTMENT;
         Money money = new Money(Math.Abs(proceeds), currency);
         Transaction transaction = new Transaction(date, description, money, category);
 

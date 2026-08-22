@@ -47,7 +47,7 @@ public class CoinbaseImportServiceTests
         var (_, assetTransactions, _) = await service.ParseAllAsync(path);
 
         Assert.Equal(3, assetTransactions.Where(at => at.Type == AssetTransactionType.Buy).Count());
-        Assert.All(assetTransactions.Where(at => at.Type == AssetTransactionType.Buy), at => Assert.Equal(TransactionCategory.EXPENSE, at.Transaction.Category));
+        Assert.All(assetTransactions.Where(at => at.Type == AssetTransactionType.Buy), at => Assert.Equal(TransactionCategory.INVESTMENT, at.Transaction.Category));
         AssetTransaction ada = assetTransactions.Single(at => at.Symbol == "ADA");
         Assert.Equal(212.524476m, ada.Quantity);
         Assert.Equal(250m, ada.Transaction.Money.Amount);
@@ -96,7 +96,7 @@ public class CoinbaseImportServiceTests
         Assert.Equal("BTC", sell.Symbol);
         Assert.Equal(0.005m, sell.Quantity);
         Assert.Equal(200m, sell.Transaction.Money.Amount);
-        Assert.Equal(TransactionCategory.INCOME, sell.Transaction.Category);
+        Assert.Equal(TransactionCategory.DIVESTMENT, sell.Transaction.Category);
     }
 
     [Fact]
