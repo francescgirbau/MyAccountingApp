@@ -15,4 +15,7 @@ public static class TransactionCategoryExtensions
         category is TransactionCategory.TRANSFER
             or TransactionCategory.DEPOSIT
             or TransactionCategory.FX_CONVERSION;
+
+    public static bool IsInvestingCashFlow(this TransactionCategory category) =>
+        category is TransactionCategory.INVESTMENT or TransactionCategory.DIVESTMENT;
 }

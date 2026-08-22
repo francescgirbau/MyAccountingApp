@@ -140,6 +140,15 @@ INVESTMENT / sells are out of scope for this matcher.
 - Broker rate stays on the pair; official EUR rates stay in `conversions.json` (Frankfurter / mark-to-market). They are different things.
 - Summary / dashboard: TRANSFER and DEPOSIT totals are same-currency internal moves only. FX_CONVERSION is shown as its own FX out / FX in / FX net (EUR legs; non-EUR legs appear under their currency in Transactions). FX legs are never added into Transfers or Deposits, and never into income/expense.
 
+## Investing cash flows (IAS 7)
+
+`INVESTMENT = 8` (buy asset) and `DIVESTMENT = 10` (sell asset proceeds) are **not** operating income/expense.
+
+- `IsCashIncome` / `IsCashExpense` exclude both → operating P&L unchanged when you buy/sell.
+- `IsInvestingCashFlow` = INVESTMENT | DIVESTMENT (for cash-flow reporting).
+- Annual summary / dashboard keep `InvestmentPurchases` / `InvestmentSales` from `AssetTransaction` (Buy/Sell). Do not double-count.
+- Financing (loans, mortgage, Berta) is out of scope; those rows stay EXPENSE until manually recategorized.
+
 ## Currency Options (`appsettings.json` → `CurrencyApi`)
 | Key | Default | Description |
 |---|---|---|

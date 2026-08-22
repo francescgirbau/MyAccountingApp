@@ -124,7 +124,7 @@ public class InteractiveBrokersImportService : IBrokerImportService
 
         bool isSell = quantity < 0;
 
-        TransactionCategory category = isSell ? TransactionCategory.INCOME : TransactionCategory.EXPENSE;
+        TransactionCategory category = isSell ? TransactionCategory.DIVESTMENT : TransactionCategory.INVESTMENT;
         AssetTransactionType type = isSell ? AssetTransactionType.Sell : AssetTransactionType.Buy;
 
         DateTime date = this.ParseDate(record.ReportDate);
@@ -210,7 +210,7 @@ public class InteractiveBrokersImportService : IBrokerImportService
         decimal quantity = this.ParseAmount(record.Quantity ?? "0");
         bool isBuy = quantity > 0;
 
-        TransactionCategory category = isBuy ? TransactionCategory.EXPENSE : TransactionCategory.INCOME;
+        TransactionCategory category = isBuy ? TransactionCategory.INVESTMENT : TransactionCategory.DIVESTMENT;
 
         DateTime date = this.ParseDate(record.Date);
 
@@ -458,7 +458,7 @@ public class InteractiveBrokersImportService : IBrokerImportService
             type = isBuy ? AssetTransactionType.Buy : AssetTransactionType.Sell;
         }
 
-        TransactionCategory category = isBuy ? TransactionCategory.EXPENSE : TransactionCategory.INCOME;
+        TransactionCategory category = isBuy ? TransactionCategory.INVESTMENT : TransactionCategory.DIVESTMENT;
 
         DateTime date = this.ParseDate(record.Date);
 

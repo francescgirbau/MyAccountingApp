@@ -51,7 +51,7 @@ public class AssetTransactionCsvImportServiceTests
             Assert.Equal(Domain.Enums.AssetTransactionType.Buy, atx.Type);
             Assert.Equal(2500m, atx.Transaction.Money.Amount);
             Assert.Equal("EUR", atx.Transaction.Money.Currency);
-            Assert.Equal(Domain.Enums.TransactionCategory.EXPENSE, atx.Transaction.Category);
+            Assert.Equal(Domain.Enums.TransactionCategory.INVESTMENT, atx.Transaction.Category);
         }
         finally
         {
@@ -78,7 +78,7 @@ public class AssetTransactionCsvImportServiceTests
             Assert.Equal(1, atx.Quantity);
             Assert.Equal(Domain.Enums.AssetTransactionType.Sell, atx.Type);
             Assert.Equal(1200m, atx.Transaction.Money.Amount);
-            Assert.Equal(Domain.Enums.TransactionCategory.INCOME, atx.Transaction.Category);
+            Assert.Equal(Domain.Enums.TransactionCategory.DIVESTMENT, atx.Transaction.Category);
         }
         finally
         {

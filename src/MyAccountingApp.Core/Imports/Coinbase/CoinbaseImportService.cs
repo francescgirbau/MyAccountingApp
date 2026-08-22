@@ -113,7 +113,7 @@ public class CoinbaseImportService : IBrokerImportService
         return -1;
     }
 
-    private static AssetTransaction CreateAssetTransaction(
+private static AssetTransaction CreateAssetTransaction(
         DateTime date,
         string symbol,
         string currency,
@@ -122,7 +122,7 @@ public class CoinbaseImportService : IBrokerImportService
         string description,
         AssetTransactionType type)
     {
-        TransactionCategory category = type == AssetTransactionType.Buy ? TransactionCategory.EXPENSE : TransactionCategory.INCOME;
+        TransactionCategory category = type == AssetTransactionType.Buy ? TransactionCategory.INVESTMENT : TransactionCategory.DIVESTMENT;
         Transaction transaction = new Transaction(date, description, new Money(Math.Abs(total), currency), category);
 
         return new AssetTransaction(transaction, symbol, Math.Abs(quantity), type);

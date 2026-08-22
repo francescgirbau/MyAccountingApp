@@ -59,7 +59,7 @@ public partial class DegiroTransactionImportService : IBrokerImportService
                     string symbol = ExtractSymbol(producto, isin);
                     AssetTransactionType optionType = premiumReceived ? AssetTransactionType.Sell : AssetTransactionType.Buy;
                     Money premium = new Money(Math.Abs(amount), currency);
-                    TransactionCategory optionCategory = premiumReceived ? TransactionCategory.INCOME : TransactionCategory.EXPENSE;
+                    TransactionCategory optionCategory = premiumReceived ? TransactionCategory.DIVESTMENT : TransactionCategory.INVESTMENT;
                     Transaction tx = new Transaction(date, producto, premium, optionCategory);
                     OptionTransaction optionTx = new OptionTransaction(
                         tx, symbol, isin, Math.Abs(rawQuantity), optionType);
@@ -71,7 +71,7 @@ public partial class DegiroTransactionImportService : IBrokerImportService
                 bool isBuy = amount < 0;
                 string assetSymbol = ExtractSymbol(producto, isin);
                 AssetTransactionType type = isBuy ? AssetTransactionType.Buy : AssetTransactionType.Sell;
-                TransactionCategory category = isBuy ? TransactionCategory.EXPENSE : TransactionCategory.INCOME;
+                TransactionCategory category = isBuy ? TransactionCategory.INVESTMENT : TransactionCategory.DIVESTMENT;
 
                 Money money = new Money(Math.Abs(amount), currency);
                 Transaction transaction = new Transaction(date, producto, money, category);
