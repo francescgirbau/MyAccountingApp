@@ -138,6 +138,7 @@ INVESTMENT / sells are out of scope for this matcher.
 - `MISSING_FX` is NOT reported for FX legs (they have a real counterpart in the cash book); it still applies to non-EUR DIVIDEND / FEE / WITHHOLDING / EXPENSE / INCOME / INVESTMENT without an official rate.
 - Degiro `Cambio de Divisa` (for PR2) and IBKR `Forex` rows (for PR3) import as pairs; `POST /api/transactions/fx` creates a pair manually in one call. Bulk-recategorizing to `FX_CONVERSION` without a pair is rejected.
 - Broker rate stays on the pair; official EUR rates stay in `conversions.json` (Frankfurter / mark-to-market). They are different things.
+- Summary / dashboard: TRANSFER and DEPOSIT totals are same-currency internal moves only. FX_CONVERSION is shown as its own FX out / FX in / FX net (EUR legs; non-EUR legs appear under their currency in Transactions). FX legs are never added into Transfers or Deposits, and never into income/expense.
 
 ## Currency Options (`appsettings.json` → `CurrencyApi`)
 | Key | Default | Description |

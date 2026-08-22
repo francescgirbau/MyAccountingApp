@@ -18,6 +18,25 @@ public class AnnualSummaryService : IAnnualSummaryService
         this.portfolioRepo = portfolioRepo ?? throw new ArgumentNullException(nameof(portfolioRepo));
     }
 
+    private static (int PairCount, int UnmatchedLegCount) CountFx(List<Domain.Entities.Transaction> yearTxs)
+    {
+        List<Domain.Entities.Transaction> fxLegs = yearTxs
+            .Where(t => t.Category == TransactionCategory.FX_CONVERSION)
+            .ToList();
+
+        int pairCount = fxLegs
+            .Select(t => t.FxPairId)
+            .Where(id => id is not null)
+            .Distinct()
+            .Count();
+
+        int unmatchedLegCount = fxLegs.Count(t =>
+            t.FxPairId is null ||
+            !fxLegs.Any(other => other.FxPairId == t.FxPairId && other.Id != t.Id));
+
+        return (pairCount, unmatchedLegCount);
+    }
+
     public List<AnnualSummaryDto> GetAll()
     {
         List<Domain.Entities.Transaction> transactions = this.transactionRepo.GetAll().ToList();
@@ -82,12 +101,24 @@ public class AnnualSummaryService : IAnnualSummaryService
             .Sum(t => t.Money.Amount);
 
         decimal transfers = yearEurCashTxs
-            .Where(t => t.Category == TransactionCategory.TRANSFER || (t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out))
+            .Where(t => t.Category == TransactionCategory.TRANSFER)
             .Sum(t => t.Money.Amount);
 
         decimal deposits = yearEurCashTxs
-            .Where(t => t.Category == TransactionCategory.DEPOSIT || (t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In))
+            .Where(t => t.Category == TransactionCategory.DEPOSIT)
             .Sum(t => t.Money.Amount);
+
+        decimal fxOut = yearEurCashTxs
+            .Where(t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out)
+            .Sum(t => t.Money.Amount);
+
+        decimal fxIn = yearEurCashTxs
+            .Where(t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In)
+            .Sum(t => t.Money.Amount);
+
+        decimal fxNet = fxIn - fxOut;
+
+        (int pairCount, int unmatchedLegCount) = CountFx(yearTxs);
 
         decimal investmentPurchases = yearAssetTxs
             .Where(a => a.Type == AssetTransactionType.Buy)
@@ -113,7 +144,12 @@ public class AnnualSummaryService : IAnnualSummaryService
             months,
             Math.Round(transfers, 2),
             Math.Round(deposits, 2),
-            IncludesAssetCashFlows: false);
+            IncludesAssetCashFlows: false,
+            Math.Round(fxOut, 2),
+            Math.Round(fxIn, 2),
+            Math.Round(fxNet, 2),
+            pairCount,
+            unmatchedLegCount);
     }
 
     private List<MonthlySummaryDto> BuildMonthlySummaries(
@@ -151,12 +187,22 @@ public class AnnualSummaryService : IAnnualSummaryService
                 .Sum(t => t.Money.Amount);
 
             decimal transfers = monthEurCashTxs
-                .Where(t => t.Category == TransactionCategory.TRANSFER || (t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out))
+                .Where(t => t.Category == TransactionCategory.TRANSFER)
                 .Sum(t => t.Money.Amount);
 
             decimal deposits = monthEurCashTxs
-                .Where(t => t.Category == TransactionCategory.DEPOSIT || (t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In))
+                .Where(t => t.Category == TransactionCategory.DEPOSIT)
                 .Sum(t => t.Money.Amount);
+
+            decimal fxOut = monthEurCashTxs
+                .Where(t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out)
+                .Sum(t => t.Money.Amount);
+
+            decimal fxIn = monthEurCashTxs
+                .Where(t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In)
+                .Sum(t => t.Money.Amount);
+
+            decimal fxNet = fxIn - fxOut;
 
             decimal investmentPurchases = monthAssetTxs
                 .Where(a => a.Type == AssetTransactionType.Buy)
@@ -178,7 +224,10 @@ public class AnnualSummaryService : IAnnualSummaryService
                 monthTxs.Count,
                 monthAssetTxs.Count,
                 Math.Round(transfers, 2),
-                Math.Round(deposits, 2)));
+                Math.Round(deposits, 2),
+                Math.Round(fxOut, 2),
+                Math.Round(fxIn, 2),
+                Math.Round(fxNet, 2)));
         }
 
         return result;

@@ -19,6 +19,9 @@ public class MonthlySummaryDto
     public int AssetTransactionCount { get; set; }
     public decimal Transfers { get; set; }
     public decimal Deposits { get; set; }
+    public decimal FxOut { get; set; }
+    public decimal FxIn { get; set; }
+    public decimal FxNet { get; set; }
 }
 
 public class AnnualSummaryDto
@@ -35,4 +38,9 @@ public class AnnualSummaryDto
     public decimal Transfers { get; set; }
     public decimal Deposits { get; set; }
     public bool IncludesAssetCashFlows { get; set; }
+    public decimal FxOut { get; set; }
+    public decimal FxIn { get; set; }
+    public decimal FxNet { get; set; }
+    public int FxPairCount { get; set; }
+    public int FxUnmatchedLegCount { get; set; }
 }
