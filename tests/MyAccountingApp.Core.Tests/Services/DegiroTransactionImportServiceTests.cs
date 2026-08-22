@@ -28,6 +28,7 @@ public class DegiroTransactionImportServiceTests
             Assert.Equal(661.20m, a.Transaction.Money.Amount);
             Assert.Equal("EUR", a.Transaction.Money.Currency);
             Assert.Equal(Domain.Enums.AssetTransactionType.Buy, a.Type);
+            Assert.Equal(Domain.Enums.TransactionCategory.INVESTMENT, a.Transaction.Category);
         }
         finally
         {
@@ -54,6 +55,7 @@ public class DegiroTransactionImportServiceTests
             Assert.Equal(903, a.Transaction.Money.Amount);
             Assert.Equal("USD", a.Transaction.Money.Currency);
             Assert.Equal(Domain.Enums.AssetTransactionType.Sell, a.Type);
+            Assert.Equal(Domain.Enums.TransactionCategory.DIVESTMENT, a.Transaction.Category);
         }
         finally
         {
@@ -173,6 +175,7 @@ public class DegiroTransactionImportServiceTests
             Assert.Equal(1, a.Quantity);
             Assert.Equal(15, a.Transaction.Money.Amount);
             Assert.Equal(Domain.Enums.AssetTransactionType.Sell, a.Type);
+            Assert.Equal(Domain.Enums.TransactionCategory.DIVESTMENT, a.Transaction.Category);
         }
         finally
         {

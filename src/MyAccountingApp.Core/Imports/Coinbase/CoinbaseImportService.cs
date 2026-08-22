@@ -113,7 +113,7 @@ public class CoinbaseImportService : IBrokerImportService
         return -1;
     }
 
-private static AssetTransaction CreateAssetTransaction(
+    private static AssetTransaction CreateAssetTransaction(
         DateTime date,
         string symbol,
         string currency,
