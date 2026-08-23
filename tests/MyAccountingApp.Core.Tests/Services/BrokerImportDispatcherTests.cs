@@ -380,31 +380,6 @@ public class BrokerImportDispatcherTests
     }
 
     [Fact]
-    public async Task ParseAllAsync_SelfBankFundHistoricalFile_RoutesToFundImporter()
-    {
-        BrokerImportDispatcher dispatcher = CreateDispatcher();
-
-        var (txs, assets, _) = await dispatcher.ParseAllAsync(@"C:\Users\Francesc\source\repos\MyAccountingApp\import\historical\selfbank_founds_historical.csv");
-
-        Assert.Empty(txs);
-        Assert.NotEmpty(assets);
-        Assert.All(assets, a => Assert.Equal(TransactionCategory.INVESTMENT, a.Transaction.Category));
-        Assert.Contains(assets, a => a.Symbol == "SIGMA_INTERNACIONAL_A");
-    }
-
-    [Fact]
-    public async Task ParseAllAsync_SelfBankAccountHistoricalFile_RoutesToAccountImporter()
-    {
-        BrokerImportDispatcher dispatcher = CreateDispatcher();
-
-        var (txs, assets, _) = await dispatcher.ParseAllAsync(@"C:\Users\Francesc\source\repos\MyAccountingApp\import\historical\selfbank_historical.csv");
-
-        Assert.NotEmpty(txs);
-        Assert.Empty(assets);
-        Assert.All(txs, t => Assert.Contains(t.Category, new[] { TransactionCategory.TRANSFER, TransactionCategory.INTEREST, TransactionCategory.EXPENSE, TransactionCategory.INCOME }));
-    }
-
-    [Fact]
     public async Task ParseAllAsync_SelfBankFundFilename_UsesSelfBankFundService()
     {
         string csv = "Nombre cliente:;FRANCESC GIRBAU LLISTUELLA\nDivisa:;EUR\nFecha movimiento;Fecha valor;Movimiento;Valor;Cantidad;Precio;Importe Bruto;Comisión;Canon;Impuestos;Importe total;Plusvalía/Minusvalía;Saldo\n05/09/2025;04/09/2025;Suscripción fondo;Sigma Internacional A FI;6,63081400;18,09732700;-120,00000000;0,00000000;0,00000000;0,00000000;-120,00000000;;120,00000000;";
