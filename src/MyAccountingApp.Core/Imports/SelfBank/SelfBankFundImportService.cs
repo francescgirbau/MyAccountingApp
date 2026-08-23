@@ -92,12 +92,14 @@ public class SelfBankFundImportService : IBrokerImportService
 
     private static AssetTransactionType? MapType(string movimiento)
     {
-        if (movimiento.Contains("Suscripción", StringComparison.OrdinalIgnoreCase))
+        string m = movimiento.ToUpperInvariant();
+
+        if (m.Contains("SUSCRIPCI") || m.Contains("TRASPASO DE ENTRADA"))
         {
             return AssetTransactionType.Buy;
         }
 
-        if (movimiento.Contains("Reembolso", StringComparison.OrdinalIgnoreCase))
+        if (m.Contains("REEMBOLSO") || m.Contains("TRASPASO DE SALIDA"))
         {
             return AssetTransactionType.Sell;
         }
