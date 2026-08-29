@@ -13,6 +13,7 @@ using MyAccountingApp.Core.Imports.MyInvestor;
 using MyAccountingApp.Core.Imports.Revolut;
 using MyAccountingApp.Core.Imports.SelfBank;
 using MyAccountingApp.Domain.Entities;
+using MyAccountingApp.Domain.Enums;
 using Xunit;
 
 public class BrokerImportDispatcherTests
@@ -321,6 +322,54 @@ public class BrokerImportDispatcherTests
 
             Transaction transaction = Assert.Single(txs);
             Assert.Equal(240.00m, transaction.Money.Amount);
+            Assert.Empty(assets);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_SelfBankFundHeader_UsesSelfBankFundService()
+    {
+        // Fund CSV with preamble lines before the actual header (like real SelfBank fund export)
+        string csv = "Nombre cliente:;FRANCESC GIRBAU LLISTUELLA\nDivisa:;EUR\nFecha movimiento;Fecha valor;Movimiento;Valor;Cantidad;Precio;Importe Bruto;Comisión;Canon;Impuestos;Importe total;Plusvalía/Minusvalía;Saldo\n05/09/2025;04/09/2025;Suscripción fondo;Sigma Internacional A FI;6,63081400;18,09732700;-120,00000000;0,00000000;0,00000000;0,00000000;-120,00000000;;120,00000000;";
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv, Encoding.Latin1);
+            BrokerImportDispatcher dispatcher = CreateDispatcher();
+
+            var (txs, assets, _) = await dispatcher.ParseAllAsync(file);
+
+            Assert.Empty(txs);
+            AssetTransaction asset = Assert.Single(assets);
+            Assert.Equal("SIGMA_INTERNACIONAL_A", asset.Symbol);
+            Assert.Equal(TransactionCategory.INVESTMENT, asset.Transaction.Category);
+            Assert.Equal(6.63081400m, asset.Quantity);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_SelfBankAccountHeader_UsesSelfBankAccountService()
+    {
+        string csv = "Fecha Operación;Fecha Valor;Movimiento;Categoría;Importe\n2025-11-10;2025-11-10;Cargo TRF A COBAS Internacional FI;Sin Categoría;-120.00;";
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv, Encoding.Latin1);
+            BrokerImportDispatcher dispatcher = CreateDispatcher();
+
+            var (txs, assets, _) = await dispatcher.ParseAllAsync(file);
+
+            Transaction transaction = Assert.Single(txs);
+            Assert.Equal(TransactionCategory.TRANSFER, transaction.Category);
+            Assert.Equal(120.00m, transaction.Money.Amount);
             Assert.Empty(assets);
         }
         finally

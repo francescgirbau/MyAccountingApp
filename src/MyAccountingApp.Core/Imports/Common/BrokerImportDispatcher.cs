@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using MyAccountingApp.Core.Imports.AbnAmro;
@@ -28,6 +29,8 @@ public class BrokerImportDispatcher : IBrokerImportService
     private const string MyInvestorFundCsvHeaderPrefix = "Fecha de la orden;ISIN;Importe estimado";
     private const string CoinbaseCsvHeaderPrefix = "User,";
     private const string CoinbaseCsvHeaderLinePrefix = "ID,Timestamp";
+    private const string SelfBankFundHeaderPrefix = "Fecha movimiento;Fecha valor;Movimiento;Valor;Cantidad;Precio;Importe Bruto";
+    private const string SelfBankAccountHeaderPrefix = "Fecha Operación;Fecha Valor;Movimiento;Categoría;Importe";
 
     private readonly InteractiveBrokersImportService ibkrService;
     private readonly BankCsvImportService bankService;
@@ -114,6 +117,34 @@ public class BrokerImportDispatcher : IBrokerImportService
         return null;
     }
 
+    private static string? ReadSelfBankHeader(string filePath)
+    {
+        try
+        {
+            using StreamReader reader = new StreamReader(filePath, Encoding.Latin1);
+            string? line;
+            int linesRead = 0;
+            while ((line = reader.ReadLine()) != null && linesRead < 20)
+            {
+                if (!string.IsNullOrWhiteSpace(line))
+                {
+                    linesRead++;
+                    string trimmed = line.TrimStart('\uFEFF');
+                    if (trimmed.StartsWith(SelfBankFundHeaderPrefix, StringComparison.OrdinalIgnoreCase) ||
+                        trimmed.StartsWith(SelfBankAccountHeaderPrefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return trimmed;
+                    }
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        return null;
+    }
+
     private static bool HasCoinbaseSignature(string filePath)
     {
         try
@@ -161,7 +192,26 @@ public class BrokerImportDispatcher : IBrokerImportService
             return this.abnAmroService;
         }
 
-        if (fileName.StartsWith("selfbank_found", StringComparison.OrdinalIgnoreCase))
+        // SelfBank: try header-based detection first for robustness (scans first 20 non-empty lines)
+        string? selfBankHeader = ReadSelfBankHeader(filePath);
+        if (selfBankHeader != null)
+        {
+            if (selfBankHeader.StartsWith(SelfBankFundHeaderPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return this.selfBankFundService;
+            }
+
+            if (selfBankHeader.StartsWith(SelfBankAccountHeaderPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return this.selfBankAccountService;
+            }
+        }
+
+        // Fallback to filename-based detection for backward compatibility
+        if (fileName.StartsWith("selfbank_found", StringComparison.OrdinalIgnoreCase) ||
+            fileName.StartsWith("selfbank_founds", StringComparison.OrdinalIgnoreCase) ||
+            fileName.StartsWith("selfbank_fund", StringComparison.OrdinalIgnoreCase) ||
+            fileName.StartsWith("selfbank_funds", StringComparison.OrdinalIgnoreCase))
         {
             return this.selfBankFundService;
         }
@@ -181,6 +231,7 @@ public class BrokerImportDispatcher : IBrokerImportService
             return this.coinbaseService;
         }
 
+        // General header detection for other formats
         string? header = ReadFirstContentLine(filePath);
         if (header != null)
         {

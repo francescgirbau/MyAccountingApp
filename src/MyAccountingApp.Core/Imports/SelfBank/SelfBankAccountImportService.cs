@@ -15,6 +15,12 @@ using MyAccountingApp.Domain.ValueObjects;
 
 public class SelfBankAccountImportService : IBrokerImportService
 {
+    private static readonly string[] TransferOutKeywords = { "TRF A COBAS", "TRF A FRANCESC", "TRF A GIRBAU" };
+    private static readonly string[] TransferInKeywords = { "TFI RECIBIDA", "ABONO TRF DE F GIRBAU", "ABONO TRF DE FRANCESC", "ABONO TRF DE GIRBAU" };
+    private static readonly string[] TermDepositKeywords = { "APERTURA DEPOSITO", "VENCIMIENTO DEPOSITO" };
+    private static readonly string[] InterestKeywords = { "INTERESES DEPOSITO", "INTERESES " };
+    private static readonly string[] ExpenseKeywords = { "CLUB TRIATLO", "O2 MOVIL", "MUTUALITAT", "O2 MÓVIL" };
+
     public async Task<(IEnumerable<Transaction> Transactions, IEnumerable<AssetTransaction> AssetTransactions, IEnumerable<OptionTransaction> OptionTransactions)> ParseAllAsync(
         string filePath,
         CancellationToken cancellationToken = default)
@@ -53,11 +59,7 @@ public class SelfBankAccountImportService : IBrokerImportService
                     continue;
                 }
 
-                TransactionCategory category = amount >= 0
-                    ? TransactionCategory.INCOME
-                    : TransactionCategory.EXPENSE;
-
-                category = BankCsvImportService.DetectTransfer(movimiento, category);
+                TransactionCategory category = ClassifySelfBank(movimiento, amount);
 
                 Money money = new Money(Math.Abs(amount), "EUR");
                 Transaction transaction = new Transaction(date, movimiento, money, category);
@@ -69,6 +71,44 @@ public class SelfBankAccountImportService : IBrokerImportService
         }
 
         return (transactions, Array.Empty<AssetTransaction>(), Enumerable.Empty<OptionTransaction>());
+    }
+
+    private static TransactionCategory ClassifySelfBank(string movimiento, decimal amount)
+    {
+        string m = movimiento.ToUpperInvariant();
+
+        // Outgoing transfers to broker (Cobas, Francesc, etc.)
+        if (TransferOutKeywords.Any(k => m.Contains(k)))
+        {
+            return TransactionCategory.TRANSFER;
+        }
+
+        // Incoming transfers from broker
+        if (TransferInKeywords.Any(k => m.Contains(k)))
+        {
+            return TransactionCategory.TRANSFER;
+        }
+
+        // Term deposits (internal moves)
+        if (TermDepositKeywords.Any(k => m.Contains(k)))
+        {
+            return TransactionCategory.TRANSFER;
+        }
+
+        // Interest income
+        if (InterestKeywords.Any(k => m.Contains(k)))
+        {
+            return TransactionCategory.INTEREST;
+        }
+
+        // Known expenses
+        if (ExpenseKeywords.Any(k => m.Contains(k)))
+        {
+            return TransactionCategory.EXPENSE;
+        }
+
+        // Fallback: amount sign
+        return amount >= 0 ? TransactionCategory.INCOME : TransactionCategory.EXPENSE;
     }
 
     public Task<IEnumerable<AssetTransaction>> ParseCorporateActionsAsync(
