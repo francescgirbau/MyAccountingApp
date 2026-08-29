@@ -7,17 +7,27 @@ public sealed record DashboardDto(
     IReadOnlyList<DashboardAlertDto> Alerts);
 
 public sealed record CashSnapshotDto(
-    decimal IncomeMtd,
-    decimal ExpenseMtd,
-    decimal NetCashFlowMtd,
-    decimal IncomeYtd,
-    decimal ExpenseYtd,
-    decimal NetCashFlowYtd,
-    decimal TransfersYtd,
-    decimal DepositsYtd,
-    decimal FxOutYtd,
-    decimal FxInYtd,
-    decimal FxNetYtd);
+    OperatingCashFlowDto OperatingMtd,
+    OperatingCashFlowDto OperatingYtd,
+    InvestingCashFlowDto InvestingYtd,
+    InternalCashFlowDto InternalYtd);
+
+public sealed record OperatingCashFlowDto(
+    decimal Income,
+    decimal Expenses,
+    decimal NetOperatingCashFlow);
+
+public sealed record InvestingCashFlowDto(
+    decimal Purchases,
+    decimal Sales,
+    decimal NetInvestedCash);
+
+public sealed record InternalCashFlowDto(
+    decimal Transfers,
+    decimal Deposits,
+    decimal FxOut,
+    decimal FxIn,
+    decimal FxNet);
 
 public sealed record PortfolioSnapshotDto(
     decimal TotalCostBasisEur,

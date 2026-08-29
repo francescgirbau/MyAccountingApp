@@ -48,9 +48,12 @@ public class DashboardEndpointsTests
 
         Assert.Equal("2026-08-11", root.GetProperty("asOf").GetString());
         JsonElement cash = root.GetProperty("cash");
-        Assert.Equal(1000, cash.GetProperty("incomeYtd").GetDecimal());
-        Assert.Equal(100, cash.GetProperty("expenseYtd").GetDecimal());
-        Assert.Equal(900, cash.GetProperty("netCashFlowYtd").GetDecimal());
+
+        // Operating YTD
+        JsonElement operatingYtd = cash.GetProperty("operatingYtd");
+        Assert.Equal(1000, operatingYtd.GetProperty("income").GetDecimal());
+        Assert.Equal(100, operatingYtd.GetProperty("expenses").GetDecimal());
+        Assert.Equal(900, operatingYtd.GetProperty("netOperatingCashFlow").GetDecimal());
 
         JsonElement portfolio = root.GetProperty("portfolio");
         Assert.Equal(200, portfolio.GetProperty("totalCostBasisEur").GetDecimal());
@@ -75,6 +78,6 @@ public class DashboardEndpointsTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.NotNull(document.RootElement.GetProperty("asOf").GetString());
-        Assert.Equal(0, document.RootElement.GetProperty("cash").GetProperty("incomeYtd").GetDecimal());
+        Assert.Equal(0, document.RootElement.GetProperty("cash").GetProperty("operatingYtd").GetProperty("income").GetDecimal());
     }
 }

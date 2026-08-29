@@ -26,14 +26,14 @@ public class DashboardQueryTests
 
         DashboardDto dashboard = await query.GetAsync(AsOf);
 
-        Assert.Equal(1500, dashboard.Cash.IncomeYtd);
-        Assert.Equal(500, dashboard.Cash.ExpenseYtd);
-        Assert.Equal(1000, dashboard.Cash.NetCashFlowYtd);
-        Assert.Equal(200, dashboard.Cash.TransfersYtd);
-        Assert.Equal(0, dashboard.Cash.DepositsYtd);
-        Assert.Equal(500, dashboard.Cash.IncomeMtd);
-        Assert.Equal(100, dashboard.Cash.ExpenseMtd);
-        Assert.Equal(400, dashboard.Cash.NetCashFlowMtd);
+        Assert.Equal(1500, dashboard.Cash.OperatingYtd.Income);
+        Assert.Equal(500, dashboard.Cash.OperatingYtd.Expenses);
+        Assert.Equal(1000, dashboard.Cash.OperatingYtd.NetOperatingCashFlow);
+        Assert.Equal(200, dashboard.Cash.InternalYtd.Transfers);
+        Assert.Equal(0, dashboard.Cash.InternalYtd.Deposits);
+        Assert.Equal(500, dashboard.Cash.OperatingMtd.Income);
+        Assert.Equal(100, dashboard.Cash.OperatingMtd.Expenses);
+        Assert.Equal(400, dashboard.Cash.OperatingMtd.NetOperatingCashFlow);
     }
 
     [Fact]
@@ -80,11 +80,11 @@ public class DashboardQueryTests
 
         DashboardDto dashboard = await query.GetAsync(AsOf);
 
-        Assert.Equal(200, dashboard.Cash.TransfersYtd);
-        Assert.Equal(200, dashboard.Cash.DepositsYtd);
-        Assert.Equal(490.24m, dashboard.Cash.FxOutYtd);
-        Assert.Equal(0, dashboard.Cash.FxInYtd);
-        Assert.Equal(-490.24m, dashboard.Cash.FxNetYtd);
+        Assert.Equal(200, dashboard.Cash.InternalYtd.Transfers);
+        Assert.Equal(200, dashboard.Cash.InternalYtd.Deposits);
+        Assert.Equal(490.24m, dashboard.Cash.InternalYtd.FxOut);
+        Assert.Equal(0, dashboard.Cash.InternalYtd.FxIn);
+        Assert.Equal(-490.24m, dashboard.Cash.InternalYtd.FxNet);
     }
 
     private static AssetTransaction CreateAsset(string symbol, DateTime date, decimal quantity, decimal amount, AssetTransactionType type)

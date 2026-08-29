@@ -52,26 +52,26 @@ public class AnnualSummaryServiceTests
 
         Assert.NotNull(result);
         Assert.Equal(2020, result.Year);
-        Assert.Equal(500m, result.Expenses);
-        Assert.Equal(1000m, result.Income);
-        Assert.Equal(300m, result.InvestmentPurchases);
-        Assert.Equal(150m, result.InvestmentSales);
-        Assert.Equal(500m, result.NetCashFlow);
+        Assert.Equal(500m, result.Operating.Expenses);
+        Assert.Equal(1000m, result.Operating.Income);
+        Assert.Equal(300m, result.Investing.Purchases);
+        Assert.Equal(150m, result.Investing.Sales);
+        Assert.Equal(500m, result.Operating.NetOperatingCashFlow);
         Assert.Equal(2, result.TransactionCount);
         Assert.Equal(2, result.AssetTransactionCount);
-        Assert.Equal(0, result.Transfers);
-        Assert.Equal(0, result.Deposits);
+        Assert.Equal(0m, result.Internal.Transfers);
+        Assert.Equal(0m, result.Internal.Deposits);
         Assert.False(result.IncludesAssetCashFlows);
         Assert.NotEmpty(result.Months);
         MonthlySummaryDto month = Assert.Single(result.Months);
         Assert.Equal(6, month.Month);
-        Assert.Equal(500m, month.Expenses);
-        Assert.Equal(1000m, month.Income);
-        Assert.Equal(300m, month.InvestmentPurchases);
-        Assert.Equal(150m, month.InvestmentSales);
-        Assert.Equal(500m, month.NetCashFlow);
-        Assert.Equal(0, month.Transfers);
-        Assert.Equal(0, month.Deposits);
+        Assert.Equal(500m, month.Operating.Expenses);
+        Assert.Equal(1000m, month.Operating.Income);
+        Assert.Equal(300m, month.Investing.Purchases);
+        Assert.Equal(150m, month.Investing.Sales);
+        Assert.Equal(500m, month.Operating.NetOperatingCashFlow);
+        Assert.Equal(0m, month.Internal.Transfers);
+        Assert.Equal(0m, month.Internal.Deposits);
     }
 
     [Fact]
@@ -111,9 +111,9 @@ public class AnnualSummaryServiceTests
         Assert.NotNull(result);
         Assert.Equal(2, result.Months.Count);
         Assert.Equal(1, result.Months[0].Month);
-        Assert.Equal(2000m, result.Months[0].NetCashFlow);
+        Assert.Equal(2000m, result.Months[0].Operating.NetOperatingCashFlow);
         Assert.Equal(3, result.Months[1].Month);
-        Assert.Equal(1500m, result.Months[1].NetCashFlow);
+        Assert.Equal(1500m, result.Months[1].Operating.NetOperatingCashFlow);
     }
 
     [Fact]
@@ -134,9 +134,9 @@ public class AnnualSummaryServiceTests
         AnnualSummaryDto? result = svc.GetByYear(2024);
 
         Assert.NotNull(result);
-        Assert.Equal(3000m, result.NetCashFlow);
-        Assert.Equal(1000m, result.InvestmentPurchases);
-        Assert.Equal(800m, result.InvestmentSales);
+        Assert.Equal(3000m, result.Operating.NetOperatingCashFlow);
+        Assert.Equal(1000m, result.Investing.Purchases);
+        Assert.Equal(800m, result.Investing.Sales);
     }
 
     [Fact]
@@ -156,9 +156,9 @@ public class AnnualSummaryServiceTests
         AnnualSummaryDto? result = svc.GetByYear(2024);
 
         Assert.NotNull(result);
-        Assert.Equal(2000m, result.NetCashFlow);
-        Assert.Equal(1000m, result.InvestmentPurchases);
-        Assert.Equal(1000m, result.Expenses);
+        Assert.Equal(2000m, result.Operating.NetOperatingCashFlow);
+        Assert.Equal(1000m, result.Investing.Purchases);
+        Assert.Equal(1000m, result.Operating.Expenses);
     }
 
     [Fact]
@@ -176,15 +176,15 @@ public class AnnualSummaryServiceTests
         AnnualSummaryDto? result = svc.GetByYear(2024);
 
         Assert.NotNull(result);
-        Assert.Equal(3000m, result.Income);
-        Assert.Equal(1000m, result.Expenses);
-        Assert.Equal(500m, result.Transfers);
-        Assert.Equal(200m, result.Deposits);
-        Assert.Equal(2000m, result.NetCashFlow);
+        Assert.Equal(3000m, result.Operating.Income);
+        Assert.Equal(1000m, result.Operating.Expenses);
+        Assert.Equal(500m, result.Internal.Transfers);
+        Assert.Equal(200m, result.Internal.Deposits);
+        Assert.Equal(2000m, result.Operating.NetOperatingCashFlow);
 
         MonthlySummaryDto month = Assert.Single(result.Months);
-        Assert.Equal(500m, month.Transfers);
-        Assert.Equal(200m, month.Deposits);
+        Assert.Equal(500m, month.Internal.Transfers);
+        Assert.Equal(200m, month.Internal.Deposits);
     }
 
     [Fact]
@@ -203,20 +203,20 @@ public class AnnualSummaryServiceTests
         AnnualSummaryDto? result = svc.GetByYear(2024);
 
         Assert.NotNull(result);
-        Assert.Equal(200m, result.Transfers);
-        Assert.Equal(200m, result.Deposits);
-        Assert.Equal(490.24m, result.FxOut);
-        Assert.Equal(0m, result.FxIn);
-        Assert.Equal(-490.24m, result.FxNet);
-        Assert.Equal(1, result.FxPairCount);
-        Assert.Equal(0, result.FxUnmatchedLegCount);
+        Assert.Equal(200m, result.Internal.Transfers);
+        Assert.Equal(200m, result.Internal.Deposits);
+        Assert.Equal(490.24m, result.Internal.FxOut);
+        Assert.Equal(0m, result.Internal.FxIn);
+        Assert.Equal(-490.24m, result.Internal.FxNet);
+        Assert.Equal(1, result.Internal.FxPairCount);
+        Assert.Equal(0, result.Internal.FxUnmatchedLegCount);
 
         MonthlySummaryDto month = Assert.Single(result.Months);
-        Assert.Equal(200m, month.Transfers);
-        Assert.Equal(200m, month.Deposits);
-        Assert.Equal(490.24m, month.FxOut);
-        Assert.Equal(0m, month.FxIn);
-        Assert.Equal(-490.24m, month.FxNet);
+        Assert.Equal(200m, month.Internal.Transfers);
+        Assert.Equal(200m, month.Internal.Deposits);
+        Assert.Equal(490.24m, month.Internal.FxOut);
+        Assert.Equal(0m, month.Internal.FxIn);
+        Assert.Equal(-490.24m, month.Internal.FxNet);
     }
 
     [Fact]
@@ -234,12 +234,12 @@ public class AnnualSummaryServiceTests
         AnnualSummaryDto? result = svc.GetByYear(2024);
 
         Assert.NotNull(result);
-        Assert.Equal(100m, result.Deposits);
-        Assert.Equal(0m, result.Transfers);
-        Assert.Equal(2.40m, result.FxIn);
-        Assert.Equal(0m, result.FxOut);
-        Assert.Equal(2.40m, result.FxNet);
-        Assert.Equal(1, result.FxPairCount);
+        Assert.Equal(100m, result.Internal.Deposits);
+        Assert.Equal(0m, result.Internal.Transfers);
+        Assert.Equal(2.40m, result.Internal.FxIn);
+        Assert.Equal(0m, result.Internal.FxOut);
+        Assert.Equal(2.40m, result.Internal.FxNet);
+        Assert.Equal(1, result.Internal.FxPairCount);
     }
 
     [Fact]
@@ -254,8 +254,8 @@ public class AnnualSummaryServiceTests
         AnnualSummaryDto? result = svc.GetByYear(2024);
 
         Assert.NotNull(result);
-        Assert.Equal(1, result.FxPairCount);
-        Assert.Equal(1, result.FxUnmatchedLegCount);
+        Assert.Equal(1, result.Internal.FxPairCount);
+        Assert.Equal(1, result.Internal.FxUnmatchedLegCount);
     }
 
     [Fact]
@@ -274,9 +274,9 @@ public class AnnualSummaryServiceTests
         AnnualSummaryDto? result = svc.GetByYear(2024);
 
         Assert.NotNull(result);
-        Assert.Equal(3000m, result.Income);
-        Assert.Equal(1000m, result.Expenses);
-        Assert.Equal(2000m, result.NetCashFlow);
+        Assert.Equal(3000m, result.Operating.Income);
+        Assert.Equal(1000m, result.Operating.Expenses);
+        Assert.Equal(2000m, result.Operating.NetOperatingCashFlow);
     }
 
     [Fact]
@@ -299,11 +299,11 @@ public class AnnualSummaryServiceTests
         AnnualSummaryDto? result = svc.GetByYear(2024);
 
         Assert.NotNull(result);
-        Assert.Equal(3000m, result.Income);        // salary only
-        Assert.Equal(1000m, result.Expenses);      // supermarket only
-        Assert.Equal(2000m, result.NetCashFlow);   // income - expense only
-        Assert.Equal(500m, result.InvestmentPurchases); // from AssetTransaction
-        Assert.Equal(0m, result.InvestmentSales);
+        Assert.Equal(3000m, result.Operating.Income);        // salary only
+        Assert.Equal(1000m, result.Operating.Expenses);      // supermarket only
+        Assert.Equal(2000m, result.Operating.NetOperatingCashFlow);   // income - expense only
+        Assert.Equal(500m, result.Investing.Purchases); // from AssetTransaction
+        Assert.Equal(0m, result.Investing.Sales);
     }
 
     private static Transaction Tx(int year, decimal amount, TransactionCategory category = TransactionCategory.INCOME, int month = 6)
@@ -331,8 +331,8 @@ public class AnnualSummaryServiceTests
     private static AssetTransaction AssetTx(int year, decimal amount, AssetTransactionType type)
     {
         TransactionCategory cat = type == AssetTransactionType.Buy
-            ? TransactionCategory.EXPENSE
-            : TransactionCategory.INCOME;
+            ? TransactionCategory.INVESTMENT
+            : TransactionCategory.DIVESTMENT;
 
         Transaction tx = new Transaction(
             Guid.NewGuid(),

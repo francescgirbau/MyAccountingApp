@@ -49,27 +49,50 @@ public class DashboardQuery : IDashboardQuery
         List<Transaction> ytd = allTransactions.Where(t => t.Date >= yearStart && t.Date <= end).ToList();
         List<Transaction> mtd = allTransactions.Where(t => t.Date >= monthStart && t.Date <= end).ToList();
 
-        decimal incomeYtd = SumCategory(ytd, t => t.Category.IsCashIncome());
-        decimal expenseYtd = SumCategory(ytd, t => t.Category.IsCashExpense());
+        // Operating breakdown YTD
+        decimal incomeYtd = SumCategory(ytd, t => t.Category == TransactionCategory.INCOME);
+        decimal dividendsYtd = SumCategory(ytd, t => t.Category == TransactionCategory.DIVIDEND);
+        decimal interestYtd = SumCategory(ytd, t => t.Category == TransactionCategory.INTEREST);
+        decimal expensesYtd = SumCategory(ytd, t => t.Category == TransactionCategory.EXPENSE);
+        decimal feesYtd = SumCategory(ytd, t => t.Category == TransactionCategory.FEE);
+        decimal withholdingYtd = SumCategory(ytd, t => t.Category == TransactionCategory.WITHHOLDING_TAX);
+
+        decimal incomeYtdTotal = incomeYtd + SumCategory(ytd, t => t.Category == TransactionCategory.DIVIDEND) + SumCategory(ytd, t => t.Category == TransactionCategory.INTEREST);
+        decimal expensesYtdTotal = SumCategory(ytd, t => t.Category == TransactionCategory.EXPENSE) + SumCategory(ytd, t => t.Category == TransactionCategory.FEE) + SumCategory(ytd, t => t.Category == TransactionCategory.WITHHOLDING_TAX);
+
+        // Operating breakdown MTD
+        decimal incomeMtd = SumCategory(mtd, t => t.Category == TransactionCategory.INCOME);
+        decimal dividendsMtd = SumCategory(mtd, t => t.Category == TransactionCategory.DIVIDEND);
+        decimal interestMtd = SumCategory(mtd, t => t.Category == TransactionCategory.INTEREST);
+        decimal expenseMtd = SumCategory(mtd, t => t.Category == TransactionCategory.EXPENSE);
+        decimal feesMtd = SumCategory(mtd, t => t.Category == TransactionCategory.FEE);
+        decimal withholdingMtd = SumCategory(mtd, t => t.Category == TransactionCategory.WITHHOLDING_TAX);
+
+        decimal incomeMtdTotal = incomeMtd + SumCategory(mtd, t => t.Category == TransactionCategory.DIVIDEND) + SumCategory(mtd, t => t.Category == TransactionCategory.INTEREST);
+        decimal expensesMtdTotal = SumCategory(mtd, t => t.Category == TransactionCategory.EXPENSE) + SumCategory(mtd, t => t.Category == TransactionCategory.FEE) + SumCategory(mtd, t => t.Category == TransactionCategory.WITHHOLDING_TAX);
+
+        // Internal YTD
         decimal transfersYtd = SumCategory(ytd, t => t.Category == TransactionCategory.TRANSFER);
         decimal depositsYtd = SumCategory(ytd, t => t.Category == TransactionCategory.DEPOSIT);
         decimal fxOutYtd = SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out);
         decimal fxInYtd = SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In);
-        decimal incomeMtd = SumCategory(mtd, t => t.Category.IsCashIncome());
-        decimal expenseMtd = SumCategory(mtd, t => t.Category.IsCashExpense());
 
         return new CashSnapshotDto(
-            Math.Round(incomeMtd, 2),
-            Math.Round(expenseMtd, 2),
-            Math.Round(incomeMtd - expenseMtd, 2),
-            Math.Round(incomeYtd, 2),
-            Math.Round(expenseYtd, 2),
-            Math.Round(incomeYtd - expenseYtd, 2),
-            Math.Round(transfersYtd, 2),
-            Math.Round(depositsYtd, 2),
-            Math.Round(fxOutYtd, 2),
-            Math.Round(fxInYtd, 2),
-            Math.Round(fxInYtd - fxOutYtd, 2));
+            new OperatingCashFlowDto(
+                Math.Round(incomeMtd + dividendsMtd + interestMtd, 2),
+                Math.Round(expenseMtd + feesMtd + withholdingMtd, 2),
+                Math.Round(incomeMtd + dividendsMtd + interestMtd - expenseMtd - feesMtd - withholdingMtd, 2)),
+            new OperatingCashFlowDto(
+                Math.Round(incomeYtd + SumCategory(ytd, t => t.Category == TransactionCategory.DIVIDEND) + SumCategory(ytd, t => t.Category == TransactionCategory.INTEREST), 2),
+                Math.Round(expensesYtdTotal, 2),
+                Math.Round(incomeYtd + SumCategory(ytd, t => t.Category == TransactionCategory.DIVIDEND) + SumCategory(ytd, t => t.Category == TransactionCategory.INTEREST) - expensesYtdTotal, 2)),
+            new InvestingCashFlowDto(0, 0, 0), // Investment breakdown not in dashboard for now
+            new InternalCashFlowDto(
+                Math.Round(transfersYtd, 2),
+                Math.Round(depositsYtd, 2),
+                Math.Round(SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out), 2),
+                Math.Round(SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In), 2),
+                Math.Round(SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In) - SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out), 2)));
     }
 
     private static PortfolioSnapshotDto BuildPortfolioSnapshot(List<AssetTransaction> allAssetTransactions, int year)
