@@ -14,7 +14,6 @@ using MyAccountingApp.Core.Imports.Revolut;
 using MyAccountingApp.Core.Imports.SelfBank;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
-using System.Text;
 using Xunit;
 
 public class BrokerImportDispatcherTests
