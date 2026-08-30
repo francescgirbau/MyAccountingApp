@@ -23,116 +23,150 @@ else if (Year.HasValue)
     <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowBack" Href="summary" Class="mb-4">Back to all years</MudButton>
     <MudText Typo="Typo.h4" GutterBottom="true">@Year.Value</MudText>
 
-    <MudText Typo="Typo.subtitle1" Class="mb-2 mud-text-secondary">Cash</MudText>
-    <MudCard Class="pa-6" Outlined="true">
-        <MudCardContent>
-            <MudGrid>
-                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Income</MudText><MudText Typo="Typo.h5" Color="Color.Success">@_summary?.Income.ToString("N2") €</MudText></MudItem>
-                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Expenses</MudText><MudText Typo="Typo.h5" Color="Color.Error">@_summary?.Expenses.ToString("N2") €</MudText></MudItem>
-                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Transfers</MudText><MudText Typo="Typo.h5">@_summary?.Transfers.ToString("N2") €</MudText></MudItem>
-                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Deposits</MudText><MudText Typo="Typo.h5" Color="Color.Success">@_summary?.Deposits.ToString("N2") €</MudText></MudItem>
-                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Net Cash Flow</MudText><MudText Typo="Typo.h5" Color="@NetCashFlowColor">@_summary?.NetCashFlow.ToString("N2") €</MudText></MudItem>
-                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Bank Transactions</MudText><MudText Typo="Typo.h5">@_summary?.TransactionCount</MudText></MudItem>
-            </MudGrid>
-        </MudCardContent>
-    </MudCard>
-
-    <MudText Typo="Typo.subtitle1" Class="mt-6 mb-2 mud-text-secondary">FX conversions</MudText>
-    <MudCard Class="pa-6" Outlined="true">
-        <MudCardContent>
-            <MudGrid>
-                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">FX out (EUR)</MudText><MudText Typo="Typo.h5">@_summary?.FxOut.ToString("N2") €</MudText></MudItem>
-                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">FX in (EUR)</MudText><MudText Typo="Typo.h5" Color="Color.Success">@_summary?.FxIn.ToString("N2") €</MudText></MudItem>
-                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">FX net (EUR)</MudText><MudText Typo="Typo.h5" Color="@FxNetColor">@_summary?.FxNet.ToString("N2") €</MudText></MudItem>
-                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">FX pairs</MudText><MudText Typo="Typo.h5">@_summary?.FxPairCount (unmatched legs: @_summary?.FxUnmatchedLegCount)</MudText></MudItem>
-            </MudGrid>
-            <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
-                FX totals count EUR legs only — a non-EUR in-leg (e.g. USD) appears under its own currency in Transactions. FX net is not income.
-            </MudText>
-        </MudCardContent>
-    </MudCard>
-
-    <MudText Typo="Typo.subtitle1" Class="mt-6 mb-2 mud-text-secondary">Investments</MudText>
-    <MudCard Class="pa-6" Outlined="true">
-        <MudCardContent>
-            <MudGrid>
-                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Purchases</MudText><MudText Typo="Typo.h5">@_summary?.InvestmentPurchases.ToString("N2") €</MudText></MudItem>
-                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Sales</MudText><MudText Typo="Typo.h5">@_summary?.InvestmentSales.ToString("N2") €</MudText></MudItem>
-                <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Asset Transactions</MudText><MudText Typo="Typo.h5">@_summary?.AssetTransactionCount</MudText></MudItem>
-            </MudGrid>
-        </MudCardContent>
-    </MudCard>
-
-    @if (_summary is { IncludesAssetCashFlows: false })
+    @if (_summary != null)
     {
-        <MudAlert Severity="Severity.Info" Class="mt-4">
-            Cash and investment flows are reported separately: net cash flow only counts the cash ledger, and investment purchases/sales are shown above without being folded into cash expenses.
-        </MudAlert>
-    }
+        <!-- 1. Operating Cash Flow -->
+        <MudText Typo="Typo.subtitle1" Class="mb-2 mud-text-secondary">Operating cash flow</MudText>
+        <MudCard Class="pa-6" Outlined="true">
+            <MudCardContent>
+                <MudGrid>
+                    <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Income</MudText><MudText Typo="Typo.h5" Color="Color.Success">@_summary.Operating.Income.ToString("N2") €</MudText></MudItem>
+                    <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Expenses</MudText><MudText Typo="Typo.h5" Color="Color.Error">@_summary.Operating.Expenses.ToString("N2") €</MudText></MudItem>
+                    <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Dividends</MudText><MudText Typo="Typo.h5" Color="Color.Success">@_summary.Operating.Dividends.ToString("N2") €</MudText></MudItem>
+                    <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Interest</MudText><MudText Typo="Typo.h5" Color="Color.Success">@_summary.Operating.InterestIncome.ToString("N2") €</MudText></MudItem>
+                    <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Fees</MudText><MudText Typo="Typo.h5" Color="Color.Error">@_summary.Operating.Fees.ToString("N2") €</MudText></MudItem>
+                    <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Withholding tax</MudText><MudText Typo="Typo.h5" Color="Color.Error">@_summary.Operating.WithholdingTax.ToString("N2") €</MudText></MudItem>
+                    <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Net operating cash flow</MudText><MudText Typo="Typo.h5" Color="@OperatingNetColor">@_summary.Operating.NetOperatingCashFlow.ToString("N2") €</MudText></MudItem>
+                    <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Bank transactions</MudText><MudText Typo="Typo.h5">@_summary.TransactionCount</MudText></MudItem>
+                </MudGrid>
+                <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
+                    Operating cash flow = income + dividends + interest − expenses − fees − withholding tax.
+                    Investments, internal transfers and FX are excluded.
+                </MudText>
+            </MudCardContent>
+        </MudCard>
 
-    @if (_summary?.Months is { Count: > 0 })
-    {
-        <MudText Typo="Typo.h5" GutterBottom="true" Class="mt-8">Income vs Expenses by month</MudText>
-        <MudChart T="double" ChartType="ChartType.Bar" ChartSeries="_chartSeries" ChartLabels="_chartLabels" Width="100%" Height="350px" Class="mb-4" />
+        <!-- 2. Investing Cash Flow -->
+        <MudText Typo="Typo.subtitle1" Class="mt-6 mb-2 mud-text-secondary">Investing cash flow</MudText>
+        <MudCard Class="pa-6" Outlined="true">
+            <MudCardContent>
+                <MudGrid>
+                    <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">Purchases (cash out)</MudText><MudText Typo="Typo.h5" Color="Color.Error">−@_summary.Investing.Purchases.ToString("N2") €</MudText></MudItem>
+                    <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">Sales proceeds (cash in)</MudText><MudText Typo="Typo.h5" Color="Color.Success">@_summary.Investing.Sales.ToString("N2") €</MudText></MudItem>
+                    <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">Net invested cash</MudText><MudText Typo="Typo.h5" Color="@InvestingNetColor">@_summary.Investing.NetInvestedCash.ToString("N2") €</MudText></MudItem>
+                </MudGrid>
+                <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
+                    Buying assets is not an operating expense. Sale proceeds are not operating income.
+                    Net invested cash = sales proceeds − purchases. Gains/losses are calculated separately via FIFO.
+                </MudText>
+            </MudCardContent>
+        </MudCard>
 
-        <div class="d-flex align-center">
-            <MudText Typo="Typo.h5" Class="mb-0">Monthly Breakdown</MudText>
-            <MudSpacer />
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
-                       OnClick="@ExportCsvAsync" StartIcon="@Icons.Material.Filled.Download">
-                Export CSV
-            </MudButton>
-        </div>
-        <MudTable Items="@_summary.Months" Dense="true" Hover="true" Striped="true" Class="mt-4">
-            <ColGroup>
-                <col style="width: 10%" />
-                <col style="width: 13%" />
-                <col style="width: 13%" />
-                <col style="width: 11%" />
-                <col style="width: 11%" />
-                <col style="width: 8%" />
-                <col style="width: 11%" />
-                <col style="width: 11%" />
-                <col style="width: 7%" />
-                <col style="width: 5%" />
-            </ColGroup>
-            <HeaderContent>
-                <MudTh>Month</MudTh>
-                <MudTh><MudText Color="Color.Success">Income</MudText></MudTh>
-                <MudTh><MudText Color="Color.Error">Expenses</MudText></MudTh>
-                <MudTh>Transfers</MudTh>
-                <MudTh>Deposits</MudTh>
-                <MudTh>FX</MudTh>
-                <MudTh>Net Cash Flow</MudTh>
-                <MudTh>Purchases</MudTh>
-                <MudTh>Sales</MudTh>
-                <MudTh>Tx</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="Month">@GetMonthName(context.Month)</MudTd>
-                <MudTd DataLabel="Income"><MudText Color="Color.Success">@context.Income.ToString("N2") €</MudText></MudTd>
-                <MudTd DataLabel="Expenses"><MudText Color="Color.Error">@context.Expenses.ToString("N2") €</MudText></MudTd>
-                <MudTd DataLabel="Transfers">@context.Transfers.ToString("N2") €</MudTd>
-                <MudTd DataLabel="Deposits">@context.Deposits.ToString("N2") €</MudTd>
-                <MudTd DataLabel="FX"><MudText Color="@NetColor(context.FxNet)">@context.FxNet.ToString("N2") €</MudText></MudTd>
-                <MudTd DataLabel="Net Cash Flow"><MudText Color="@NetColor(context.NetCashFlow)">@context.NetCashFlow.ToString("N2") €</MudText></MudTd>
-                <MudTd DataLabel="Purchases">@context.InvestmentPurchases.ToString("N2") €</MudTd>
-                <MudTd DataLabel="Sales">@context.InvestmentSales.ToString("N2") €</MudTd>
-                <MudTd DataLabel="Tx">@context.TransactionCount / @context.AssetTransactionCount</MudTd>
-            </RowTemplate>
-            <FooterContent>
-                <MudTd><MudText Typo="Typo.subtitle2">Total</MudText></MudTd>
-                <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Success">@_summary?.Income.ToString("N2") €</MudText></MudTd>
-                <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Error">@_summary?.Expenses.ToString("N2") €</MudText></MudTd>
-                <MudTd><MudText Typo="Typo.subtitle2">@_summary?.Transfers.ToString("N2") €</MudText></MudTd>
-                <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Success">@_summary?.Deposits.ToString("N2") €</MudText></MudTd>
-                <MudTd><MudText Typo="Typo.subtitle2" Color="@FxNetColor">@_summary?.FxNet.ToString("N2") €</MudText></MudTd>
-                <MudTd><MudText Typo="Typo.subtitle2" Color="@NetCashFlowColor">@_summary?.NetCashFlow.ToString("N2") €</MudText></MudTd>
-                <MudTd><MudText Typo="Typo.subtitle2">@_summary?.InvestmentPurchases.ToString("N2") €</MudText></MudTd>
-                <MudTd><MudText Typo="Typo.subtitle2">@_summary?.InvestmentSales.ToString("N2") €</MudText></MudTd>
-                <MudTd><MudText Typo="Typo.subtitle2">@_summary?.TransactionCount / @_summary?.AssetTransactionCount</MudText></MudTd>
-            </FooterContent>
-        </MudTable>
+        <!-- 3. Internal movements -->
+        <MudText Typo="Typo.subtitle1" Class="mt-6 mb-2 mud-text-secondary">Internal movements</MudText>
+        <MudCard Class="pa-6" Outlined="true">
+            <MudCardContent>
+                <MudGrid>
+                    <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">Transfers out</MudText><MudText Typo="Typo.h5">@_summary.Internal.Transfers.ToString("N2") €</MudText></MudItem>
+                    <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">Deposits in</MudText><MudText Typo="Typo.h5" Color="Color.Success">@_summary.Internal.Deposits.ToString("N2") €</MudText></MudItem>
+                    <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">FX out (EUR)</MudText><MudText Typo="Typo.h5">@_summary.Internal.FxOut.ToString("N2") €</MudText></MudItem>
+                    <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">FX in (EUR)</MudText><MudText Typo="Typo.h5" Color="Color.Success">@_summary.Internal.FxIn.ToString("N2") €</MudText></MudItem>
+                    <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">FX net (EUR)</MudText><MudText Typo="Typo.h5" Color="@InternalFxNetColor">@_summary.Internal.FxNet.ToString("N2") €</MudText></MudItem>
+                    <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">FX pairs</MudText><MudText Typo="Typo.h5">@_summary.Internal.FxPairCount (unmatched legs: @_summary.Internal.FxUnmatchedLegCount)</MudText></MudItem>
+                </MudGrid>
+                <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
+                    Transfers and deposits are same-currency internal moves. FX totals count EUR legs only — non-EUR legs appear under their currency in Transactions.
+                    FX net is not income or expense.
+                </MudText>
+            </MudCardContent>
+        </MudCard>
+
+        <!-- 4. Portfolio activity -->
+        <MudText Typo="Typo.subtitle1" Class="mt-6 mb-2 mud-text-secondary">Portfolio activity</MudText>
+        <MudCard Class="pa-6" Outlined="true">
+            <MudCardContent>
+                <MudGrid>
+                    <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Purchases</MudText><MudText Typo="Typo.h5">@_summary.Investing.Purchases.ToString("N2") €</MudText></MudItem>
+                    <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Sales</MudText><MudText Typo="Typo.h5">@_summary.Investing.Sales.ToString("N2") €</MudText></MudItem>
+                    <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Asset transactions</MudText><MudText Typo="Typo.h5">@_summary.AssetTransactionCount</MudText></MudItem>
+                </MudGrid>
+                <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
+                    Purchases and sales are cash flows from AssetTransaction records (already shown in Investing above).
+                    They are not folded into operating cash flow.
+                </MudText>
+            </MudCardContent>
+        </MudCard>
+
+        @if (_summary is { IncludesAssetCashFlows: false })
+        {
+            <MudAlert Severity="Severity.Info" Class="mt-4">
+                Cash and investment flows are reported separately: net operating cash flow only counts the cash ledger,
+                and investment purchases/sales are shown above without being folded into cash expenses.
+            </MudAlert>
+        }
+
+        @if (_summary.Months is { Count: > 0 })
+        {
+            <MudText Typo="Typo.h5" GutterBottom="true" Class="mt-8">Monthly breakdown</MudText>
+            <MudChart T="double" ChartType="ChartType.Bar" ChartSeries="_chartSeries" ChartLabels="_chartLabels" Width="100%" Height="350px" Class="mb-4" />
+
+            <div class="d-flex align-center">
+                <MudText Typo="Typo.h5" Class="mb-0">Monthly Breakdown</MudText>
+                <MudSpacer />
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                           OnClick="@ExportCsvAsync" StartIcon="@Icons.Material.Filled.Download">
+                    Export CSV
+                </MudButton>
+            </div>
+
+            <MudTable Items="@_summary.Months" Dense="true" Hover="true" Striped="true" Class="mt-4">
+                <ColGroup>
+                    <col style="width: 8%" />
+                    <col style="width: 12%" />
+                    <col style="width: 12%" />
+                    <col style="width: 12%" />
+                    <col style="width: 12%" />
+                    <col style="width: 10%" />
+                    <col style="width: 10%" />
+                    <col style="width: 10%" />
+                    <col style="width: 8%" />
+                    <col style="width: 8%" />
+                </ColGroup>
+                <HeaderContent>
+                    <MudTh>Month</MudTh>
+                    <MudTh>Op. income</MudTh>
+                    <MudTh>Op. expense</MudTh>
+                    <MudTh>Op. net</MudTh>
+                    <MudTh>Invest in</MudTh>
+                    <MudTh>Invest out</MudTh>
+                    <MudTh>Invest net</MudTh>
+                    <MudTh>FX net (EUR)</MudTh>
+                    <MudTh>Tx</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Month">@GetMonthName(context.Month)</MudTd>
+                    <MudTd DataLabel="Op. income"><MudText Color="Color.Success">@context.Operating.Income.ToString("N2") €</MudText></MudTd>
+                    <MudTd DataLabel="Op. expense"><MudText Color="Color.Error">@context.Operating.Expenses.ToString("N2") €</MudText></MudTd>
+                    <MudTd DataLabel="Op. net"><MudText Color="@NetColor(context.Operating.NetOperatingCashFlow)">@context.Operating.NetOperatingCashFlow.ToString("N2") €</MudText></MudTd>
+                    <MudTd DataLabel="Invest in"><MudText Color="Color.Error">−@context.Investing.Purchases.ToString("N2") €</MudText></MudTd>
+                    <MudTd DataLabel="Invest out"><MudText Color="Color.Success">@context.Investing.Sales.ToString("N2") €</MudText></MudTd>
+                    <MudTd DataLabel="Invest net"><MudText Color="@GetNetColor(context.Investing.NetInvestedCash)">@context.Investing.NetInvestedCash.ToString("N2") €</MudText></MudTd>
+                    <MudTd DataLabel="FX net (EUR)"><MudText Color="@NetColor(context.Internal.FxNet)">@context.Internal.FxNet.ToString("N2") €</MudText></MudTd>
+                    <MudTd DataLabel="Tx">@context.TransactionCount / @context.AssetTransactionCount</MudTd>
+                </RowTemplate>
+                <FooterContent>
+                    <MudTd><MudText Typo="Typo.subtitle2">Total</MudText></MudTd>
+                    <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Success">@_summary.Operating.Income.ToString("N2") €</MudText></MudTd>
+                    <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Error">@_summary.Operating.Expenses.ToString("N2") €</MudText></MudTd>
+                    <MudTd><MudText Typo="Typo.subtitle2" Color="@OperatingNetColor">@_summary.Operating.NetOperatingCashFlow.ToString("N2") €</MudText></MudTd>
+                    <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Error">−@_summary.Investing.Purchases.ToString("N2") €</MudText></MudTd>
+                    <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Success">@_summary.Investing.Sales.ToString("N2") €</MudText></MudTd>
+                    <MudTd><MudText Typo="Typo.subtitle2" Color="@GetNetColor(_summary.Investing.NetInvestedCash)">@_summary.Investing.NetInvestedCash.ToString("N2") €</MudText></MudTd>
+                    <MudTd><MudText Typo="Typo.subtitle2" Color="@InternalFxNetColor">@_summary.Internal.FxNet.ToString("N2") €</MudText></MudTd>
+                    <MudTd><MudText Typo="Typo.subtitle2">@_summary.TransactionCount / @_summary.AssetTransactionCount</MudText></MudTd>
+                </FooterContent>
+            </MudTable>
+        }
     }
 }
 else
@@ -145,12 +179,14 @@ else
                 <MudCard Class="pa-4" Outlined="true" Style="cursor: pointer;" @onclick="() => NavigateToYear(s.Year)">
                     <MudCardContent>
                         <MudText Typo="Typo.h4" GutterBottom="true">@s.Year</MudText>
-                        <MudText Typo="Typo.subtitle2">Income</MudText>
-                        <MudText Typo="Typo.h6" Color="Color.Success">@s.Income.ToString("N2") €</MudText>
-                        <MudText Typo="Typo.subtitle2" Class="mt-2">Expenses</MudText>
-                        <MudText Typo="Typo.h6" Color="Color.Error">@s.Expenses.ToString("N2") €</MudText>
-                        <MudText Typo="Typo.subtitle2" Class="mt-2">Net Cash Flow</MudText>
-                        <MudText Typo="Typo.h6" Color="@GetNetColor(s.NetCashFlow)">@s.NetCashFlow.ToString("N2") €</MudText>
+                        <MudText Typo="Typo.subtitle2">Operating income</MudText>
+                        <MudText Typo="Typo.h6" Color="Color.Success">@s.Operating.Income.ToString("N2") €</MudText>
+                        <MudText Typo="Typo.subtitle2" Class="mt-2">Operating expense</MudText>
+                        <MudText Typo="Typo.h6" Color="Color.Error">@s.Operating.Expenses.ToString("N2") €</MudText>
+                        <MudText Typo="Typo.subtitle2" Class="mt-2">Operating net</MudText>
+                        <MudText Typo="Typo.h6" Color="@GetNetColor(s.Operating.NetOperatingCashFlow)">@s.Operating.NetOperatingCashFlow.ToString("N2") €</MudText>
+                        <MudText Typo="Typo.subtitle2" Class="mt-2">Invested net</MudText>
+                        <MudText Typo="Typo.body2">@s.Investing.NetInvestedCash.ToString("N2") €</MudText>
                         <MudText Typo="Typo.subtitle2" Class="mt-2">Transactions</MudText>
                         <MudText Typo="Typo.body2">@s.TransactionCount bank / @s.AssetTransactionCount asset</MudText>
                     </MudCardContent>
@@ -173,8 +209,9 @@ else
     private int? _loadedYear;
     private bool _initialized;
 
-    private Color NetCashFlowColor => (_summary?.NetCashFlow ?? 0) >= 0 ? Color.Success : Color.Error;
-    private Color FxNetColor => (_summary?.FxNet ?? 0) >= 0 ? Color.Success : Color.Error;
+    private Color OperatingNetColor => (_summary?.Operating.NetOperatingCashFlow ?? 0) >= 0 ? Color.Success : Color.Error;
+    private Color InvestingNetColor => (_summary?.Investing.NetInvestedCash ?? 0) >= 0 ? Color.Success : Color.Error;
+    private Color InternalFxNetColor => (_summary?.Internal.FxNet ?? 0) >= 0 ? Color.Success : Color.Error;
     private Color GetNetColor(decimal net) => net >= 0 ? Color.Success : Color.Error;
     private static Color NetColor(decimal net) => net >= 0 ? Color.Success : Color.Error;
 
@@ -236,14 +273,14 @@ else
 
         foreach (MonthlySummaryDto month in _summary.Months ?? new())
         {
-            income[month.Month - 1] = (double)month.Income;
-            expenses[month.Month - 1] = (double)month.Expenses;
+            income[month.Month - 1] = (double)month.Operating.Income;
+            expenses[month.Month - 1] = (double)month.Operating.Expenses;
         }
 
         _chartSeries = new List<ChartSeries<double>>
         {
-            new() { Name = "Income", Data = income },
-            new() { Name = "Expenses", Data = expenses },
+            new() { Name = "Operating income", Data = income },
+            new() { Name = "Operating expense", Data = expenses },
         };
         _chartLabels = Enumerable.Range(1, 12).Select(GetMonthName).ToArray();
     }
@@ -256,18 +293,18 @@ else
         }
 
         StringBuilder csv = new();
-        csv.AppendLine("Month,Income,Expenses,Transfers,Deposits,NetCashFlow,InvestmentPurchases,InvestmentSales,BankTx,AssetTx");
+        csv.AppendLine("Month,OperatingIncome,OperatingExpenses,OperatingNet,InvestPurchases,InvestSales,InvestNet,FXNet,BankTx,AssetTx");
         foreach (MonthlySummaryDto month in _summary.Months ?? new())
         {
             csv.AppendLine(string.Join(",",
                 GetMonthName(month.Month),
-                month.Income.ToString("F2", CultureInfo.InvariantCulture),
-                month.Expenses.ToString("F2", CultureInfo.InvariantCulture),
-                month.Transfers.ToString("F2", CultureInfo.InvariantCulture),
-                month.Deposits.ToString("F2", CultureInfo.InvariantCulture),
-                month.NetCashFlow.ToString("F2", CultureInfo.InvariantCulture),
-                month.InvestmentPurchases.ToString("F2", CultureInfo.InvariantCulture),
-                month.InvestmentSales.ToString("F2", CultureInfo.InvariantCulture),
+                month.Operating.Income.ToString("F2", CultureInfo.InvariantCulture),
+                month.Operating.Expenses.ToString("F2", CultureInfo.InvariantCulture),
+                month.Operating.NetOperatingCashFlow.ToString("F2", CultureInfo.InvariantCulture),
+                month.Investing.Purchases.ToString("F2", CultureInfo.InvariantCulture),
+                month.Investing.Sales.ToString("F2", CultureInfo.InvariantCulture),
+                month.Investing.NetInvestedCash.ToString("F2", CultureInfo.InvariantCulture),
+                month.Internal.FxNet.ToString("F2", CultureInfo.InvariantCulture),
                 month.TransactionCount,
                 month.AssetTransactionCount));
         }
