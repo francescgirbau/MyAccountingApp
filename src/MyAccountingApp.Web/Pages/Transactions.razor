@@ -66,8 +66,23 @@
             <MudTextField @bind-Value="_searchText" @bind-Value:after="ApplyFilters" Label="Search description" Variant="Variant.Outlined" FullWidth="true" Immediate="true" Placeholder="Type to search..." />
         </MudItem>
     </MudGrid>
+    <MudText Typo="Typo.subtitle2" Class="mt-3 mb-1">Quick filters</MudText>
+    <div class="d-flex flex-wrap gap-2">
+        <MudChip T="string" Color="@(IsBucketActive(OperatingBucket, _selectedCategories) ? Color.Primary : Color.Default)"
+                 Variant="@(IsBucketActive(OperatingBucket, _selectedCategories) ? Variant.Filled : Variant.Outlined)"
+                 OnClick="@(() => ToggleBucket(OperatingBucket))">Operating</MudChip>
+        <MudChip T="string" Color="@(IsBucketActive(InvestingBucket, _selectedCategories) ? Color.Primary : Color.Default)"
+                 Variant="@(IsBucketActive(InvestingBucket, _selectedCategories) ? Variant.Filled : Variant.Outlined)"
+                 OnClick="@(() => ToggleBucket(InvestingBucket))">Investing</MudChip>
+        <MudChip T="string" Color="@(IsBucketActive(InternalBucket, _selectedCategories) ? Color.Primary : Color.Default)"
+                 Variant="@(IsBucketActive(InternalBucket, _selectedCategories) ? Variant.Filled : Variant.Outlined)"
+                 OnClick="@(() => ToggleBucket(InternalBucket))">Internal moves</MudChip>
+        <MudChip T="string" Color="@(IsBucketActive(FxBucket, _selectedCategories) ? Color.Primary : Color.Default)"
+                 Variant="@(IsBucketActive(FxBucket, _selectedCategories) ? Variant.Filled : Variant.Outlined)"
+                 OnClick="@(() => ToggleBucket(FxBucket))">FX</MudChip>
+    </div>
     <MudText Typo="Typo.caption" Class="mud-text-secondary mt-2">
-        Select multiple categories to review deposits and transfers together.
+        Quick filters select whole cash-flow buckets. Use the Categories dropdown for finer control.
     </MudText>
 </MudPaper>
 
@@ -102,14 +117,22 @@ else
             <MudSimpleTable Dense="true" Hover="false" Bordered="false" Style="background: transparent;">
                 <thead>
                     <tr>
-                        <th>Currency</th>
+                        <th rowspan="2">Currency</th>
+                        <th style="text-align:center" colspan="3">Operating</th>
+                        <th style="text-align:center" colspan="2">Investing</th>
+                        <th style="text-align:center" colspan="2">Internal</th>
+                        <th style="text-align:center" colspan="2" class="mud-text-secondary">FX</th>
+                    </tr>
+                    <tr>
                         <th style="text-align:right">Income</th>
                         <th style="text-align:right">Expense</th>
-                        <th style="text-align:right">Transfer</th>
-                        <th style="text-align:right">Deposit</th>
-                        <th style="text-align:right" class="mud-text-secondary">FX out</th>
-                        <th style="text-align:right" class="mud-text-secondary">FX in</th>
-                        <th style="text-align:right">Net (excl. transfers)</th>
+                        <th style="text-align:right">Net</th>
+                        <th style="text-align:right">Purchases</th>
+                        <th style="text-align:right">Sales</th>
+                        <th style="text-align:right">Out</th>
+                        <th style="text-align:right">In</th>
+                        <th style="text-align:right" class="mud-text-secondary">Out</th>
+                        <th style="text-align:right" class="mud-text-secondary">In</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -119,19 +142,21 @@ else
                             <td><strong>@s.Currency</strong> <span class="mud-text-secondary">(@s.Count)</span></td>
                             <td style="text-align:right" class="green--text">@s.Income.ToString("N2")</td>
                             <td style="text-align:right" class="red--text">@s.Expense.ToString("N2")</td>
+                            <td style="text-align:right">
+                                <strong class="@(s.OperatingNet >= 0 ? "green--text" : "red--text")">@s.OperatingNet.ToString("N2")</strong>
+                            </td>
+                            <td style="text-align:right">@s.InvestingPurchase.ToString("N2")</td>
+                            <td style="text-align:right">@s.InvestingSale.ToString("N2")</td>
                             <td style="text-align:right">@s.Transfer.ToString("N2")</td>
-                            <td style="text-align:right" class="green--text">@s.Deposit.ToString("N2")</td>
+                            <td style="text-align:right">@s.Deposit.ToString("N2")</td>
                             <td style="text-align:right" class="mud-text-secondary">@s.FxOut.ToString("N2")</td>
                             <td style="text-align:right" class="mud-text-secondary">@s.FxIn.ToString("N2")</td>
-                            <td style="text-align:right">
-                                <strong class="@(s.Net >= 0 ? "green--text" : "red--text")">@s.Net.ToString("N2")</strong>
-                            </td>
                         </tr>
                     }
                 </tbody>
             </MudSimpleTable>
             <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
-                Net = Income + Deposit − Expense. Transfers / deposits are same-currency moves; FX legs sit in their own out / in columns (not in Net).
+                Operating net = Income − Expense. Investing (asset purchase/sale) and internal transfers/deposits are excluded from Operating net; FX legs sit in their own out / in columns (not in Operating net).
             </MudText>
         }
     </MudPaper>
@@ -189,7 +214,19 @@ else
             <MudTd DataLabel="Amount"><span class="@(context.Category == "EXPENSE" || context.Category == "FEE" || context.Category == "WITHHOLDING_TAX" || context.Category == "TRANSFER" ? "red--text" : "green--text")">@context.Money.Amount.ToString("N2")</span></MudTd>
             <MudTd DataLabel="Curr.">@context.Money.Currency</MudTd>
             <MudTd DataLabel="Category">
-                <MudChip T="string" Size="Size.Small" Color="@GetCategoryColor(context.Category)">@context.Category</MudChip>
+                @if (GetCategoryTooltip(context.Category) is string tip)
+                {
+                    <MudTooltip Placement="Placement.Top">
+                        <ChildContent>
+                            <MudChip T="string" Size="Size.Small" Color="@GetCategoryColor(context.Category)">@GetCategoryLabel(context.Category)</MudChip>
+                        </ChildContent>
+                        <TooltipContent><span>@tip</span></TooltipContent>
+                    </MudTooltip>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="@GetCategoryColor(context.Category)">@GetCategoryLabel(context.Category)</MudChip>
+                }
                 @if (!string.IsNullOrEmpty(context.FxLeg))
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Class="ml-1">FX @(context.FxLeg == "Out" ? "out" : "in")</MudChip>
@@ -551,6 +588,8 @@ else
             {
                 decimal income = g.Where(t => t.Category is "INCOME" or "DIVIDEND" or "INTEREST").Sum(t => t.Money.Amount);
                 decimal expense = g.Where(t => t.Category is "EXPENSE" or "FEE" or "WITHHOLDING_TAX").Sum(t => t.Money.Amount);
+                decimal investingPurchase = g.Where(t => t.Category == "INVESTMENT").Sum(t => t.Money.Amount);
+                decimal investingSale = g.Where(t => t.Category == "DIVESTMENT").Sum(t => t.Money.Amount);
                 decimal transfer = g.Where(t => t.Category == "TRANSFER").Sum(t => t.Money.Amount);
                 decimal deposit = g.Where(t => t.Category == "DEPOSIT").Sum(t => t.Money.Amount);
                 decimal fxOut = g.Where(t => t.Category == "FX_CONVERSION" && t.FxLeg == "Out").Sum(t => t.Money.Amount);
@@ -561,11 +600,13 @@ else
                     Count = g.Count(),
                     Income = income,
                     Expense = expense,
+                    InvestingPurchase = investingPurchase,
+                    InvestingSale = investingSale,
                     Transfer = transfer,
                     Deposit = deposit,
                     FxOut = fxOut,
                     FxIn = fxIn,
-                    Net = income + deposit - expense,
+                    OperatingNet = income - expense,
                 };
             })
             .ToList();
@@ -579,19 +620,69 @@ else
         public int Count { get; set; }
         public decimal Income { get; set; }
         public decimal Expense { get; set; }
+        public decimal InvestingPurchase { get; set; }
+        public decimal InvestingSale { get; set; }
         public decimal Transfer { get; set; }
         public decimal Deposit { get; set; }
         public decimal FxOut { get; set; }
         public decimal FxIn { get; set; }
-        public decimal Net { get; set; }
+        public decimal OperatingNet { get; set; }
     }
+
+    private static readonly string[] OperatingBucket = { "INCOME", "EXPENSE", "DIVIDEND", "INTEREST", "FEE", "WITHHOLDING_TAX" };
+    private static readonly string[] InvestingBucket = { "INVESTMENT", "DIVESTMENT" };
+    private static readonly string[] InternalBucket = { "TRANSFER", "DEPOSIT" };
+    private static readonly string[] FxBucket = { "FX_CONVERSION" };
+
+    private static bool IsBucketActive(IEnumerable<string> bucket, IReadOnlySet<string> selected) => bucket.All(selected.Contains);
+
+    private void ToggleBucket(IEnumerable<string> bucket)
+    {
+        if (IsBucketActive(bucket, _selectedCategories))
+        {
+            foreach (string cat in bucket)
+            {
+                _selectedCategories.Remove(cat);
+            }
+        }
+        else
+        {
+            foreach (string cat in bucket)
+            {
+                _selectedCategories.Add(cat);
+            }
+        }
+
+        ApplyFilters();
+    }
+
+    private static string GetCategoryLabel(string category) => category switch
+    {
+        "INVESTMENT" => "Asset purchase",
+        "DIVESTMENT" => "Asset sale",
+        "TRANSFER" => "Internal transfer out",
+        "DEPOSIT" => "Internal transfer in",
+        "FX_CONVERSION" => "Currency exchange",
+        _ => category,
+    };
+
+    private static string? GetCategoryTooltip(string category) => category switch
+    {
+        "INVESTMENT" => "Cash converted into an asset; not an operating expense.",
+        "DIVESTMENT" => "Cash received from an asset sale; not operating income.",
+        "TRANSFER" => "Internal same-currency move out; not P/L.",
+        "DEPOSIT" => "Internal same-currency move in; not P/L.",
+        "FX_CONVERSION" => "Two-leg currency conversion; not P/L.",
+        _ => null,
+    };
 
     private static Color GetCategoryColor(string category) => category switch
     {
         "INCOME" or "DIVIDEND" or "INTEREST" => Color.Success,
         "EXPENSE" or "FEE" or "WITHHOLDING_TAX" => Color.Error,
         "TRANSFER" => Color.Warning,
-        "DEPOSIT" or "INVESTMENT" or "DIVESTMENT" => Color.Info,
+        "DEPOSIT" => Color.Warning,
+        "INVESTMENT" or "DIVESTMENT" => Color.Info,
         "FX_CONVERSION" => Color.Secondary,
         _ => Color.Default,
     };
