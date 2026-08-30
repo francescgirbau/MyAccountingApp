@@ -147,17 +147,33 @@ public class DashboardDto
 
 public class CashSnapshotDto
 {
-    public decimal IncomeMtd { get; set; }
-    public decimal ExpenseMtd { get; set; }
-    public decimal NetCashFlowMtd { get; set; }
-    public decimal IncomeYtd { get; set; }
-    public decimal ExpenseYtd { get; set; }
-    public decimal NetCashFlowYtd { get; set; }
-    public decimal TransfersYtd { get; set; }
-    public decimal DepositsYtd { get; set; }
-    public decimal FxOutYtd { get; set; }
-    public decimal FxInYtd { get; set; }
-    public decimal FxNetYtd { get; set; }
+    public OperatingCashFlowDto OperatingMtd { get; set; } = new();
+    public OperatingCashFlowDto OperatingYtd { get; set; } = new();
+    public InvestingCashFlowDto InvestingYtd { get; set; } = new();
+    public InternalCashFlowDto InternalYtd { get; set; } = new();
+}
+
+public class OperatingCashFlowDto
+{
+    public decimal Income { get; set; }
+    public decimal Expenses { get; set; }
+    public decimal NetOperatingCashFlow { get; set; }
+}
+
+public class InvestingCashFlowDto
+{
+    public decimal Purchases { get; set; }
+    public decimal Sales { get; set; }
+    public decimal NetInvestedCash { get; set; }
+}
+
+public class InternalCashFlowDto
+{
+    public decimal Transfers { get; set; }
+    public decimal Deposits { get; set; }
+    public decimal FxOut { get; set; }
+    public decimal FxIn { get; set; }
+    public decimal FxNet { get; set; }
 }
 
 public class PortfolioSnapshotDto

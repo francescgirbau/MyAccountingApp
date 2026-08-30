@@ -51,6 +51,25 @@ public class DashboardQueryTests
         Assert.Equal(1, dashboard.Portfolio.OpenPositionCount);
         Assert.Equal(1, dashboard.Portfolio.SymbolCount);
         Assert.Null(dashboard.Portfolio.TotalMarketValueEur);
+        Assert.Equal(1000, dashboard.Cash.InvestingYtd.Purchases);
+        Assert.Equal(300, dashboard.Cash.InvestingYtd.Sales);
+        Assert.Equal(-700, dashboard.Cash.InvestingYtd.NetInvestedCash);
+    }
+
+    [Fact]
+    public async Task GetAsync_ShouldOnlyCountInvestingWithinYtd()
+    {
+        FakePfRepo pfRepo = new();
+        pfRepo.Add(CreateAsset("MSFT", new DateTime(2025, 11, 10), 5, 500, AssetTransactionType.Buy));
+        pfRepo.Add(CreateAsset("MSFT", new DateTime(2026, 3, 2), 3, 350, AssetTransactionType.Buy));
+        pfRepo.Add(CreateAsset("MSFT", new DateTime(2026, 7, 15), 1, 120, AssetTransactionType.Sell));
+        DashboardQuery query = new(new FakeTxRepo(), pfRepo, new FakeValidationQuery());
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        Assert.Equal(350, dashboard.Cash.InvestingYtd.Purchases);
+        Assert.Equal(120, dashboard.Cash.InvestingYtd.Sales);
+        Assert.Equal(-230, dashboard.Cash.InvestingYtd.NetInvestedCash);
     }
 
     [Fact]

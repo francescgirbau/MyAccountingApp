@@ -55,6 +55,12 @@ public class DashboardEndpointsTests
         Assert.Equal(100, operatingYtd.GetProperty("expenses").GetDecimal());
         Assert.Equal(900, operatingYtd.GetProperty("netOperatingCashFlow").GetDecimal());
 
+        // Investing YTD
+        JsonElement investingYtd = cash.GetProperty("investingYtd");
+        Assert.Equal(200, investingYtd.GetProperty("purchases").GetDecimal());
+        Assert.Equal(0, investingYtd.GetProperty("sales").GetDecimal());
+        Assert.Equal(-200, investingYtd.GetProperty("netInvestedCash").GetDecimal());
+
         JsonElement portfolio = root.GetProperty("portfolio");
         Assert.Equal(200, portfolio.GetProperty("totalCostBasisEur").GetDecimal());
         Assert.Equal(0, portfolio.GetProperty("realizedGainLossYtdEur").GetDecimal());
