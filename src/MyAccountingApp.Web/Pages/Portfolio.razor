@@ -14,7 +14,12 @@
             <MudText Typo="Typo.h5">@_overview.MarketValueEur.ToString("N2") €</MudText>
         </MudPaper>
         <MudPaper Class="pa-4 flex-1" Outlined="true">
-            <MudText Typo="Typo.body2">Invested / open cost (EUR)</MudText>
+            <MudText Typo="Typo.body2">
+                <MudTooltip Placement="Placement.Top">
+                    <ChildContent><span>Open cost basis (EUR)</span></ChildContent>
+                    <TooltipContent><span>Cost basis of open (priced) positions — excludes unpriced positions, not "cash invested during the year".</span></TooltipContent>
+                </MudTooltip>
+            </MudText>
             <MudText Typo="Typo.h5">@_overview.InvestedCostEur.ToString("N2") €</MudText>
         </MudPaper>
         <MudPaper Class="pa-4 flex-1" Outlined="true">
@@ -33,13 +38,38 @@
         </MudPaper>
     </div>
 
+    <div class="d-flex flex-wrap align-center gap-4 mb-4">
+        <MudChip T="string" Color="Color.Primary" Size="Size.Small">Open positions only</MudChip>
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+            @if (_overview.PricesAsOfUtc is not null)
+            {
+                <text>Last price as of @FormatAsOf(_overview.PricesAsOfUtc.Value)</text>
+            }
+            else
+            {
+                <text>No market prices available</text>
+            }
+            @if (_overview.IsMarketClosed)
+            {
+                <text> · last close (market closed)</text>
+            }
+        </MudText>
+        <MudSpacer />
+        @if (_overview.UnpricedPositionCount > 0)
+        {
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                @_overview.UnpricedPositionCount unpriced position(s) excluded from valuation
+                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary"
+                           OnClick="@(() => Navigation.NavigateTo("/data-quality"))" StartIcon="@Icons.Material.Filled.OpenInNew">
+                    Data Quality
+                </MudButton>
+            </MudText>
+        }
+    </div>
+
     @if (_overview.IsMarketClosed && _overview.PricesAsOfUtc is not null)
     {
         <MudAlert Severity="Severity.Info" Class="mb-4">Market closed — using last close prices as of @FormatAsOf(_overview.PricesAsOfUtc.Value).</MudAlert>
-    }
-    @if (_overview.UnpricedPositionCount > 0)
-    {
-        <MudAlert Severity="Severity.Warning" Class="mb-4">@_overview.UnpricedPositionCount unpriced position(s) excluded from valuation.</MudAlert>
     }
     @if (_overview.OptionSymbolCount > 0)
     {
@@ -114,7 +144,7 @@
             <MudTh>Last price</MudTh>
         </Columns>
         <RowTemplate>
-            <MudTd DataLabel="Symbol">
+            <MudTd DataLabel="Symbol" Style="@HighlightStyle(context.Symbol)">
                 <span class="cursor-pointer" @onclick="() => NavigateToSlice(context.Symbol)">@context.Symbol</span>
             </MudTd>
             <MudTd DataLabel="Qty">@context.Quantity.ToString("G")</MudTd>
@@ -254,7 +284,7 @@ else
             <MudTh></MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd DataLabel="Symbol">
+            <MudTd DataLabel="Symbol" Style="@HighlightStyle(context.Symbol)">
                 <MudChip T="string" Size="Size.Small" Color="Color.Primary">@context.Symbol</MudChip>
                 @if (context.HasShortfall)
                 {
@@ -391,6 +421,10 @@ else
     private List<LegendItemDto> _legend = new();
     private string _sortColumn = "CurrentWeight";
     private bool _sortAscending;
+    private string? _highlightedSymbol;
+
+    [SupplyParameterFromQuery(Name = "symbol")]
+    public string? SymbolFromQuery { get; set; }
 
     private static readonly string[] Palette =
     {
@@ -414,12 +448,21 @@ else
             BuildPies();
             BuildLegend();
             ComputeTotals();
+
+            if (!string.IsNullOrWhiteSpace(SymbolFromQuery))
+            {
+                _highlightedSymbol = SymbolFromQuery;
+                _expanded.Add(SymbolFromQuery);
+            }
         }
         finally
         {
             _loading = false;
         }
     }
+
+    private string? HighlightStyle(string symbol) =>
+        _highlightedSymbol == symbol ? "background-color: #fff9c4;" : null;
 
     private async Task RefreshPricesAsync()
     {

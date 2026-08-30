@@ -1,4 +1,5 @@
 @page "/"
+@using MyAccountingApp.Application.Services
 @inject HttpClient Http
 @inject NavigationManager Navigation
 
@@ -73,7 +74,12 @@ else
             <MudCard Class="pa-4" Outlined="true">
                 <MudCardContent>
                     <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Purchases YTD</MudText>
-                    <MudText Typo="Typo.h5" Class="red--text">-@_dashboard.Cash.InvestingYtd.Purchases.ToString("N2")</MudText>
+                    <MudTooltip Placement="Placement.Top">
+                        <ChildContent>
+                            <MudText Typo="Typo.h5" Class="red--text cursor-pointer" @onclick="@(() => NavigateToAssetTransactions(purchase: true))">-@_dashboard.Cash.InvestingYtd.Purchases.ToString("N2")</MudText>
+                        </ChildContent>
+                        <TooltipContent><span>View purchases in Asset Transactions</span></TooltipContent>
+                    </MudTooltip>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -81,7 +87,12 @@ else
             <MudCard Class="pa-4" Outlined="true">
                 <MudCardContent>
                     <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Sales YTD</MudText>
-                    <MudText Typo="Typo.h5" Class="green--text">@_dashboard.Cash.InvestingYtd.Sales.ToString("N2")</MudText>
+                    <MudTooltip Placement="Placement.Top">
+                        <ChildContent>
+                            <MudText Typo="Typo.h5" Class="green--text cursor-pointer" @onclick="@(() => NavigateToAssetTransactions(purchase: false))">@_dashboard.Cash.InvestingYtd.Sales.ToString("N2")</MudText>
+                        </ChildContent>
+                        <TooltipContent><span>View sales in Asset Transactions</span></TooltipContent>
+                    </MudTooltip>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -194,4 +205,7 @@ else
     private static string NetClass(decimal value) => value >= 0 ? "green--text" : "red--text";
 
     private static string GainClass(decimal value) => value >= 0 ? "green--text" : "red--text";
+
+    private void NavigateToAssetTransactions(bool purchase) =>
+        Navigation.NavigateTo(AssetTransactionDisplay.BuildDeepLink(_dashboard.AsOf.Year, purchase));
 }
