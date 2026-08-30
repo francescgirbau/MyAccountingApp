@@ -150,7 +150,7 @@ else if (Year.HasValue)
                     <MudTd DataLabel="Op. net"><MudText Color="@NetColor(context.Operating.NetOperatingCashFlow)">@context.Operating.NetOperatingCashFlow.ToString("N2") €</MudText></MudTd>
                     <MudTd DataLabel="Invest in"><MudText Color="Color.Error">−@context.Investing.Purchases.ToString("N2") €</MudText></MudTd>
                     <MudTd DataLabel="Invest out"><MudText Color="Color.Success">@context.Investing.Sales.ToString("N2") €</MudText></MudTd>
-                    <MudTd DataLabel="Invest net"><MudText Color="@InvestingNetColor(context.Investing.NetInvestedCash)">@context.Investing.NetInvestedCash.ToString("N2") €</MudText></MudTd>
+                    <MudTd DataLabel="Invest net"><MudText Color="@GetNetColor(context.Investing.NetInvestedCash)">@context.Investing.NetInvestedCash.ToString("N2") €</MudText></MudTd>
                     <MudTd DataLabel="FX net (EUR)"><MudText Color="@NetColor(context.Internal.FxNet)">@context.Internal.FxNet.ToString("N2") €</MudText></MudTd>
                     <MudTd DataLabel="Tx">@context.TransactionCount / @context.AssetTransactionCount</MudTd>
                 </RowTemplate>
@@ -161,9 +161,9 @@ else if (Year.HasValue)
                     <MudTd><MudText Typo="Typo.subtitle2" Color="@OperatingNetColor">@_summary.Operating.NetOperatingCashFlow.ToString("N2") €</MudText></MudTd>
                     <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Error">−@_summary.Investing.Purchases.ToString("N2") €</MudText></MudTd>
                     <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Success">@_summary.Investing.Sales.ToString("N2") €</MudText></MudTd>
-                    <MudTd><MudText Typo="Typo.subtitle2" Color="@InvestingNetColor(_summary.Investing.NetInvestedCash)">@_summary.Investing.NetInvestedCash.ToString("N2") €</MudText></MudTd>
+                    <MudTd><MudText Typo="Typo.subtitle2" Color="@GetNetColor(_summary.Investing.NetInvestedCash)">@_summary.Investing.NetInvestedCash.ToString("N2") €</MudText></MudTd>
                     <MudTd><MudText Typo="Typo.subtitle2" Color="@InternalFxNetColor">@_summary.Internal.FxNet.ToString("N2") €</MudText></MudTd>
-                    <MudTd><MudText Typo="Typo.subtitle2">@_summary.TransactionCount / @_summary.AssetTransactionCount</MudTd>
+                    <MudTd><MudText Typo="Typo.subtitle2">@_summary.TransactionCount / @_summary.AssetTransactionCount</MudText></MudTd>
                 </FooterContent>
             </MudTable>
         }
