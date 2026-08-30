@@ -5,6 +5,7 @@
 @inject IJSRuntime JS
 @using System.Globalization
 @using System.Text
+@using MyAccountingApp.Application.Services
 
 <PageTitle>Summary</PageTitle>
 
@@ -51,8 +52,24 @@ else if (Year.HasValue)
         <MudCard Class="pa-6" Outlined="true">
             <MudCardContent>
                 <MudGrid>
-                    <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">Purchases (cash out)</MudText><MudText Typo="Typo.h5" Color="Color.Error">−@_summary.Investing.Purchases.ToString("N2") €</MudText></MudItem>
-                    <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">Sales proceeds (cash in)</MudText><MudText Typo="Typo.h5" Color="Color.Success">@_summary.Investing.Sales.ToString("N2") €</MudText></MudItem>
+                    <MudItem xs="6" md="4">
+                        <MudText Typo="Typo.subtitle2">Purchases (cash out)</MudText>
+                        <MudTooltip Placement="Placement.Top">
+                            <ChildContent>
+                                <MudText Typo="Typo.h5" Color="Color.Error" Class="cursor-pointer" @onclick="@(() => NavigateToAssetTransactions(purchase: true))">−@_summary.Investing.Purchases.ToString("N2") €</MudText>
+                            </ChildContent>
+                            <TooltipContent><span>View purchases in Asset Transactions</span></TooltipContent>
+                        </MudTooltip>
+                    </MudItem>
+                    <MudItem xs="6" md="4">
+                        <MudText Typo="Typo.subtitle2">Sales proceeds (cash in)</MudText>
+                        <MudTooltip Placement="Placement.Top">
+                            <ChildContent>
+                                <MudText Typo="Typo.h5" Color="Color.Success" Class="cursor-pointer" @onclick="@(() => NavigateToAssetTransactions(purchase: false))">@_summary.Investing.Sales.ToString("N2") €</MudText>
+                            </ChildContent>
+                            <TooltipContent><span>View sales in Asset Transactions</span></TooltipContent>
+                        </MudTooltip>
+                    </MudItem>
                     <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">Net invested cash</MudText><MudText Typo="Typo.h5" Color="@InvestingNetColor">@_summary.Investing.NetInvestedCash.ToString("N2") €</MudText></MudItem>
                 </MudGrid>
                 <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
@@ -216,6 +233,14 @@ else
     private static Color NetColor(decimal net) => net >= 0 ? Color.Success : Color.Error;
 
     private void NavigateToYear(int year) => Navigation.NavigateTo($"/summary/{year}");
+
+    private void NavigateToAssetTransactions(bool purchase)
+    {
+        if (Year.HasValue)
+        {
+            Navigation.NavigateTo(AssetTransactionDisplay.BuildDeepLink(Year.Value, purchase));
+        }
+    }
 
     private static string GetMonthName(int month) => CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month);
 

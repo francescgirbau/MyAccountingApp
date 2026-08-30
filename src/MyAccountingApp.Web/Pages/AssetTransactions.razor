@@ -1,4 +1,5 @@
 @page "/asset-transactions"
+@using MyAccountingApp.Application.Services
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
@@ -67,6 +68,15 @@ else
                 </MudSelect>
             </MudItem>
         </MudGrid>
+        <MudText Typo="Typo.subtitle2" Class="mt-3 mb-1">Quick filters</MudText>
+        <div class="d-flex flex-wrap gap-2">
+            <MudChip T="string" Color="@(_selectedType == "Buy" ? Color.Primary : Color.Default)"
+                     Variant="@(_selectedType == "Buy" ? Variant.Filled : Variant.Outlined)"
+                     OnClick="@(() => ToggleType("Buy"))">Buy</MudChip>
+            <MudChip T="string" Color="@(_selectedType == "Sell" ? Color.Primary : Color.Default)"
+                     Variant="@(_selectedType == "Sell" ? Variant.Filled : Variant.Outlined)"
+                     OnClick="@(() => ToggleType("Sell"))">Sell</MudChip>
+        </div>
     </MudPaper>
 
     @if (_selected.Count > 0)
@@ -99,10 +109,11 @@ else
             <col style="width: 80px" />
             <col />
             <col style="width: 80px" />
+            <col style="width: 90px" />
             <col style="width: 100px" />
             <col style="width: 80px" />
-            <col style="width: 80px" />
-            <col style="width: 80px" />
+            <col style="width: 90px" />
+            <col style="width: 150px" />
             <col style="width: 140px" />
         </ColGroup>
         <HeaderContent>
@@ -110,22 +121,49 @@ else
             <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Symbol)">Symbol</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Transaction.Description)">Description</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Quantity)">Qty</MudTableSortLabel></MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Transaction.Money.Amount)">Amount</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.UnitaryCost.Amount)">Unit price</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Transaction.Money.Amount)">@(_selectedType switch { "Buy" => "Cost", "Sell" => "Proceeds", _ => "Amount" })</MudTableSortLabel></MudTh>
             <MudTh>Curr.</MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Type)">Type</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Transaction.Category)">Category</MudTableSortLabel></MudTh>
             <MudTh>Source</MudTh>
             <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Date">@context.Transaction.Date.ToString("yyyy-MM-dd")</MudTd>
             <MudTd DataLabel="Symbol">
-                <MudChip T="string" Size="Size.Small" Color="Color.Primary">@context.Symbol</MudChip>
+                <MudTooltip Placement="Placement.Top">
+                    <ChildContent>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" OnClick="@(() => NavigateToPortfolio(context.Symbol))">@context.Symbol</MudChip>
+                    </ChildContent>
+                    <TooltipContent><span>Open position in Portfolio</span></TooltipContent>
+                </MudTooltip>
             </MudTd>
             <MudTd DataLabel="Description">@context.Transaction.Description</MudTd>
             <MudTd DataLabel="Qty">@context.Quantity.ToString("G")</MudTd>
+            <MudTd DataLabel="Unit price">@context.UnitaryCost.Amount.ToString("N4")</MudTd>
             <MudTd DataLabel="Amount">@context.Transaction.Money.Amount.ToString("N2")</MudTd>
             <MudTd DataLabel="Curr.">@context.Transaction.Money.Currency</MudTd>
             <MudTd DataLabel="Type">@context.Type</MudTd>
+            <MudTd DataLabel="Category">
+                @{
+                    string label = AssetTransactionDisplay.GetCategoryLabel(context.Type, context.Transaction.Category);
+                    string tip = AssetTransactionDisplay.GetCategoryTooltip(context.Type, context.Transaction.Category);
+                }
+                @if (!string.IsNullOrEmpty(tip))
+                {
+                    <MudTooltip Placement="Placement.Top">
+                        <ChildContent>
+                            <MudChip T="string" Size="Size.Small" Color="@(context.Type == "Buy" ? Color.Primary : Color.Info)">@label</MudChip>
+                        </ChildContent>
+                        <TooltipContent><span>@tip · technical category: @context.Transaction.Category</span></TooltipContent>
+                    </MudTooltip>
+                }
+                else
+                {
+                    <MudText Typo="Typo.caption">@context.Transaction.Category</MudText>
+                }
+            </MudTd>
             <MudTd DataLabel="Source">
                 @if (!string.IsNullOrEmpty(context.Source))
                 {
@@ -145,6 +183,9 @@ else
             <MudTablePager PageSizeOptions="@(new int[]{25, 50, 100})" />
         </PagerContent>
     </MudTable>
+    <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
+        Amount is the cost basis for asset purchases and the proceeds for asset sales. Unit price is the amount per quantity.
+    </MudText>
 }
 
 <MudDialog @bind-Visible="_showFormDialog">
@@ -279,6 +320,12 @@ else
     [SupplyParameterFromQuery(Name = "symbol")]
     public string? SymbolFromQuery { get; set; }
 
+    [SupplyParameterFromQuery(Name = "year")]
+    public int? YearFromQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "type")]
+    public string? TypeFromQuery { get; set; }
+
     [SupplyParameterFromQuery(Name = "ids")]
     public string? IdsFromQuery { get; set; }
 
@@ -295,8 +342,29 @@ else
             _selectedSymbol = SymbolFromQuery;
         }
 
+        if (YearFromQuery.HasValue)
+        {
+            _selectedYear = YearFromQuery.Value;
+        }
+
+        if (!string.IsNullOrWhiteSpace(TypeFromQuery))
+        {
+            _selectedType = TypeFromQuery;
+        }
+
         ApplyIssueFilterFromQuery();
         await LoadDataAsync();
+    }
+
+    private void ToggleType(string type)
+    {
+        _selectedType = _selectedType == type ? null : type;
+        ApplyFilters();
+    }
+
+    private void NavigateToPortfolio(string symbol)
+    {
+        Navigation.NavigateTo($"/portfolio?symbol={Uri.EscapeDataString(symbol)}");
     }
 
     private void ApplyIssueFilterFromQuery()
