@@ -29,7 +29,7 @@ public class DashboardQuery : IDashboardQuery
         List<Transaction> allTransactions = this._transactionRepo.GetAll().ToList();
         List<AssetTransaction> allAssetTransactions = this._portfolioRepo.GetAllTransactions().ToList();
 
-        CashSnapshotDto cash = BuildCashSnapshot(allTransactions, asOf);
+        CashSnapshotDto cash = BuildCashSnapshot(allTransactions, allAssetTransactions, asOf);
         PortfolioSnapshotDto portfolio = BuildPortfolioSnapshot(allAssetTransactions, asOf.Year);
         List<DashboardAlertDto> alerts = BuildAlerts(allTransactions, allAssetTransactions);
         this.AddDataQualityAlert(alerts);
@@ -37,7 +37,7 @@ public class DashboardQuery : IDashboardQuery
         return Task.FromResult(new DashboardDto(asOf, cash, portfolio, alerts));
     }
 
-    private static CashSnapshotDto BuildCashSnapshot(List<Transaction> allTransactions, DateOnly asOf)
+    private static CashSnapshotDto BuildCashSnapshot(List<Transaction> allTransactions, List<AssetTransaction> allAssetTransactions, DateOnly asOf)
     {
         DateTime end = asOf.ToDateTime(new TimeOnly(23, 59, 59));
         DateTime yearStart = new DateTime(asOf.Year, 1, 1);
@@ -77,6 +77,13 @@ public class DashboardQuery : IDashboardQuery
         decimal fxOutYtd = SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out);
         decimal fxInYtd = SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In);
 
+        // Investing YTD (from AssetTransactions)
+        List<AssetTransaction> ytdAssets = allAssetTransactions
+            .Where(a => a.Transaction.Date >= yearStart && a.Transaction.Date <= end)
+            .ToList();
+        decimal purchasesYtd = ytdAssets.Where(a => a.Type == AssetTransactionType.Buy).Sum(a => a.Transaction.Money.Amount);
+        decimal salesYtd = ytdAssets.Where(a => a.Type == AssetTransactionType.Sell).Sum(a => a.Transaction.Money.Amount);
+
         return new CashSnapshotDto(
             new OperatingCashFlowDto(
                 Math.Round(incomeMtd + dividendsMtd + interestMtd, 2),
@@ -86,7 +93,10 @@ public class DashboardQuery : IDashboardQuery
                 Math.Round(incomeYtd + SumCategory(ytd, t => t.Category == TransactionCategory.DIVIDEND) + SumCategory(ytd, t => t.Category == TransactionCategory.INTEREST), 2),
                 Math.Round(expensesYtdTotal, 2),
                 Math.Round(incomeYtd + SumCategory(ytd, t => t.Category == TransactionCategory.DIVIDEND) + SumCategory(ytd, t => t.Category == TransactionCategory.INTEREST) - expensesYtdTotal, 2)),
-            new InvestingCashFlowDto(0, 0, 0), // Investment breakdown not in dashboard for now
+            new InvestingCashFlowDto(
+                Math.Round(purchasesYtd, 2),
+                Math.Round(salesYtd, 2),
+                Math.Round(salesYtd - purchasesYtd, 2)),
             new InternalCashFlowDto(
                 Math.Round(transfersYtd, 2),
                 Math.Round(depositsYtd, 2),

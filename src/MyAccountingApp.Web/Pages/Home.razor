@@ -23,9 +23,9 @@ else
             <MudCard Class="pa-4" Outlined="true">
                 <MudCardContent>
                     <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Month to date</MudText>
-                    <MudText Typo="Typo.h4" Class="green--text">+@_dashboard.Cash.IncomeMtd.ToString("N2")</MudText>
-                    <MudText Typo="Typo.h4" Class="red--text">-@_dashboard.Cash.ExpenseMtd.ToString("N2")</MudText>
-                    <MudText Typo="Typo.h5" Class="@NetClass(_dashboard.Cash.NetCashFlowMtd)">Net @_dashboard.Cash.NetCashFlowMtd.ToString("N2")</MudText>
+                    <MudText Typo="Typo.h4" Class="green--text">+@_dashboard.Cash.OperatingMtd.Income.ToString("N2")</MudText>
+                    <MudText Typo="Typo.h4" Class="red--text">-@_dashboard.Cash.OperatingMtd.Expenses.ToString("N2")</MudText>
+                    <MudText Typo="Typo.h5" Class="@NetClass(_dashboard.Cash.OperatingMtd.NetOperatingCashFlow)">Net @_dashboard.Cash.OperatingMtd.NetOperatingCashFlow.ToString("N2")</MudText>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -33,9 +33,9 @@ else
             <MudCard Class="pa-4" Outlined="true">
                 <MudCardContent>
                     <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Year to date</MudText>
-                    <MudText Typo="Typo.h4" Class="green--text">+@_dashboard.Cash.IncomeYtd.ToString("N2")</MudText>
-                    <MudText Typo="Typo.h4" Class="red--text">-@_dashboard.Cash.ExpenseYtd.ToString("N2")</MudText>
-                    <MudText Typo="Typo.h5" Class="@NetClass(_dashboard.Cash.NetCashFlowYtd)">Net @_dashboard.Cash.NetCashFlowYtd.ToString("N2")</MudText>
+                    <MudText Typo="Typo.h4" Class="green--text">+@_dashboard.Cash.OperatingYtd.Income.ToString("N2")</MudText>
+                    <MudText Typo="Typo.h4" Class="red--text">-@_dashboard.Cash.OperatingYtd.Expenses.ToString("N2")</MudText>
+                    <MudText Typo="Typo.h5" Class="@NetClass(_dashboard.Cash.OperatingYtd.NetOperatingCashFlow)">Net @_dashboard.Cash.OperatingYtd.NetOperatingCashFlow.ToString("N2")</MudText>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -43,7 +43,7 @@ else
             <MudCard Class="pa-4" Outlined="true">
                 <MudCardContent>
                     <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Transfers YTD</MudText>
-                    <MudText Typo="Typo.h5">@_dashboard.Cash.TransfersYtd.ToString("N2")</MudText>
+                    <MudText Typo="Typo.h5">@_dashboard.Cash.InternalYtd.Transfers.ToString("N2")</MudText>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -51,7 +51,7 @@ else
             <MudCard Class="pa-4" Outlined="true">
                 <MudCardContent>
                     <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Deposits YTD</MudText>
-                    <MudText Typo="Typo.h5" Class="green--text">@_dashboard.Cash.DepositsYtd.ToString("N2")</MudText>
+                    <MudText Typo="Typo.h5" Class="green--text">@_dashboard.Cash.InternalYtd.Deposits.ToString("N2")</MudText>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -59,9 +59,45 @@ else
             <MudCard Class="pa-4" Outlined="true">
                 <MudCardContent>
                     <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">FX YTD (EUR)</MudText>
-                    <MudText Typo="Typo.h6" Class="mud-text-secondary">out @_dashboard.Cash.FxOutYtd.ToString("N2")</MudText>
-                    <MudText Typo="Typo.h6" Class="green--text">in @_dashboard.Cash.FxInYtd.ToString("N2")</MudText>
-                    <MudText Typo="Typo.h6" Class="@NetClass(_dashboard.Cash.FxNetYtd)">net @_dashboard.Cash.FxNetYtd.ToString("N2")</MudText>
+                    <MudText Typo="Typo.h6" Class="mud-text-secondary">out @_dashboard.Cash.InternalYtd.FxOut.ToString("N2")</MudText>
+                    <MudText Typo="Typo.h6" Class="green--text">in @_dashboard.Cash.InternalYtd.FxIn.ToString("N2")</MudText>
+                    <MudText Typo="Typo.h6" Class="@NetClass(_dashboard.Cash.InternalYtd.FxNet)">net @_dashboard.Cash.InternalYtd.FxNet.ToString("N2")</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <MudText Typo="Typo.subtitle1" Class="mt-6 mb-2 mud-text-secondary">Investing</MudText>
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Class="pa-4" Outlined="true">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Purchases YTD</MudText>
+                    <MudText Typo="Typo.h5" Class="red--text">-@_dashboard.Cash.InvestingYtd.Purchases.ToString("N2")</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Class="pa-4" Outlined="true">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Sales YTD</MudText>
+                    <MudText Typo="Typo.h5" Class="green--text">@_dashboard.Cash.InvestingYtd.Sales.ToString("N2")</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Class="pa-4" Outlined="true">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Net invested YTD</MudText>
+                    <MudText Typo="Typo.h5" Class="@NetClass(_dashboard.Cash.InvestingYtd.NetInvestedCash)">@_dashboard.Cash.InvestingYtd.NetInvestedCash.ToString("N2")</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Class="pa-4" Outlined="true">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Detail</MudText>
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Href="portfolio">Portfolio</MudButton>
                 </MudCardContent>
             </MudCard>
         </MudItem>
