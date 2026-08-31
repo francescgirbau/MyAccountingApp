@@ -33,6 +33,11 @@ public static class AssetTransactionDisplay
     };
 
     /// <summary>
+    /// Builds the Asset Transactions deep link for a given year, pre-filling the year filter only.
+    /// </summary>
+    public static string BuildDeepLink(int year) => $"/asset-transactions?year={year}";
+
+    /// <summary>
     /// Builds the Asset Transactions deep link for a given year and flow (purchase or sale),
     /// pre-filling the year and type filters. Purchase maps to Buy, sale maps to Sell.
     /// </summary>

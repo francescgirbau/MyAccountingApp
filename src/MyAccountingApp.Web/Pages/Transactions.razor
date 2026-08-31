@@ -429,6 +429,9 @@ else
     [SupplyParameterFromQuery(Name = "categories")]
     public string? CategoriesFromQuery { get; set; }
 
+    [SupplyParameterFromQuery(Name = "year")]
+    public int? YearFromQuery { get; set; }
+
     private List<Guid> _impactedIds = new();
     private string? _issueContext;
 
@@ -442,6 +445,11 @@ else
     {
         this.ApplyIssueFilterFromQuery();
         this.ApplyCategoriesFromQuery();
+        if (this.YearFromQuery.HasValue)
+        {
+            _selectedYear = this.YearFromQuery.Value;
+        }
+
         await this.LoadDataAsync();
     }
 

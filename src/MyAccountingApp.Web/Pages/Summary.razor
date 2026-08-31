@@ -56,7 +56,7 @@ else if (Year.HasValue)
                         <MudText Typo="Typo.subtitle2">Purchases (cash out)</MudText>
                         <MudTooltip Placement="Placement.Top">
                             <ChildContent>
-                                <MudText Typo="Typo.h5" Color="Color.Error" Class="cursor-pointer" @onclick="@(() => NavigateToAssetTransactions(purchase: true))">−@_summary.Investing.Purchases.ToString("N2") €</MudText>
+                                <MudText Typo="Typo.h5" Color="Color.Info" Class="cursor-pointer" @onclick="@(() => NavigateToAssetTransactions(purchase: true))">−@_summary.Investing.Purchases.ToString("N2") €</MudText>
                             </ChildContent>
                             <TooltipContent><span>View purchases in Asset Transactions</span></TooltipContent>
                         </MudTooltip>
@@ -65,12 +65,12 @@ else if (Year.HasValue)
                         <MudText Typo="Typo.subtitle2">Sales proceeds (cash in)</MudText>
                         <MudTooltip Placement="Placement.Top">
                             <ChildContent>
-                                <MudText Typo="Typo.h5" Color="Color.Success" Class="cursor-pointer" @onclick="@(() => NavigateToAssetTransactions(purchase: false))">@_summary.Investing.Sales.ToString("N2") €</MudText>
+                                <MudText Typo="Typo.h5" Color="Color.Info" Class="cursor-pointer" @onclick="@(() => NavigateToAssetTransactions(purchase: false))">@_summary.Investing.Sales.ToString("N2") €</MudText>
                             </ChildContent>
                             <TooltipContent><span>View sales in Asset Transactions</span></TooltipContent>
                         </MudTooltip>
                     </MudItem>
-                    <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">Net invested cash</MudText><MudText Typo="Typo.h5" Color="@InvestingNetColor">@_summary.Investing.NetInvestedCash.ToString("N2") €</MudText></MudItem>
+                    <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">Net invested cash</MudText><MudText Typo="Typo.h5" Color="Color.Info">@_summary.Investing.NetInvestedCash.ToString("N2") €</MudText></MudItem>
                 </MudGrid>
                 <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
                     Buying assets is not an operating expense. Sale proceeds are not operating income.
@@ -84,11 +84,51 @@ else if (Year.HasValue)
         <MudCard Class="pa-6" Outlined="true">
             <MudCardContent>
                 <MudGrid>
-                    <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">Transfers out</MudText><MudText Typo="Typo.h5">@_summary.Internal.Transfers.ToString("N2") €</MudText></MudItem>
-                    <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">Deposits in</MudText><MudText Typo="Typo.h5" Color="Color.Success">@_summary.Internal.Deposits.ToString("N2") €</MudText></MudItem>
-                    <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">FX out (EUR)</MudText><MudText Typo="Typo.h5">@_summary.Internal.FxOut.ToString("N2") €</MudText></MudItem>
-                    <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">FX in (EUR)</MudText><MudText Typo="Typo.h5" Color="Color.Success">@_summary.Internal.FxIn.ToString("N2") €</MudText></MudItem>
-                    <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">FX net (EUR)</MudText><MudText Typo="Typo.h5" Color="@InternalFxNetColor">@_summary.Internal.FxNet.ToString("N2") €</MudText></MudItem>
+                    <MudItem xs="6" md="4">
+                        <MudText Typo="Typo.subtitle2">Transfers out</MudText>
+                        <MudTooltip Placement="Placement.Top">
+                            <ChildContent>
+                                <MudText Typo="Typo.h5" Class="cursor-pointer" @onclick="@(() => NavigateToTransactions("TRANSFER"))">@_summary.Internal.Transfers.ToString("N2") €</MudText>
+                            </ChildContent>
+                            <TooltipContent><span>View transfers in Transactions</span></TooltipContent>
+                        </MudTooltip>
+                    </MudItem>
+                    <MudItem xs="6" md="4">
+                        <MudText Typo="Typo.subtitle2">Deposits in</MudText>
+                        <MudTooltip Placement="Placement.Top">
+                            <ChildContent>
+                                <MudText Typo="Typo.h5" Color="Color.Success" Class="cursor-pointer" @onclick="@(() => NavigateToTransactions("DEPOSIT"))">@_summary.Internal.Deposits.ToString("N2") €</MudText>
+                            </ChildContent>
+                            <TooltipContent><span>View deposits in Transactions</span></TooltipContent>
+                        </MudTooltip>
+                    </MudItem>
+                    <MudItem xs="6" md="4">
+                        <MudText Typo="Typo.subtitle2">FX out (EUR)</MudText>
+                        <MudTooltip Placement="Placement.Top">
+                            <ChildContent>
+                                <MudText Typo="Typo.h5" Class="cursor-pointer" @onclick="@(() => NavigateToTransactions("FX_CONVERSION"))">@_summary.Internal.FxOut.ToString("N2") €</MudText>
+                            </ChildContent>
+                            <TooltipContent><span>View FX conversions in Transactions</span></TooltipContent>
+                        </MudTooltip>
+                    </MudItem>
+                    <MudItem xs="6" md="4">
+                        <MudText Typo="Typo.subtitle2">FX in (EUR)</MudText>
+                        <MudTooltip Placement="Placement.Top">
+                            <ChildContent>
+                                <MudText Typo="Typo.h5" Color="Color.Success" Class="cursor-pointer" @onclick="@(() => NavigateToTransactions("FX_CONVERSION"))">@_summary.Internal.FxIn.ToString("N2") €</MudText>
+                            </ChildContent>
+                            <TooltipContent><span>View FX conversions in Transactions</span></TooltipContent>
+                        </MudTooltip>
+                    </MudItem>
+                    <MudItem xs="6" md="4">
+                        <MudText Typo="Typo.subtitle2">FX net (EUR)</MudText>
+                        <MudTooltip Placement="Placement.Top">
+                            <ChildContent>
+                                <MudText Typo="Typo.h5" Color="@InternalFxNetColor" Class="cursor-pointer" @onclick="@(() => NavigateToTransactions("FX_CONVERSION"))">@_summary.Internal.FxNet.ToString("N2") €</MudText>
+                            </ChildContent>
+                            <TooltipContent><span>View FX conversions in Transactions</span></TooltipContent>
+                        </MudTooltip>
+                    </MudItem>
                     <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">FX pairs</MudText><MudText Typo="Typo.h5">@_summary.Internal.FxPairCount (unmatched legs: @_summary.Internal.FxUnmatchedLegCount)</MudText></MudItem>
                 </MudGrid>
                 <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
@@ -103,13 +143,19 @@ else if (Year.HasValue)
         <MudCard Class="pa-6" Outlined="true">
             <MudCardContent>
                 <MudGrid>
-                    <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Purchases</MudText><MudText Typo="Typo.h5">@_summary.Investing.Purchases.ToString("N2") €</MudText></MudItem>
-                    <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Sales</MudText><MudText Typo="Typo.h5">@_summary.Investing.Sales.ToString("N2") €</MudText></MudItem>
-                    <MudItem xs="6" md="3"><MudText Typo="Typo.subtitle2">Asset transactions</MudText><MudText Typo="Typo.h5">@_summary.AssetTransactionCount</MudText></MudItem>
+                    <MudItem xs="6" md="4"><MudText Typo="Typo.subtitle2">Asset transactions</MudText><MudText Typo="Typo.h5">@_summary.AssetTransactionCount</MudText></MudItem>
+                    <MudItem xs="6" md="4">
+                        <MudText Typo="Typo.subtitle2">Asset Transactions</MudText>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" OnClick="@(() => Navigation.NavigateTo(AssetTransactionDisplay.BuildDeepLink(Year.Value)))">View transactions</MudButton>
+                    </MudItem>
+                    <MudItem xs="6" md="4">
+                        <MudText Typo="Typo.subtitle2">Portfolio</MudText>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" OnClick="@(() => Navigation.NavigateTo("/portfolio"))">View portfolio</MudButton>
+                    </MudItem>
                 </MudGrid>
                 <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
-                    Purchases and sales are cash flows from AssetTransaction records (already shown in Investing above).
-                    They are not folded into operating cash flow.
+                    Asset purchases and sales are already shown above under Investing cash flow and are not folded into operating cash flow.
+                    Open positions, market value and unrealized P/L are on the Portfolio page.
                 </MudText>
             </MudCardContent>
         </MudCard>
@@ -165,9 +211,9 @@ else if (Year.HasValue)
                     <MudTd DataLabel="Op. income"><MudText Color="Color.Success">@context.Operating.Income.ToString("N2") €</MudText></MudTd>
                     <MudTd DataLabel="Op. expense"><MudText Color="Color.Error">@context.Operating.Expenses.ToString("N2") €</MudText></MudTd>
                     <MudTd DataLabel="Op. net"><MudText Color="@NetColor(context.Operating.NetOperatingCashFlow)">@context.Operating.NetOperatingCashFlow.ToString("N2") €</MudText></MudTd>
-                    <MudTd DataLabel="Invest in"><MudText Color="Color.Error">−@context.Investing.Purchases.ToString("N2") €</MudText></MudTd>
-                    <MudTd DataLabel="Invest out"><MudText Color="Color.Success">@context.Investing.Sales.ToString("N2") €</MudText></MudTd>
-                    <MudTd DataLabel="Invest net"><MudText Color="@GetNetColor(context.Investing.NetInvestedCash)">@context.Investing.NetInvestedCash.ToString("N2") €</MudText></MudTd>
+                    <MudTd DataLabel="Invest in"><MudText Color="Color.Info">−@context.Investing.Purchases.ToString("N2") €</MudText></MudTd>
+                    <MudTd DataLabel="Invest out"><MudText Color="Color.Info">@context.Investing.Sales.ToString("N2") €</MudText></MudTd>
+                    <MudTd DataLabel="Invest net"><MudText Color="Color.Info">@context.Investing.NetInvestedCash.ToString("N2") €</MudText></MudTd>
                     <MudTd DataLabel="FX net (EUR)"><MudText Color="@NetColor(context.Internal.FxNet)">@context.Internal.FxNet.ToString("N2") €</MudText></MudTd>
                     <MudTd DataLabel="Tx">@context.TransactionCount / @context.AssetTransactionCount</MudTd>
                 </RowTemplate>
@@ -176,9 +222,9 @@ else if (Year.HasValue)
                     <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Success">@_summary.Operating.Income.ToString("N2") €</MudText></MudTd>
                     <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Error">@_summary.Operating.Expenses.ToString("N2") €</MudText></MudTd>
                     <MudTd><MudText Typo="Typo.subtitle2" Color="@OperatingNetColor">@_summary.Operating.NetOperatingCashFlow.ToString("N2") €</MudText></MudTd>
-                    <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Error">−@_summary.Investing.Purchases.ToString("N2") €</MudText></MudTd>
-                    <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Success">@_summary.Investing.Sales.ToString("N2") €</MudText></MudTd>
-                    <MudTd><MudText Typo="Typo.subtitle2" Color="@GetNetColor(_summary.Investing.NetInvestedCash)">@_summary.Investing.NetInvestedCash.ToString("N2") €</MudText></MudTd>
+                    <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Info">−@_summary.Investing.Purchases.ToString("N2") €</MudText></MudTd>
+                    <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Info">@_summary.Investing.Sales.ToString("N2") €</MudText></MudTd>
+                    <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Info">@_summary.Investing.NetInvestedCash.ToString("N2") €</MudText></MudTd>
                     <MudTd><MudText Typo="Typo.subtitle2" Color="@InternalFxNetColor">@_summary.Internal.FxNet.ToString("N2") €</MudText></MudTd>
                     <MudTd><MudText Typo="Typo.subtitle2">@_summary.TransactionCount / @_summary.AssetTransactionCount</MudText></MudTd>
                 </FooterContent>
@@ -227,7 +273,6 @@ else
     private bool _initialized;
 
     private Color OperatingNetColor => (_summary?.Operating.NetOperatingCashFlow ?? 0) >= 0 ? Color.Success : Color.Error;
-    private Color InvestingNetColor => (_summary?.Investing.NetInvestedCash ?? 0) >= 0 ? Color.Success : Color.Error;
     private Color InternalFxNetColor => (_summary?.Internal.FxNet ?? 0) >= 0 ? Color.Success : Color.Error;
     private Color GetNetColor(decimal net) => net >= 0 ? Color.Success : Color.Error;
     private static Color NetColor(decimal net) => net >= 0 ? Color.Success : Color.Error;
@@ -239,6 +284,14 @@ else
         if (Year.HasValue)
         {
             Navigation.NavigateTo(AssetTransactionDisplay.BuildDeepLink(Year.Value, purchase));
+        }
+    }
+
+    private void NavigateToTransactions(string category)
+    {
+        if (Year.HasValue)
+        {
+            Navigation.NavigateTo($"/transactions?year={Year.Value}&categories={category}");
         }
     }
 
