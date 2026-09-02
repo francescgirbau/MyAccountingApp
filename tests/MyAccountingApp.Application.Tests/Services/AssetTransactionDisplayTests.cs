@@ -74,6 +74,14 @@ public class AssetTransactionDisplayTests
     }
 
     [Theory]
+    [InlineData(2024, "/asset-transactions?year=2024")]
+    [InlineData(2021, "/asset-transactions?year=2021")]
+    public void BuildDeepLink_YearOnly_OmitsTypeFilter(int year, string expected)
+    {
+        Assert.Equal(expected, AssetTransactionDisplay.BuildDeepLink(year));
+    }
+
+    [Theory]
     [InlineData(2024, true)]
     [InlineData(2023, false)]
     public void MatchesFilter_AppliesCorrectYearAndType(int year, bool purchase)
