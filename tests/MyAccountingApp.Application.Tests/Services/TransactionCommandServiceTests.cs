@@ -121,6 +121,59 @@ public class TransactionCommandServiceTests
         Assert.Equal(TransactionCategory.TRANSFER, repo.GetAll().Single().Category);
     }
 
+    [Fact]
+    public void DeleteMany_ShouldRemoveMatchingTransactions()
+    {
+        FakeTxRepo repo = new();
+        Transaction first = CreateTransaction();
+        Transaction second = CreateTransaction();
+        repo.Add(first);
+        repo.Add(second);
+        TransactionCommandService service = new(repo);
+
+        BatchDeleteResult result = service.DeleteMany(new[] { first.Id, second.Id });
+
+        Assert.Equal(2, result.Requested);
+        Assert.Equal(2, result.Deleted);
+        Assert.Empty(result.Failures);
+        Assert.Empty(repo.GetAll());
+    }
+
+    [Fact]
+    public void DeleteMany_ShouldReportMissingIds_AsFailures()
+    {
+        FakeTxRepo repo = new();
+        Transaction existing = CreateTransaction();
+        repo.Add(existing);
+        TransactionCommandService service = new(repo);
+        Guid missing = Guid.NewGuid();
+
+        BatchDeleteResult result = service.DeleteMany(new[] { existing.Id, missing });
+
+        Assert.Equal(2, result.Requested);
+        Assert.Equal(1, result.Deleted);
+        BatchPatchFailure failure = Assert.Single(result.Failures);
+        Assert.Equal(missing, failure.Id);
+        Assert.Equal("Transaction not found.", failure.Error);
+        Assert.Empty(repo.GetAll());
+    }
+
+    [Fact]
+    public void DeleteMany_ShouldCountDuplicateIdsOnce()
+    {
+        FakeTxRepo repo = new();
+        Transaction existing = CreateTransaction();
+        repo.Add(existing);
+        TransactionCommandService service = new(repo);
+
+        BatchDeleteResult result = service.DeleteMany(new[] { existing.Id, existing.Id });
+
+        Assert.Equal(1, result.Requested);
+        Assert.Equal(1, result.Deleted);
+        Assert.Empty(result.Failures);
+        Assert.Empty(repo.GetAll());
+    }
+
     private static Transaction CreateTransaction()
     {
         return new Transaction(

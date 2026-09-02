@@ -122,6 +122,17 @@ public static class TransactionsEndpoints
             return Results.Ok(result);
         });
 
+        app.MapPost($"{prefix}/transactions/bulk-delete", (BulkDeleteRequest request, ITransactionCommandService service) =>
+        {
+            if (request.Ids is null || request.Ids.Count == 0)
+            {
+                return Results.BadRequest(new { message = "ids are required." });
+            }
+
+            BatchDeleteResult result = service.DeleteMany(request.Ids);
+            return Results.Ok(result);
+        });
+
         app.MapPut($"{prefix}/transactions/{{id:guid}}", (Guid id, CreateTransactionRequest request, ITransactionRepository repo, ITransactionValidator validator) =>
         {
             Transaction? existing = repo.GetAll().FirstOrDefault(t => t.Id == id);
@@ -262,6 +273,17 @@ public static class TransactionsEndpoints
             return Results.Ok(result);
         });
 
+        app.MapPost($"{prefix}/asset-transactions/bulk-delete", (BulkDeleteRequest request, IAssetTransactionCommandService service) =>
+        {
+            if (request.Ids is null || request.Ids.Count == 0)
+            {
+                return Results.BadRequest(new { message = "ids are required." });
+            }
+
+            BatchDeleteResult result = service.DeleteMany(request.Ids);
+            return Results.Ok(result);
+        });
+
         app.MapDelete($"{prefix}/asset-transactions/{{id:guid}}", (Guid id, IPortfolioRepository repo) =>
         {
             AssetTransaction? existing = repo.GetAllTransactions().FirstOrDefault(t => t.Transaction.Id == id);
@@ -369,3 +391,4 @@ record UpdateOptionTransactionRequest(DateTime Date, string Description, decimal
 record BatchAssetTransactionPatchRequest(List<Guid> Ids, AssetTransactionPatch Patch);
 record BatchOptionTransactionPatchRequest(List<Guid> Ids, OptionTransactionPatch Patch);
 record BatchTransactionPatchRequest(List<Guid> Ids, TransactionPatch Patch);
+record BulkDeleteRequest(List<Guid> Ids);

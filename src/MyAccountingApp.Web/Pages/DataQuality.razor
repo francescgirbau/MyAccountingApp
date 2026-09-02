@@ -1,4 +1,8 @@
 @page "/data-quality"
+@using MyAccountingApp.Application.Services
+@using MyAccountingApp.Domain.Entities
+@using MyAccountingApp.Domain.Enums
+@using MyAccountingApp.Domain.ValueObjects
 @inject HttpClient Http
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
@@ -84,6 +88,14 @@ else
                     {
                         <MudText Typo="Typo.body2" Class="mud-text-secondary">—</MudText>
                     }
+                    @if (context.Field == "DUPLICATE_FINGERPRINT")
+                    {
+                        <MudButton Variant="Variant.Text" Color="Color.Success" Size="Size.Small"
+                                   OnClick="@(() => OpenResolveAsync(context))"
+                                   StartIcon="@Icons.Material.Filled.CleaningServices">
+                            Resolve
+                        </MudButton>
+                    }
                 </MudTd>
             </RowTemplate>
             <NoRecordsContent>
@@ -93,6 +105,67 @@ else
     }
 }
 
+<MudOverlay Visible="_dialogOpen" OnClick="@CloseResolveAsync" />
+
+<MudDialog @bind-Visible="_dialogOpen" Options="new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Large, FullWidth = true }">
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-2">Resolve duplicate transactions</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+            This group of transactions shares the same date, description and amount.
+            Choose the one to keep; the rest will be permanently deleted.
+        </MudText>
+
+        @if (_resolvingIssue is not null && _duplicateRows is { Count: > 0 })
+        {
+            <MudRadioGroup T="Guid" @bind-Value="_keeperId">
+                <MudTable Items="_duplicateRows" Hover="true" Elevation="0" Outlined="true" Striped="true">
+                    <HeaderContent>
+                        <MudTh>Keep</MudTh>
+                        <MudTh>Date</MudTh>
+                        <MudTh>Description</MudTh>
+                        <MudTh>Amount</MudTh>
+                        <MudTh>Category</MudTh>
+                        <MudTh>Source</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd><MudRadio T="Guid" Value="@context.Id" /></MudTd>
+                        <MudTd>@context.Date.ToString("yyyy-MM-dd")</MudTd>
+                        <MudTd>@context.Description</MudTd>
+                        <MudTd>@context.Money.Amount.ToString("0.##") @context.Money.Currency</MudTd>
+                        <MudTd>@context.Category</MudTd>
+                        <MudTd>
+                            @if (string.IsNullOrEmpty(context.Source))
+                            {
+                                <MudText Typo="Typo.body2" Class="mud-text-secondary">—</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2">@context.Source</MudText>
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudRadioGroup>
+
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-4 mb-4">
+                @DupesToDelete duplicate(s) will be permanently deleted.
+            </MudAlert>
+
+            <MudForm>
+                <MudCheckBox T="bool" @bind-Value="_confirmed" Label="I understand this action cannot be undone." Color="Color.Error" />
+            </MudForm>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="@CloseResolveAsync" Disabled="@_resolving">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error"
+                   OnClick="@ConfirmResolveAsync"
+                   Disabled="@(_confirmed == false || _resolving)">
+            @(_resolving ? "Deleting…" : "Delete duplicates")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
     private static bool ShowAdvancedMatching = false;
 
@@ -101,6 +174,15 @@ else
     private bool _loading = true;
     private bool _recalculating;
     private bool _syncingFx;
+
+    private bool _dialogOpen;
+    private ValidationError? _resolvingIssue;
+    private List<TransactionDto> _duplicateRows = new();
+    private Guid _keeperId;
+    private bool _confirmed;
+    private bool _resolving;
+
+    private int DupesToDelete => _keeperId == Guid.Empty ? 0 : _duplicateRows.Count(t => t.Id != _keeperId);
 
     private int WarningCount => _result?.Warnings.Count(w => w.Severity != "info") ?? 0;
     private int InfoCount => _result?.Warnings.Count(w => w.Severity == "info") ?? 0;
@@ -129,6 +211,107 @@ else
         {
             _loading = false;
         }
+    }
+
+    private async Task OpenResolveAsync(ValidationError issue)
+    {
+        _resolvingIssue = issue;
+        _duplicateRows = new List<TransactionDto>();
+        _keeperId = Guid.Empty;
+        _confirmed = false;
+
+        try
+        {
+            List<TransactionDto> all = await Http.GetFromJsonAsync<List<TransactionDto>>("/api/transactions") ?? new List<TransactionDto>();
+            HashSet<Guid> ids = (issue.EntityIds ?? new List<Guid>()).ToHashSet();
+            _duplicateRows = all.Where(t => ids.Contains(t.Id)).ToList();
+            _keeperId = PickDefaultKeeper(_duplicateRows);
+            _dialogOpen = true;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load duplicates: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void CloseResolveAsync()
+    {
+        if (_resolving)
+        {
+            return;
+        }
+
+        _dialogOpen = false;
+        _resolvingIssue = null;
+        _duplicateRows = new List<TransactionDto>();
+        _keeperId = Guid.Empty;
+        _confirmed = false;
+    }
+
+    private async Task ConfirmResolveAsync()
+    {
+        if (_resolvingIssue is null || _keeperId == Guid.Empty)
+        {
+            return;
+        }
+
+        _resolving = true;
+        try
+        {
+            List<Guid> deleteIds = _duplicateRows.Where(t => t.Id != _keeperId).Select(t => t.Id).ToList();
+            if (deleteIds.Count > 0)
+            {
+                HttpResponseMessage response = await Http.PostAsJsonAsync(
+                    "/api/transactions/bulk-delete",
+                    new BulkDeleteRequest { Ids = deleteIds });
+                response.EnsureSuccessStatusCode();
+                BulkDeleteResultDto? result = await response.Content.ReadFromJsonAsync<BulkDeleteResultDto>();
+                Snackbar.Add(
+                    $"Resolved: kept 1 transaction and deleted {result?.Deleted ?? 0} duplicate(s).",
+                    Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("No duplicates to delete.", Severity.Info);
+            }
+
+            CloseResolveAsync();
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to resolve duplicates: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _resolving = false;
+        }
+    }
+
+    private static Guid PickDefaultKeeper(IReadOnlyList<TransactionDto> rows)
+    {
+        if (rows.Count == 0)
+        {
+            return Guid.Empty;
+        }
+
+        Transaction keeper = DuplicateResolutionService.PickDefaultKeeper(rows.Select(ToDomainTransaction).ToList());
+        return keeper.Id;
+    }
+
+    private static Transaction ToDomainTransaction(TransactionDto dto)
+    {
+        TransactionCategory category = Enum.TryParse<TransactionCategory>(dto.Category, ignoreCase: true, out TransactionCategory parsed)
+            ? parsed
+            : TransactionCategory.EXPENSE;
+
+        return new Transaction(
+            dto.Id,
+            dto.Date,
+            dto.Description,
+            new Money(dto.Money.Amount, dto.Money.Currency),
+            category,
+            dto.Source);
     }
 
     private async Task RecalculateTransferMatchesAsync()
