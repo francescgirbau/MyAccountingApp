@@ -45,6 +45,14 @@ public static class AssetTransactionDisplay
         $"/asset-transactions?year={year}&type={(purchase ? "Buy" : "Sell")}";
 
     /// <summary>
+    /// Builds the Asset Transactions deep link from the Transactions (cash ledger) page.
+    /// Shows all asset purchases and sales; the selected cash-ledger year is preserved
+    /// when present so the Asset Transactions list opens pre-filtered to the same year.
+    /// </summary>
+    public static string BuildInvestmentsLink(int? year) =>
+        year.HasValue ? $"/asset-transactions?year={year.Value}" : "/asset-transactions";
+
+    /// <summary>
     /// Whether an asset transaction belongs to the requested year and flow (purchase or sale).
     /// Used to apply the year + type filters that come from a drill-down deep link.
     /// </summary>

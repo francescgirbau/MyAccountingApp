@@ -59,6 +59,20 @@ public class AssetTransactionDisplayTests
         Assert.Equal(expected, AssetTransactionDisplay.BuildDeepLink(year, purchase));
     }
 
+    [Fact]
+    public void BuildInvestmentsLink_NoYear_NavigatesToAssetTransactions()
+    {
+        Assert.Equal("/asset-transactions", AssetTransactionDisplay.BuildInvestmentsLink(year: null));
+    }
+
+    [Theory]
+    [InlineData(2024, "/asset-transactions?year=2024")]
+    [InlineData(2022, "/asset-transactions?year=2022")]
+    public void BuildInvestmentsLink_SelectedYear_NavigatesWithYearFilter(int year, string expected)
+    {
+        Assert.Equal(expected, AssetTransactionDisplay.BuildInvestmentsLink(year));
+    }
+
     [Theory]
     [InlineData(2024, "/asset-transactions?year=2024")]
     [InlineData(2021, "/asset-transactions?year=2021")]

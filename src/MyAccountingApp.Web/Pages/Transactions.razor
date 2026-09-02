@@ -71,15 +71,20 @@
         <MudChip T="string" Color="@(IsBucketActive(OperatingBucket, _selectedCategories) ? Color.Primary : Color.Default)"
                  Variant="@(IsBucketActive(OperatingBucket, _selectedCategories) ? Variant.Filled : Variant.Outlined)"
                  OnClick="@(() => ToggleBucket(OperatingBucket))">Operating</MudChip>
-        <MudChip T="string" Color="@(IsBucketActive(InvestingBucket, _selectedCategories) ? Color.Primary : Color.Default)"
-                 Variant="@(IsBucketActive(InvestingBucket, _selectedCategories) ? Variant.Filled : Variant.Outlined)"
-                 OnClick="@(() => ToggleBucket(InvestingBucket))">Investing</MudChip>
         <MudChip T="string" Color="@(IsBucketActive(InternalBucket, _selectedCategories) ? Color.Primary : Color.Default)"
                  Variant="@(IsBucketActive(InternalBucket, _selectedCategories) ? Variant.Filled : Variant.Outlined)"
                  OnClick="@(() => ToggleBucket(InternalBucket))">Internal moves</MudChip>
         <MudChip T="string" Color="@(IsBucketActive(FxBucket, _selectedCategories) ? Color.Primary : Color.Default)"
                  Variant="@(IsBucketActive(FxBucket, _selectedCategories) ? Variant.Filled : Variant.Outlined)"
                  OnClick="@(() => ToggleBucket(FxBucket))">FX</MudChip>
+        <MudTooltip Placement="Placement.Top">
+            <ChildContent>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.TrendingUp"
+                           OnClick="@NavigateToInvestments">View investments</MudButton>
+            </ChildContent>
+            <TooltipContent><span>View asset purchases and sales, quantities and prices.</span></TooltipContent>
+        </MudTooltip>
     </div>
     <MudText Typo="Typo.caption" Class="mud-text-secondary mt-2">
         Quick filters select whole cash-flow buckets. Use the Categories dropdown for finer control.
@@ -397,7 +402,7 @@ else
     private HashSet<string> _selectedCategories = new(StringComparer.OrdinalIgnoreCase);
     private string? _searchText { get; set; }
 
-    private static readonly string[] _categories = { "INCOME", "EXPENSE", "TRANSFER", "DEPOSIT", "DIVIDEND", "FEE", "WITHHOLDING_TAX", "INTEREST", "INVESTMENT", "DIVESTMENT", "FX_CONVERSION" };
+    private static readonly string[] _categories = { "INCOME", "EXPENSE", "TRANSFER", "DEPOSIT", "DIVIDEND", "FEE", "WITHHOLDING_TAX", "INTEREST", "FX_CONVERSION" };
     private static readonly string[] _monthNames =
     {
         "January", "February", "March", "April", "May", "June",
@@ -638,7 +643,6 @@ else
     }
 
     private static readonly string[] OperatingBucket = { "INCOME", "EXPENSE", "DIVIDEND", "INTEREST", "FEE", "WITHHOLDING_TAX" };
-    private static readonly string[] InvestingBucket = { "INVESTMENT", "DIVESTMENT" };
     private static readonly string[] InternalBucket = { "TRANSFER", "DEPOSIT" };
     private static readonly string[] FxBucket = { "FX_CONVERSION" };
 
@@ -662,6 +666,11 @@ else
         }
 
         ApplyFilters();
+    }
+
+    private void NavigateToInvestments()
+    {
+        Navigation.NavigateTo(AssetTransactionDisplay.BuildInvestmentsLink(_selectedYear));
     }
 
     private static string GetCategoryLabel(string category) => category switch
