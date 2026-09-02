@@ -44,7 +44,12 @@ else
             <MudCard Class="pa-4" Outlined="true">
                 <MudCardContent>
                     <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Transfers YTD</MudText>
-                    <MudText Typo="Typo.h5">@_dashboard.Cash.InternalYtd.Transfers.ToString("N2")</MudText>
+                    <MudTooltip Placement="Placement.Top">
+                        <ChildContent>
+                            <MudText Typo="Typo.h5" Class="cursor-pointer" @onclick="@(() => NavigateToTransactions("TRANSFER"))">@_dashboard.Cash.InternalYtd.Transfers.ToString("N2")</MudText>
+                        </ChildContent>
+                        <TooltipContent><span>View transfers in Transactions</span></TooltipContent>
+                    </MudTooltip>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -52,7 +57,12 @@ else
             <MudCard Class="pa-4" Outlined="true">
                 <MudCardContent>
                     <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Deposits YTD</MudText>
-                    <MudText Typo="Typo.h5" Class="green--text">@_dashboard.Cash.InternalYtd.Deposits.ToString("N2")</MudText>
+                    <MudTooltip Placement="Placement.Top">
+                        <ChildContent>
+                            <MudText Typo="Typo.h5" Class="green--text cursor-pointer" @onclick="@(() => NavigateToTransactions("DEPOSIT"))">@_dashboard.Cash.InternalYtd.Deposits.ToString("N2")</MudText>
+                        </ChildContent>
+                        <TooltipContent><span>View deposits in Transactions</span></TooltipContent>
+                    </MudTooltip>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -60,9 +70,14 @@ else
             <MudCard Class="pa-4" Outlined="true">
                 <MudCardContent>
                     <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">FX YTD (EUR)</MudText>
-                    <MudText Typo="Typo.h6" Class="mud-text-secondary">out @_dashboard.Cash.InternalYtd.FxOut.ToString("N2")</MudText>
-                    <MudText Typo="Typo.h6" Class="green--text">in @_dashboard.Cash.InternalYtd.FxIn.ToString("N2")</MudText>
-                    <MudText Typo="Typo.h6" Class="@NetClass(_dashboard.Cash.InternalYtd.FxNet)">net @_dashboard.Cash.InternalYtd.FxNet.ToString("N2")</MudText>
+                    <MudTooltip Placement="Placement.Top">
+                        <ChildContent>
+                            <MudText Typo="Typo.h6" Class="mud-text-secondary cursor-pointer" @onclick="@(() => NavigateToTransactions("FX_CONVERSION"))">out @_dashboard.Cash.InternalYtd.FxOut.ToString("N2")</MudText>
+                            <MudText Typo="Typo.h6" Class="green--text cursor-pointer" @onclick="@(() => NavigateToTransactions("FX_CONVERSION"))">in @_dashboard.Cash.InternalYtd.FxIn.ToString("N2")</MudText>
+                            <MudText Typo="Typo.h6" Class="@($"{NetClass(_dashboard.Cash.InternalYtd.FxNet)} cursor-pointer")" @onclick="@(() => NavigateToTransactions("FX_CONVERSION"))">net @_dashboard.Cash.InternalYtd.FxNet.ToString("N2")</MudText>
+                        </ChildContent>
+                        <TooltipContent><span>View FX conversions in Transactions</span></TooltipContent>
+                    </MudTooltip>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -76,7 +91,7 @@ else
                     <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Purchases YTD</MudText>
                     <MudTooltip Placement="Placement.Top">
                         <ChildContent>
-                            <MudText Typo="Typo.h5" Class="red--text cursor-pointer" @onclick="@(() => NavigateToAssetTransactions(purchase: true))">-@_dashboard.Cash.InvestingYtd.Purchases.ToString("N2")</MudText>
+                            <MudText Typo="Typo.h5" Class="blue--text cursor-pointer" @onclick="@(() => NavigateToAssetTransactions(purchase: true))">-@_dashboard.Cash.InvestingYtd.Purchases.ToString("N2")</MudText>
                         </ChildContent>
                         <TooltipContent><span>View purchases in Asset Transactions</span></TooltipContent>
                     </MudTooltip>
@@ -89,7 +104,7 @@ else
                     <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Sales YTD</MudText>
                     <MudTooltip Placement="Placement.Top">
                         <ChildContent>
-                            <MudText Typo="Typo.h5" Class="green--text cursor-pointer" @onclick="@(() => NavigateToAssetTransactions(purchase: false))">@_dashboard.Cash.InvestingYtd.Sales.ToString("N2")</MudText>
+                            <MudText Typo="Typo.h5" Class="blue--text cursor-pointer" @onclick="@(() => NavigateToAssetTransactions(purchase: false))">@_dashboard.Cash.InvestingYtd.Sales.ToString("N2")</MudText>
                         </ChildContent>
                         <TooltipContent><span>View sales in Asset Transactions</span></TooltipContent>
                     </MudTooltip>
@@ -100,7 +115,7 @@ else
             <MudCard Class="pa-4" Outlined="true">
                 <MudCardContent>
                     <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Net invested YTD</MudText>
-                    <MudText Typo="Typo.h5" Class="@NetClass(_dashboard.Cash.InvestingYtd.NetInvestedCash)">@_dashboard.Cash.InvestingYtd.NetInvestedCash.ToString("N2")</MudText>
+                    <MudText Typo="Typo.h5" Class="blue--text">@_dashboard.Cash.InvestingYtd.NetInvestedCash.ToString("N2")</MudText>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -208,4 +223,7 @@ else
 
     private void NavigateToAssetTransactions(bool purchase) =>
         Navigation.NavigateTo(AssetTransactionDisplay.BuildDeepLink(_dashboard.AsOf.Year, purchase));
+
+    private void NavigateToTransactions(string category) =>
+        Navigation.NavigateTo($"/transactions?year={_dashboard.AsOf.Year}&categories={category}");
 }
