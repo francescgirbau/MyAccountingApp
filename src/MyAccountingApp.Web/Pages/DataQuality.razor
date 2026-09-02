@@ -64,12 +64,22 @@ else
 
         <MudTable Items="@_issues" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true">
             <HeaderContent>
+                <MudTh Style="width:50px"></MudTh>
                 <MudTh>Severity</MudTh>
                 <MudTh>Code</MudTh>
                 <MudTh>Message</MudTh>
                 <MudTh>Impacted</MudTh>
             </HeaderContent>
             <RowTemplate>
+                <MudTd>
+                    @if (context.Field == "DUPLICATE_FINGERPRINT")
+                    {
+                        <MudCheckBox T="bool"
+                                     Value="@(_selectedDuplicateIssues.Contains(context))"
+                                     ValueChanged="@((bool val) => ToggleSelection(context, val))"
+                                     Size="Size.Small" Color="Color.Primary" />
+                    }
+                </MudTd>
                 <MudTd DataLabel="Severity">
                     <MudChip T="string" Size="Size.Small" Color="@MapSeverityColor(context.Severity)">@context.Severity</MudChip>
                 </MudTd>
@@ -102,6 +112,26 @@ else
                 <MudText Class="pa-4">No issues.</MudText>
             </NoRecordsContent>
         </MudTable>
+
+        @if (_selectedDuplicateIssues.Count > 0)
+        {
+            <MudPaper Class="pa-3 mt-4" Outlined="true">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="4">
+                    <MudText Typo="Typo.body2">
+                        @_selectedDuplicateIssues.Count group(s) selected, ~@BulkDeleteCount duplicate(s) to delete
+                    </MudText>
+                    <MudSpacer />
+                    <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small"
+                               OnClick="@ClearSelection">Clear</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.CleaningServices"
+                               OnClick="@OpenBulkResolveAsync"
+                               Disabled="@_resolving">
+                        Resolve selected
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        }
     }
 }
 
@@ -166,6 +196,38 @@ else
     </DialogActions>
 </MudDialog>
 
+<MudOverlay Visible="_bulkDialogOpen" OnClick="@CloseBulkResolveAsync" />
+
+<MudDialog @bind-Visible="_bulkDialogOpen" Options="new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true }">
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-2">Resolve all selected duplicates</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+            For each selected group the system will keep one transaction (the one with
+            import provenance or the lowest id) and permanently delete the rest.
+        </MudText>
+
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mb-4">
+            @_selectedDuplicateIssues.Count group(s) selected —
+            ~@BulkDeleteCount duplicate(s) will be permanently deleted.
+        </MudAlert>
+
+        <MudForm>
+            <MudCheckBox T="bool" @bind-Value="_bulkConfirmed"
+                         Label="I understand this action cannot be undone."
+                         Color="Color.Error" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" Color="Color.Default"
+                   OnClick="@CloseBulkResolveAsync" Disabled="@_resolving">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error"
+                   OnClick="@ConfirmBulkResolveAsync"
+                   Disabled="@(_bulkConfirmed == false || _resolving)">
+            @(_resolving ? "Deleting…" : "Delete duplicates")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
     private static bool ShowAdvancedMatching = false;
 
@@ -181,6 +243,13 @@ else
     private Guid _keeperId;
     private bool _confirmed;
     private bool _resolving;
+
+    private List<ValidationError> _selectedDuplicateIssues = new();
+    private List<BulkDuplicateGroup> _bulkGroups = new();
+    private bool _bulkDialogOpen;
+    private bool _bulkConfirmed;
+
+    private int BulkDeleteCount => _bulkGroups.SelectMany(g => g.Rows.Where(r => r.Id != g.KeeperId)).Count();
 
     private int DupesToDelete => _keeperId == Guid.Empty ? 0 : _duplicateRows.Count(t => t.Id != _keeperId);
 
@@ -288,6 +357,123 @@ else
         }
     }
 
+    private void ToggleSelection(ValidationError issue, bool isSelected)
+    {
+        if (isSelected)
+        {
+            if (!_selectedDuplicateIssues.Contains(issue))
+            {
+                _selectedDuplicateIssues.Add(issue);
+            }
+        }
+        else
+        {
+            _selectedDuplicateIssues.Remove(issue);
+        }
+    }
+
+    private void ClearSelection()
+    {
+        _selectedDuplicateIssues.Clear();
+        _bulkGroups = new List<BulkDuplicateGroup>();
+    }
+
+    private async Task OpenBulkResolveAsync()
+    {
+        if (_selectedDuplicateIssues.Count == 0)
+        {
+            return;
+        }
+
+        _bulkGroups = new List<BulkDuplicateGroup>();
+        _bulkConfirmed = false;
+
+        try
+        {
+            List<TransactionDto> all = await Http.GetFromJsonAsync<List<TransactionDto>>("/api/transactions") ?? new List<TransactionDto>();
+
+            foreach (ValidationError issue in _selectedDuplicateIssues)
+            {
+                HashSet<Guid> ids = (issue.EntityIds ?? new List<Guid>()).ToHashSet();
+                List<TransactionDto> rows = all.Where(t => ids.Contains(t.Id)).ToList();
+                if (rows.Count == 0)
+                {
+                    continue;
+                }
+
+                Guid keeperId = PickDefaultKeeper(rows);
+                _bulkGroups.Add(new BulkDuplicateGroup(issue, rows, keeperId));
+            }
+
+            if (_bulkGroups.Count == 0)
+            {
+                Snackbar.Add("Selected groups have no matching transactions.", Severity.Warning);
+                return;
+            }
+
+            _bulkDialogOpen = true;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load duplicates: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void CloseBulkResolveAsync()
+    {
+        if (_resolving)
+        {
+            return;
+        }
+
+        _bulkDialogOpen = false;
+        _bulkConfirmed = false;
+    }
+
+    private async Task ConfirmBulkResolveAsync()
+    {
+        if (_bulkGroups.Count == 0)
+        {
+            return;
+        }
+
+        _resolving = true;
+        try
+        {
+            List<Guid> deleteIds = _bulkGroups
+                .SelectMany(g => g.Rows.Where(r => r.Id != g.KeeperId).Select(r => r.Id))
+                .ToList();
+
+            if (deleteIds.Count == 0)
+            {
+                Snackbar.Add("No duplicates to delete.", Severity.Info);
+            }
+            else
+            {
+                HttpResponseMessage response = await Http.PostAsJsonAsync(
+                    "/api/transactions/bulk-delete",
+                    new BulkDeleteRequest { Ids = deleteIds });
+                response.EnsureSuccessStatusCode();
+                BulkDeleteResultDto? result = await response.Content.ReadFromJsonAsync<BulkDeleteResultDto>();
+                Snackbar.Add(
+                    $"Resolved {_bulkGroups.Count} group(s): kept 1 per group and deleted {result?.Deleted ?? 0} duplicate(s).",
+                    Severity.Success);
+            }
+
+            _bulkDialogOpen = false;
+            ClearSelection();
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to resolve duplicates: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _resolving = false;
+        }
+    }
+
     private static Guid PickDefaultKeeper(IReadOnlyList<TransactionDto> rows)
     {
         if (rows.Count == 0)
@@ -375,6 +561,11 @@ else
         public int RequestedDates { get; set; }
         public int SyncedDates { get; set; }
     }
+
+    private sealed record BulkDuplicateGroup(
+        ValidationError Issue,
+        List<TransactionDto> Rows,
+        Guid KeeperId);
 
     private static Color MapSeverityColor(string severity) => severity switch
     {
