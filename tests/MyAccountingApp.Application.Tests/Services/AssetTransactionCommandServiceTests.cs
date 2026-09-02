@@ -121,6 +121,43 @@ public class AssetTransactionCommandServiceTests
         Assert.Empty(repo.GetAllTransactions());
     }
 
+    [Fact]
+    public void DeleteMany_ShouldRemoveMatchingAssetTransactions()
+    {
+        FakePfRepo repo = new();
+        AssetTransaction first = CreateAsset("AAPL");
+        AssetTransaction second = CreateAsset("AAPL");
+        repo.AddOrUpdate(first);
+        repo.AddOrUpdate(second);
+        AssetTransactionCommandService service = new(repo);
+
+        BatchDeleteResult result = service.DeleteMany(new[] { first.Transaction.Id, second.Transaction.Id });
+
+        Assert.Equal(2, result.Requested);
+        Assert.Equal(2, result.Deleted);
+        Assert.Empty(result.Failures);
+        Assert.Empty(repo.GetAllTransactions());
+    }
+
+    [Fact]
+    public void DeleteMany_ShouldReportMissingIds_AsFailures()
+    {
+        FakePfRepo repo = new();
+        AssetTransaction existing = CreateAsset("AAPL");
+        repo.AddOrUpdate(existing);
+        AssetTransactionCommandService service = new(repo);
+        Guid missing = Guid.NewGuid();
+
+        BatchDeleteResult result = service.DeleteMany(new[] { existing.Transaction.Id, missing });
+
+        Assert.Equal(2, result.Requested);
+        Assert.Equal(1, result.Deleted);
+        BatchPatchFailure failure = Assert.Single(result.Failures);
+        Assert.Equal(missing, failure.Id);
+        Assert.Equal("Asset transaction not found.", failure.Error);
+        Assert.Empty(repo.GetAllTransactions());
+    }
+
     private static AssetTransaction CreateAsset(string symbol)
     {
         Transaction transaction = new(

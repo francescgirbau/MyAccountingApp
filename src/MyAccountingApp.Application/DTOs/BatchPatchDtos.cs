@@ -12,3 +12,8 @@ public sealed record BatchPatchResult(
     int Requested,
     int Updated,
     IReadOnlyList<BatchPatchFailure> Failures);
+
+public sealed record BatchDeleteResult(
+    int Requested,
+    int Deleted,
+    IReadOnlyList<BatchPatchFailure> Failures);

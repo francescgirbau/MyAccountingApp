@@ -5,4 +5,6 @@ namespace MyAccountingApp.Application.Interfaces;
 public interface IAssetTransactionCommandService
 {
     BatchPatchResult PatchMany(IReadOnlyList<Guid> ids, AssetTransactionPatch patch);
+
+    BatchDeleteResult DeleteMany(IReadOnlyList<Guid> ids);
 }

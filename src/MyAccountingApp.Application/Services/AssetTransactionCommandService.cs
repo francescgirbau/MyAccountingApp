@@ -55,4 +55,32 @@ public sealed class AssetTransactionCommandService : IAssetTransactionCommandSer
 
         return new BatchPatchResult(distinctIds.Count, updated, failures);
     }
+
+    public BatchDeleteResult DeleteMany(IReadOnlyList<Guid> ids)
+    {
+        List<Guid> distinctIds = ids.Distinct().ToList();
+        List<AssetTransaction> all = this._repository.GetAllTransactions().ToList();
+        List<BatchPatchFailure> failures = new();
+        int deleted = 0;
+
+        foreach (Guid id in distinctIds)
+        {
+            AssetTransaction? target = all.FirstOrDefault(t => t.Transaction.Id == id);
+            if (target is null)
+            {
+                failures.Add(new BatchPatchFailure(id, "Asset transaction not found."));
+                continue;
+            }
+
+            all.Remove(target);
+            deleted++;
+        }
+
+        if (deleted > 0)
+        {
+            this._repository.Initialize(all);
+        }
+
+        return new BatchDeleteResult(distinctIds.Count, deleted, failures);
+    }
 }

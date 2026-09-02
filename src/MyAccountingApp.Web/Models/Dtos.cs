@@ -137,6 +137,18 @@ public class BatchPatchResultDto
     public List<BatchPatchFailureDto> Failures { get; set; } = new();
 }
 
+public class BulkDeleteResultDto
+{
+    public int Requested { get; set; }
+    public int Deleted { get; set; }
+    public List<BatchPatchFailureDto> Failures { get; set; } = new();
+}
+
+public class BulkDeleteRequest
+{
+    public List<Guid> Ids { get; set; } = new();
+}
+
 public class DashboardDto
 {
     public DateOnly AsOf { get; set; }

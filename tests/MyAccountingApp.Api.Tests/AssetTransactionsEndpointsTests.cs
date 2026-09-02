@@ -159,16 +159,70 @@ public class AssetTransactionsEndpointsTests
     }
 
     [Fact]
-    public async Task BatchPatch_MissingSymbol_ShouldReturnBadRequest()
+    public async Task BulkDelete_ShouldRemoveSelectedAssetTransactions()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        List<Guid> ids = new();
+        for (int i = 0; i < 3; i++)
+        {
+            HttpResponseMessage created = await client.PostAsJsonAsync("/api/asset-transactions", CreateAssetTransactionBody(new DateTime(2026, 8, 1), symbol: $"S{i}"));
+            ids.Add(Guid.Parse(created.Headers.Location!.ToString().Split('/').Last()));
+        }
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/asset-transactions/bulk-delete",
+            new { ids = new[] { ids[0], ids[1] } });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(2, document.RootElement.GetProperty("requested").GetInt32());
+        Assert.Equal(2, document.RootElement.GetProperty("deleted").GetInt32());
+        Assert.Empty(document.RootElement.GetProperty("failures").EnumerateArray());
+
+        HttpResponseMessage all = await client.GetAsync("/api/asset-transactions");
+        using JsonDocument allDocument = JsonDocument.Parse(await all.Content.ReadAsStringAsync());
+        JsonElement remaining = Assert.Single(allDocument.RootElement.EnumerateArray());
+        Assert.Equal(ids[2], remaining.GetProperty("transaction").GetProperty("id").GetGuid());
+    }
+
+    [Fact]
+    public async Task BulkDelete_ShouldReportMissingId_AsFailure()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        HttpResponseMessage created = await client.PostAsJsonAsync("/api/asset-transactions", CreateAssetTransactionBody(new DateTime(2026, 8, 1)));
+        Guid id = Guid.Parse(created.Headers.Location!.ToString().Split('/').Last());
+        Guid missing = Guid.NewGuid();
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/asset-transactions/bulk-delete",
+            new { ids = new[] { id, missing } });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(1, document.RootElement.GetProperty("deleted").GetInt32());
+        JsonElement failure = Assert.Single(document.RootElement.GetProperty("failures").EnumerateArray());
+        Assert.Equal(missing, failure.GetProperty("id").GetGuid());
+    }
+
+    [Fact]
+    public async Task BulkDelete_EmptyIds_ShouldReturnBadRequest()
     {
         // Arrange
         using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
         HttpClient client = factory.CreateClient();
 
         // Act
-        HttpResponseMessage response = await client.PatchAsJsonAsync(
-            "/api/asset-transactions/batch",
-            new { ids = new[] { Guid.NewGuid() }, patch = new { symbol = (string?)null } });
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/asset-transactions/bulk-delete",
+            new { ids = Array.Empty<Guid>() });
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
