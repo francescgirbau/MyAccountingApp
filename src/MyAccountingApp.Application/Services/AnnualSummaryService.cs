@@ -9,13 +9,16 @@ public class AnnualSummaryService : IAnnualSummaryService
 {
     private readonly ITransactionRepository transactionRepo;
     private readonly IPortfolioRepository portfolioRepo;
+    private readonly IOptionTransactionRepository optionRepo;
 
     public AnnualSummaryService(
         ITransactionRepository transactionRepo,
-        IPortfolioRepository portfolioRepo)
+        IPortfolioRepository portfolioRepo,
+        IOptionTransactionRepository optionRepo)
     {
         this.transactionRepo = transactionRepo ?? throw new ArgumentNullException(nameof(transactionRepo));
         this.portfolioRepo = portfolioRepo ?? throw new ArgumentNullException(nameof(portfolioRepo));
+        this.optionRepo = optionRepo ?? throw new ArgumentNullException(nameof(optionRepo));
     }
 
     private static (int PairCount, int UnmatchedLegCount) CountFx(List<Domain.Entities.Transaction> yearTxs)
@@ -41,10 +44,12 @@ public class AnnualSummaryService : IAnnualSummaryService
     {
         List<Domain.Entities.Transaction> transactions = this.transactionRepo.GetAll().ToList();
         List<Domain.Entities.AssetTransaction> assetTransactions = this.portfolioRepo.GetAllTransactions().ToList();
+        List<Domain.Entities.OptionTransaction> optionTransactions = this.optionRepo.GetAll().ToList();
 
         var years = transactions
             .Select(t => t.Date.Year)
             .Union(assetTransactions.Select(a => a.Transaction.Date.Year))
+            .Union(optionTransactions.Select(o => o.Transaction.Date.Year))
             .Distinct()
             .OrderBy(y => y)
             .ToList();
@@ -53,7 +58,7 @@ public class AnnualSummaryService : IAnnualSummaryService
 
         foreach (int year in years)
         {
-            summaries.Add(this.BuildSummary(year, transactions, assetTransactions));
+            summaries.Add(this.BuildSummary(year, transactions, assetTransactions, optionTransactions));
         }
 
         return summaries;
@@ -63,22 +68,25 @@ public class AnnualSummaryService : IAnnualSummaryService
     {
         List<Domain.Entities.Transaction> transactions = this.transactionRepo.GetAll().ToList();
         List<Domain.Entities.AssetTransaction> assetTransactions = this.portfolioRepo.GetAllTransactions().ToList();
+        List<Domain.Entities.OptionTransaction> optionTransactions = this.optionRepo.GetAll().ToList();
 
         bool hasData = transactions.Any(t => t.Date.Year == year) ||
-                       assetTransactions.Any(a => a.Transaction.Date.Year == year);
+                       assetTransactions.Any(a => a.Transaction.Date.Year == year) ||
+                       optionTransactions.Any(o => o.Transaction.Date.Year == year);
 
         if (!hasData)
         {
             return null;
         }
 
-        return this.BuildSummary(year, transactions, assetTransactions);
+        return this.BuildSummary(year, transactions, assetTransactions, optionTransactions);
     }
 
     private AnnualSummaryDto BuildSummary(
         int year,
         List<Domain.Entities.Transaction> transactions,
-        List<Domain.Entities.AssetTransaction> assetTransactions)
+        List<Domain.Entities.AssetTransaction> assetTransactions,
+        List<Domain.Entities.OptionTransaction> allOptionTransactions)
     {
         List<Domain.Entities.Transaction> yearTxs = transactions
             .Where(t => t.Date.Year == year)
@@ -90,6 +98,10 @@ public class AnnualSummaryService : IAnnualSummaryService
 
         List<Domain.Entities.AssetTransaction> yearAssetTxs = assetTransactions
             .Where(a => a.Transaction.Date.Year == year)
+            .ToList();
+
+        List<Domain.Entities.OptionTransaction> yearOptionTxs = allOptionTransactions
+            .Where(o => o.Transaction.Date.Year == year)
             .ToList();
 
         // Operating breakdown
@@ -121,14 +133,20 @@ public class AnnualSummaryService : IAnnualSummaryService
         decimal operatingExpenses = expenses + fees + withholdingTax;
         decimal netOperatingCashFlow = operatingIncome - operatingExpenses;
 
-        // Investing breakdown (from AssetTransactions)
+        // Investing breakdown (from AssetTransactions and OptionTransaction premiums)
         decimal investmentPurchases = yearAssetTxs
             .Where(a => a.Type == AssetTransactionType.Buy)
-            .Sum(a => a.Transaction.Money.Amount);
+            .Sum(a => a.Transaction.Money.Amount)
+            + yearOptionTxs
+                .Where(o => o.Type == AssetTransactionType.Buy)
+                .Sum(o => o.Transaction.Money.Amount);
 
         decimal investmentSales = yearAssetTxs
             .Where(a => a.Type == AssetTransactionType.Sell)
-            .Sum(a => a.Transaction.Money.Amount);
+            .Sum(a => a.Transaction.Money.Amount)
+            + yearOptionTxs
+                .Where(o => o.Type == AssetTransactionType.Sell)
+                .Sum(o => o.Transaction.Money.Amount);
 
         decimal netInvestedCash = investmentSales - investmentPurchases;
 
@@ -153,7 +171,7 @@ public class AnnualSummaryService : IAnnualSummaryService
 
         (int pairCount, int unmatchedLegCount) = CountFx(yearTxs);
 
-        List<MonthlySummaryDto> months = this.BuildMonthlySummaries(year, yearTxs, yearAssetTxs);
+        List<MonthlySummaryDto> months = this.BuildMonthlySummaries(year, yearTxs, yearAssetTxs, yearOptionTxs);
 
         return new AnnualSummaryDto(
             year,
@@ -186,7 +204,8 @@ public class AnnualSummaryService : IAnnualSummaryService
     private List<MonthlySummaryDto> BuildMonthlySummaries(
         int year,
         List<Domain.Entities.Transaction> yearTxs,
-        List<Domain.Entities.AssetTransaction> yearAssetTxs)
+        List<Domain.Entities.AssetTransaction> yearAssetTxs,
+        List<Domain.Entities.OptionTransaction> yearOptionTxs)
     {
         List<MonthlySummaryDto> result = new List<MonthlySummaryDto>(12);
 
@@ -204,7 +223,11 @@ public class AnnualSummaryService : IAnnualSummaryService
                 .Where(a => a.Transaction.Date.Month == month)
                 .ToList();
 
-            if (monthTxs.Count == 0 && monthAssetTxs.Count == 0)
+            List<Domain.Entities.OptionTransaction> monthOptionTxs = yearOptionTxs
+                .Where(o => o.Transaction.Date.Month == month)
+                .ToList();
+
+            if (monthTxs.Count == 0 && monthAssetTxs.Count == 0 && monthOptionTxs.Count == 0)
             {
                 continue;
             }
@@ -241,11 +264,17 @@ public class AnnualSummaryService : IAnnualSummaryService
             // Investing breakdown
             decimal investmentPurchases = monthAssetTxs
                 .Where(a => a.Type == AssetTransactionType.Buy)
-                .Sum(a => a.Transaction.Money.Amount);
+                .Sum(a => a.Transaction.Money.Amount)
+                + monthOptionTxs
+                    .Where(o => o.Type == AssetTransactionType.Buy)
+                    .Sum(o => o.Transaction.Money.Amount);
 
             decimal investmentSales = monthAssetTxs
                 .Where(a => a.Type == AssetTransactionType.Sell)
-                .Sum(a => a.Transaction.Money.Amount);
+                .Sum(a => a.Transaction.Money.Amount)
+                + monthOptionTxs
+                    .Where(o => o.Type == AssetTransactionType.Sell)
+                    .Sum(o => o.Transaction.Money.Amount);
 
             decimal netInvestedCash = investmentSales - investmentPurchases;
 

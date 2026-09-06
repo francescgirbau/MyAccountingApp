@@ -12,15 +12,18 @@ public class DashboardQuery : IDashboardQuery
 
     private readonly ITransactionRepository _transactionRepo;
     private readonly IPortfolioRepository _portfolioRepo;
+    private readonly IOptionTransactionRepository _optionRepo;
     private readonly IValidationQuery _validationQuery;
 
     public DashboardQuery(
         ITransactionRepository transactionRepo,
         IPortfolioRepository portfolioRepo,
+        IOptionTransactionRepository optionRepo,
         IValidationQuery validationQuery)
     {
         this._transactionRepo = transactionRepo;
         this._portfolioRepo = portfolioRepo;
+        this._optionRepo = optionRepo;
         this._validationQuery = validationQuery;
     }
 
@@ -28,16 +31,17 @@ public class DashboardQuery : IDashboardQuery
     {
         List<Transaction> allTransactions = this._transactionRepo.GetAll().ToList();
         List<AssetTransaction> allAssetTransactions = this._portfolioRepo.GetAllTransactions().ToList();
+        List<OptionTransaction> allOptionTransactions = this._optionRepo.GetAll().ToList();
 
-        CashSnapshotDto cash = BuildCashSnapshot(allTransactions, allAssetTransactions, asOf);
+        CashSnapshotDto cash = BuildCashSnapshot(allTransactions, allAssetTransactions, allOptionTransactions, asOf);
         PortfolioSnapshotDto portfolio = BuildPortfolioSnapshot(allAssetTransactions, asOf.Year);
-        List<DashboardAlertDto> alerts = BuildAlerts(allTransactions, allAssetTransactions);
+        List<DashboardAlertDto> alerts = BuildAlerts(allTransactions, allAssetTransactions, allOptionTransactions);
         this.AddDataQualityAlert(alerts);
 
         return Task.FromResult(new DashboardDto(asOf, cash, portfolio, alerts));
     }
 
-    private static CashSnapshotDto BuildCashSnapshot(List<Transaction> allTransactions, List<AssetTransaction> allAssetTransactions, DateOnly asOf)
+    private static CashSnapshotDto BuildCashSnapshot(List<Transaction> allTransactions, List<AssetTransaction> allAssetTransactions, List<OptionTransaction> allOptionTransactions, DateOnly asOf)
     {
         DateTime end = asOf.ToDateTime(new TimeOnly(23, 59, 59));
         DateTime yearStart = new DateTime(asOf.Year, 1, 1);
@@ -81,8 +85,13 @@ public class DashboardQuery : IDashboardQuery
         List<AssetTransaction> ytdAssets = allAssetTransactions
             .Where(a => a.Transaction.Date >= yearStart && a.Transaction.Date <= end)
             .ToList();
-        decimal purchasesYtd = ytdAssets.Where(a => a.Type == AssetTransactionType.Buy).Sum(a => a.Transaction.Money.Amount);
-        decimal salesYtd = ytdAssets.Where(a => a.Type == AssetTransactionType.Sell).Sum(a => a.Transaction.Money.Amount);
+        List<OptionTransaction> ytdOptions = allOptionTransactions
+            .Where(o => o.Transaction.Date >= yearStart && o.Transaction.Date <= end)
+            .ToList();
+        decimal purchasesYtd = ytdAssets.Where(a => a.Type == AssetTransactionType.Buy).Sum(a => a.Transaction.Money.Amount)
+            + ytdOptions.Where(o => o.Type == AssetTransactionType.Buy).Sum(o => o.Transaction.Money.Amount);
+        decimal salesYtd = ytdAssets.Where(a => a.Type == AssetTransactionType.Sell).Sum(a => a.Transaction.Money.Amount)
+            + ytdOptions.Where(o => o.Type == AssetTransactionType.Sell).Sum(o => o.Transaction.Money.Amount);
 
         return new CashSnapshotDto(
             new OperatingCashFlowDto(
@@ -176,11 +185,13 @@ public class DashboardQuery : IDashboardQuery
         return (costBasis, realized);
     }
 
-    private static List<DashboardAlertDto> BuildAlerts(List<Transaction> allTransactions, List<AssetTransaction> allAssetTransactions)
+    private static List<DashboardAlertDto> BuildAlerts(List<Transaction> allTransactions, List<AssetTransaction> allAssetTransactions, List<OptionTransaction> allOptionTransactions)
     {
         List<DashboardAlertDto> alerts = new();
 
-        if (allTransactions.Any(t => t.Money.Currency != Eur) || allAssetTransactions.Any(t => t.Transaction.Money.Currency != Eur))
+        if (allTransactions.Any(t => t.Money.Currency != Eur)
+            || allAssetTransactions.Any(t => t.Transaction.Money.Currency != Eur)
+            || allOptionTransactions.Any(o => o.Transaction.Money.Currency != Eur))
         {
             alerts.Add(new DashboardAlertDto(
                 "warning",

@@ -22,7 +22,7 @@ public class DashboardQueryTests
         txRepo.Add(new Transaction(new DateTime(2026, 8, 1), "Bonus", new Money(500, "EUR"), TransactionCategory.INCOME));
         txRepo.Add(new Transaction(new DateTime(2026, 8, 5), "Groceries", new Money(100, "EUR"), TransactionCategory.EXPENSE));
         txRepo.Add(new Transaction(new DateTime(2025, 12, 30), "Old", new Money(999, "EUR"), TransactionCategory.INCOME));
-        DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeValidationQuery());
+        DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery());
 
         DashboardDto dashboard = await query.GetAsync(AsOf);
 
@@ -42,7 +42,7 @@ public class DashboardQueryTests
         FakePfRepo pfRepo = new();
         pfRepo.Add(CreateAsset("AAPL", new DateTime(2026, 1, 5), 10, 1000, AssetTransactionType.Buy));
         pfRepo.Add(CreateAsset("AAPL", new DateTime(2026, 8, 3), 2, 300, AssetTransactionType.Sell));
-        DashboardQuery query = new(new FakeTxRepo(), pfRepo, new FakeValidationQuery());
+        DashboardQuery query = new(new FakeTxRepo(), pfRepo, new FakeOptionRepo(), new FakeValidationQuery());
 
         DashboardDto dashboard = await query.GetAsync(AsOf);
 
@@ -63,7 +63,7 @@ public class DashboardQueryTests
         pfRepo.Add(CreateAsset("MSFT", new DateTime(2025, 11, 10), 5, 500, AssetTransactionType.Buy));
         pfRepo.Add(CreateAsset("MSFT", new DateTime(2026, 3, 2), 3, 350, AssetTransactionType.Buy));
         pfRepo.Add(CreateAsset("MSFT", new DateTime(2026, 7, 15), 1, 120, AssetTransactionType.Sell));
-        DashboardQuery query = new(new FakeTxRepo(), pfRepo, new FakeValidationQuery());
+        DashboardQuery query = new(new FakeTxRepo(), pfRepo, new FakeOptionRepo(), new FakeValidationQuery());
 
         DashboardDto dashboard = await query.GetAsync(AsOf);
 
@@ -77,7 +77,7 @@ public class DashboardQueryTests
     {
         FakeTxRepo txRepo = new();
         txRepo.Add(new Transaction(new DateTime(2026, 1, 10), "USD income", new Money(100, "USD"), TransactionCategory.INCOME));
-        DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeValidationQuery());
+        DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery());
 
         DashboardDto dashboard = await query.GetAsync(AsOf);
 
@@ -95,7 +95,7 @@ public class DashboardQueryTests
         txRepo.Add(CreateFxLeg(new DateTime(2026, 2, 1), "FX in", 545.20m, "USD", pairId, FxLeg.In));
         txRepo.Add(new Transaction(new DateTime(2026, 2, 2), "Transfer", new Money(200, "EUR"), TransactionCategory.TRANSFER));
         txRepo.Add(new Transaction(new DateTime(2026, 2, 2), "Deposit", new Money(200, "EUR"), TransactionCategory.DEPOSIT));
-        DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeValidationQuery());
+        DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery());
 
         DashboardDto dashboard = await query.GetAsync(AsOf);
 
@@ -106,10 +106,79 @@ public class DashboardQueryTests
         Assert.Equal(-490.24m, dashboard.Cash.InternalYtd.FxNet);
     }
 
+    [Fact]
+    public async Task GetAsync_ShouldIncludeOptionPremsInInvestingYtd()
+    {
+        FakePfRepo pfRepo = new();
+        pfRepo.Add(CreateAsset("AAPL", new DateTime(2026, 1, 5), 10, 1000, AssetTransactionType.Buy));
+        FakeOptionRepo optRepo = new();
+        optRepo.Add(CreateOption("SPX", new DateTime(2026, 3, 10), 50, AssetTransactionType.Buy));
+        optRepo.Add(CreateOption("SPX", new DateTime(2026, 4, 12), 30, AssetTransactionType.Sell));
+        DashboardQuery query = new(new FakeTxRepo(), pfRepo, optRepo, new FakeValidationQuery());
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        Assert.Equal(1050, dashboard.Cash.InvestingYtd.Purchases);
+        Assert.Equal(30, dashboard.Cash.InvestingYtd.Sales);
+        Assert.Equal(-1020, dashboard.Cash.InvestingYtd.NetInvestedCash);
+    }
+
+    [Fact]
+    public async Task GetAsync_ShouldExcludeOptionPremsOutsideYtd()
+    {
+        FakeOptionRepo optRepo = new();
+        optRepo.Add(CreateOption("SPX", new DateTime(2025, 11, 20), 200, AssetTransactionType.Buy));
+        optRepo.Add(CreateOption("SPX", new DateTime(2026, 2, 5), 40, AssetTransactionType.Buy));
+        DashboardQuery query = new(new FakeTxRepo(), new FakePfRepo(), optRepo, new FakeValidationQuery());
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        Assert.Equal(40, dashboard.Cash.InvestingYtd.Purchases);
+        Assert.Equal(0, dashboard.Cash.InvestingYtd.Sales);
+        Assert.Equal(-40, dashboard.Cash.InvestingYtd.NetInvestedCash);
+    }
+
+    [Fact]
+    public async Task GetAsync_ShouldIncludeOptionPremsWithNoAssets()
+    {
+        FakeOptionRepo optRepo = new();
+        optRepo.Add(CreateOption("SPX", new DateTime(2026, 6, 1), 120, AssetTransactionType.Sell));
+        DashboardQuery query = new(new FakeTxRepo(), new FakePfRepo(), optRepo, new FakeValidationQuery());
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        Assert.Equal(0, dashboard.Cash.InvestingYtd.Purchases);
+        Assert.Equal(120, dashboard.Cash.InvestingYtd.Sales);
+        Assert.Equal(120, dashboard.Cash.InvestingYtd.NetInvestedCash);
+    }
+
+    [Fact]
+    public async Task GetAsync_ShouldAlert_WhenOptionPremsInNonEur()
+    {
+        FakeOptionRepo optRepo = new();
+        Transaction optionTx = new Transaction(new DateTime(2026, 5, 10), "OPT USD", new Money(80, "USD"), TransactionCategory.DIVESTMENT);
+        optRepo.Add(new OptionTransaction(optionTx, "SPX", "ISIN", 1, AssetTransactionType.Sell));
+        DashboardQuery query = new(new FakeTxRepo(), new FakePfRepo(), optRepo, new FakeValidationQuery());
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        DashboardAlertDto alert = Assert.Single(dashboard.Alerts);
+        Assert.Equal("UNCONVERTED_CURRENCY", alert.Code);
+    }
+
     private static AssetTransaction CreateAsset(string symbol, DateTime date, decimal quantity, decimal amount, AssetTransactionType type)
     {
         Transaction transaction = new(date, "Test " + symbol, new Money(amount, "EUR"), TransactionCategory.EXPENSE);
         return new AssetTransaction(transaction, symbol, quantity, type);
+    }
+
+    private static OptionTransaction CreateOption(string symbol, DateTime date, decimal amount, AssetTransactionType type)
+    {
+        TransactionCategory category = type == AssetTransactionType.Buy
+            ? TransactionCategory.INVESTMENT
+            : TransactionCategory.DIVESTMENT;
+        Transaction transaction = new(date, "OPT " + symbol, new Money(amount, "EUR"), category);
+        return new OptionTransaction(transaction, symbol, "ISIN", 1, type);
     }
 
     private static Transaction CreateFxLeg(DateTime date, string description, decimal amount, string currency, Guid pairId, FxLeg leg)
@@ -145,13 +214,25 @@ public class DashboardQueryTests
         public int DeleteByYear(int year) => this._transactions.RemoveAll(t => t.Transaction.Date.Year == year);
     }
 
+    private sealed class FakeOptionRepo : IOptionTransactionRepository
+    {
+        private readonly List<OptionTransaction> _transactions = new();
+
+        public void Add(OptionTransaction transaction) => this._transactions.Add(transaction);
+        public void Update(OptionTransaction transaction) => this._transactions.RemoveAll(t => t.Transaction.Id == transaction.Transaction.Id);
+        public IEnumerable<OptionTransaction> GetAll() => this._transactions;
+        public bool Delete(Guid id) => this._transactions.RemoveAll(t => t.Transaction.Id == id) > 0;
+        public int DeleteByYear(int year) => this._transactions.RemoveAll(t => t.Transaction.Date.Year == year);
+        public void Initialize(IEnumerable<OptionTransaction> transactions) => this._transactions.Clear();
+    }
+
     [Fact]
     public async Task GetAsync_ShouldAddDataQualityAlert_WhenValidationHasErrors()
     {
         FakeTxRepo txRepo = new();
         FakeValidationQuery validation = new(1, 0);
 
-        DashboardQuery query = new(txRepo, new FakePfRepo(), validation);
+        DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeOptionRepo(), validation);
 
         DashboardDto dashboard = await query.GetAsync(AsOf);
 
@@ -167,7 +248,7 @@ public class DashboardQueryTests
         FakeTxRepo txRepo = new();
         FakeValidationQuery validation = new(0, 2);
 
-        DashboardQuery query = new(txRepo, new FakePfRepo(), validation);
+        DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeOptionRepo(), validation);
 
         DashboardDto dashboard = await query.GetAsync(AsOf);
 
@@ -182,7 +263,7 @@ public class DashboardQueryTests
         FakeTxRepo txRepo = new();
         FakeValidationQuery validation = new(0, 0);
 
-        DashboardQuery query = new(txRepo, new FakePfRepo(), validation);
+        DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeOptionRepo(), validation);
 
         DashboardDto dashboard = await query.GetAsync(AsOf);
 
