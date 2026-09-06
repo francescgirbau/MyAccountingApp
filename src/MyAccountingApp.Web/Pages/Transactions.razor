@@ -559,19 +559,15 @@ else
 
     private void OnCategoriesChanged(IEnumerable<string> values)
     {
-        _selectedCategories.Clear();
-        foreach (string value in values)
-        {
-            _selectedCategories.Add(value);
-        }
-
+        _selectedCategories = new HashSet<string>(values, StringComparer.OrdinalIgnoreCase);
         ApplyFilters();
     }
 
     private void ClearCategories()
     {
-        _selectedCategories.Clear();
+        _selectedCategories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         ApplyFilters();
+        StateHasChanged();
     }
 
     private static string CategoriesSelectionText(IReadOnlyList<string> values) => values.Count switch
@@ -673,21 +669,29 @@ else
 
     private void ToggleBucket(IEnumerable<string> bucket)
     {
+        HashSet<string> updated = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string cat in _selectedCategories)
+        {
+            updated.Add(cat);
+        }
+
         if (IsBucketActive(bucket, _selectedCategories))
         {
             foreach (string cat in bucket)
             {
-                _selectedCategories.Remove(cat);
+                updated.Remove(cat);
             }
         }
         else
         {
             foreach (string cat in bucket)
             {
-                _selectedCategories.Add(cat);
+                updated.Add(cat);
             }
         }
 
+        _selectedCategories = updated;
+        StateHasChanged();
         ApplyFilters();
     }
 
