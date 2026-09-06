@@ -79,6 +79,50 @@ else
         </div>
     </MudPaper>
 
+    <MudPaper Class="pa-4 mb-4" Outlined="true">
+        <MudText Typo="Typo.subtitle1" GutterBottom="true">
+            Filtered totals — @_filteredTransactions.Count transactions
+        </MudText>
+        @if (_summaries.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">No transactions match the current filters.</MudText>
+        }
+        else
+        {
+            <MudSimpleTable Dense="true" Hover="false" Bordered="false" Style="background: transparent;">
+                <thead>
+                    <tr>
+                        <th>Currency</th>
+                        <th style="text-align:right">Buys</th>
+                        <th style="text-align:right">Buy cost</th>
+                        <th style="text-align:right">Sells</th>
+                        <th style="text-align:right">Sell proceeds</th>
+                        <th style="text-align:right">Fees</th>
+                        <th style="text-align:right">Net cash flow</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in _summaries)
+                    {
+                        <tr>
+                            <td><strong>@s.Currency</strong> <span class="mud-text-secondary">(@s.Count)</span></td>
+                            <td style="text-align:right">@s.BuyCount</td>
+                            <td style="text-align:right">@s.BuyCost.ToString("N2")</td>
+                            <td style="text-align:right">@s.SellCount</td>
+                            <td style="text-align:right">@s.SellProceeds.ToString("N2")</td>
+                            <td style="text-align:right">@s.Fees.ToString("N2")</td>
+                            <td style="text-align:right"><strong class="@(s.NetCashFlow >= 0 ? "green--text" : "red--text")">@s.NetCashFlow.ToString("N2")</strong></td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+            <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
+                Buy cost = cost basis on purchases; sell proceeds = cash received on sales; fees = transaction fees (FEE / withholding taxes).
+                Net cash flow = sell proceeds − buy cost: positive means the wallet received more cash than it paid out.
+            </MudText>
+        }
+    </MudPaper>
+
     @if (_selected.Count > 0)
     {
         <MudPaper Class="pa-2 mb-2 d-flex align-center" Outlined="true">
@@ -287,6 +331,7 @@ else
 @code {
     private List<AssetTransactionDto> _allTransactions = new();
     private List<AssetTransactionDto> _filteredTransactions = new();
+    private List<AssetSummary> _summaries = new();
     private List<int> _availableYears = new();
     private List<string> _availableSymbols = new();
     private bool _loading = true;
@@ -450,6 +495,47 @@ else
                 _selected.Add(tx);
             }
         }
+
+        RebuildSummaries();
+    }
+
+    private void RebuildSummaries()
+    {
+        _summaries = _filteredTransactions
+            .GroupBy(t => string.IsNullOrWhiteSpace(t.Transaction.Money.Currency) ? "?" : t.Transaction.Money.Currency)
+            .OrderBy(g => g.Key)
+            .Select(g =>
+            {
+                List<AssetTransactionDto> buys = g.Where(t => t.Type == "Buy").ToList();
+                List<AssetTransactionDto> sells = g.Where(t => t.Type == "Sell").ToList();
+                decimal buyCost = buys.Sum(t => t.Transaction.Money.Amount);
+                decimal sellProceeds = sells.Sum(t => t.Transaction.Money.Amount);
+                decimal fees = g.Where(t => t.Transaction.Category is "FEE" or "WITHHOLDING_TAX").Sum(t => t.Transaction.Money.Amount);
+                return new AssetSummary
+                {
+                    Currency = g.Key,
+                    Count = g.Count(),
+                    BuyCount = buys.Count,
+                    BuyCost = buyCost,
+                    SellCount = sells.Count,
+                    SellProceeds = sellProceeds,
+                    Fees = fees,
+                    NetCashFlow = sellProceeds - buyCost,
+                };
+            })
+            .ToList();
+    }
+
+    private sealed class AssetSummary
+    {
+        public string Currency { get; set; } = string.Empty;
+        public int Count { get; set; }
+        public int BuyCount { get; set; }
+        public decimal BuyCost { get; set; }
+        public int SellCount { get; set; }
+        public decimal SellProceeds { get; set; }
+        public decimal Fees { get; set; }
+        public decimal NetCashFlow { get; set; }
     }
 
     private void OpenCreateDialog()
