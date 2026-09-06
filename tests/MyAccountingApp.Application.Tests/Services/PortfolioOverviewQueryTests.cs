@@ -221,6 +221,122 @@ public class PortfolioOverviewQueryTests
         Assert.Equal(1, result.OptionSymbolCount);
     }
 
+    [Fact]
+    public async Task GetOverviewAsync_IncludesLongOptionPosition()
+    {
+        FakePfRepo pfRepo = new();
+        FakeOptionRepo optionRepo = new();
+        optionRepo.Add(Option("VET", "EUR", 2, 30m, AssetTransactionType.Buy));
+        FakeMarketPriceService prices = new(new Dictionary<string, Money> { { "VET", new Money(35m, "EUR") } });
+        PortfolioOverviewQuery query = new(pfRepo, optionRepo, prices, new FakeConversionRepository());
+
+        PortfolioOverviewDto result = await query.GetOverviewAsync(AsOf);
+
+        PortfolioPositionRowDto row = Assert.Single(result.Positions);
+        Assert.Equal("Option", row.AssetClass);
+        Assert.Equal(2m, row.Quantity);
+        Assert.Equal(60m, row.Cost);
+        Assert.Equal(70m, row.MarketValue);
+        Assert.Equal(10m, row.UnrealizedPnL);
+        Assert.True(row.IsPriced);
+        Assert.Equal(70m, result.MarketValueEur);
+        Assert.Equal(60m, result.InvestedCostEur);
+        Assert.Equal(10m, result.UnrealizedPnLEur);
+        Assert.Equal(1, result.OptionSymbolCount);
+    }
+
+    [Fact]
+    public async Task GetOverviewAsync_IncludesShortOptionPosition_ExcludesFromPies()
+    {
+        FakePfRepo pfRepo = new();
+        FakeOptionRepo optionRepo = new();
+
+        // Open short 3 options at 100 premium each (credit 300), current price 80 (gain).
+        optionRepo.Add(Option("SPX", "EUR", 3, 100m, AssetTransactionType.Sell));
+        FakeMarketPriceService prices = new(new Dictionary<string, Money> { { "SPX", new Money(80m, "EUR") } });
+        PortfolioOverviewQuery query = new(pfRepo, optionRepo, prices, new FakeConversionRepository());
+
+        PortfolioOverviewDto result = await query.GetOverviewAsync(AsOf);
+
+        PortfolioPositionRowDto row = Assert.Single(result.Positions);
+        Assert.Equal("Option", row.AssetClass);
+        Assert.Equal(-3m, row.Quantity);
+        Assert.Equal(-300m, row.Cost);
+        Assert.Equal(-240m, row.MarketValue);
+        Assert.Equal(60m, row.UnrealizedPnL);
+        Assert.True(row.IsPriced);
+        Assert.Equal(-240m, result.MarketValueEur);
+        Assert.Equal(-300m, result.InvestedCostEur);
+        Assert.Equal(60m, result.UnrealizedPnLEur);
+        Assert.Empty(result.PurchaseAllocation);
+        Assert.Empty(result.CurrentAllocation);
+    }
+
+    [Fact]
+    public async Task GetOverviewAsync_UnpricedOption_CountedButNotInTotalsOrPies()
+    {
+        FakePfRepo pfRepo = new();
+        FakeOptionRepo optionRepo = new();
+        optionRepo.Add(Option("VET", "EUR", 2, 30m, AssetTransactionType.Buy));
+        FakeMarketPriceService prices = new();
+        PortfolioOverviewQuery query = new(pfRepo, optionRepo, prices, new FakeConversionRepository());
+
+        PortfolioOverviewDto result = await query.GetOverviewAsync(AsOf);
+
+        Assert.Equal(1, result.UnpricedPositionCount);
+        PortfolioPositionRowDto row = Assert.Single(result.Positions);
+        Assert.False(row.IsPriced);
+        Assert.Null(row.MarketValue);
+        Assert.Null(row.PurchaseWeight);
+        Assert.Null(row.CurrentWeight);
+        Assert.Empty(result.PurchaseAllocation);
+        Assert.Empty(result.CurrentAllocation);
+    }
+
+    [Fact]
+    public async Task GetOverviewAsync_ExcludesClosedOptionPosition()
+    {
+        FakePfRepo pfRepo = new();
+        FakeOptionRepo optionRepo = new();
+        optionRepo.Add(Option("VET", "EUR", 2, 30m, AssetTransactionType.Buy));
+        optionRepo.Add(Option("VET", "EUR", 2, 40m, AssetTransactionType.Sell));
+        PortfolioOverviewQuery query = new(pfRepo, optionRepo, new FakeMarketPriceService(new Dictionary<string, Money> { { "VET", new Money(35m, "EUR") } }), new FakeConversionRepository());
+
+        PortfolioOverviewDto result = await query.GetOverviewAsync(AsOf);
+
+        Assert.Empty(result.Positions);
+        Assert.Equal(0, result.OptionSymbolCount);
+    }
+
+    [Fact]
+    public async Task GetOverviewAsync_MergesStockAndOptionSameSymbol_AsMixed()
+    {
+        FakePfRepo pfRepo = new(new[] { Buy("VET", 10, 500) });
+        FakeOptionRepo optionRepo = new();
+        optionRepo.Add(Option("VET", "EUR", 3, 100m, AssetTransactionType.Sell));
+        FakeMarketPriceService prices = new(new Dictionary<string, Money> { { "VET", new Money(60m, "EUR") } });
+        PortfolioOverviewQuery query = new(pfRepo, optionRepo, prices, new FakeConversionRepository());
+
+        PortfolioOverviewDto result = await query.GetOverviewAsync(AsOf);
+
+        PortfolioPositionRowDto row = Assert.Single(result.Positions);
+        Assert.Equal("Mixed", row.AssetClass);
+        Assert.Equal(7m, row.Quantity); // 10 stock - 3 short options
+        Assert.Equal(200m, row.Cost); // 500 stock - 300 option credit
+        Assert.Equal(420m, row.MarketValue);
+        Assert.Equal(220m, row.UnrealizedPnL);
+        Assert.Equal(1, result.OptionSymbolCount);
+    }
+
+    private static OptionTransaction Option(string symbol, string currency, decimal quantity, decimal premium, AssetTransactionType type)
+    {
+        TransactionCategory category = type == AssetTransactionType.Buy
+            ? TransactionCategory.INVESTMENT
+            : TransactionCategory.DIVESTMENT;
+        Transaction tx = new(Guid.NewGuid(), DateTime.UtcNow.AddDays(-30), $"Opt {symbol}", new Money(premium * quantity, currency), category);
+        return new OptionTransaction(tx, symbol, "ISIN", quantity, type);
+    }
+
     private static AssetTransaction Buy(string symbol, decimal quantity, decimal amount, string currency = "EUR") =>
         new(new Transaction(Guid.NewGuid(), DateTime.UtcNow.AddDays(-30), $"Buy {symbol}", new Money(amount, currency), TransactionCategory.INCOME), symbol, quantity, AssetTransactionType.Buy);
 
@@ -232,6 +348,11 @@ public class PortfolioOverviewQueryTests
         private readonly List<AssetTransaction> _transactions;
 
         public FakePfRepo(IEnumerable<AssetTransaction> txs) => this._transactions = txs.ToList();
+
+        public FakePfRepo()
+            : this(Array.Empty<AssetTransaction>())
+        {
+        }
 
         public void AddOrUpdate(AssetTransaction tx) => this._transactions.Add(tx);
 

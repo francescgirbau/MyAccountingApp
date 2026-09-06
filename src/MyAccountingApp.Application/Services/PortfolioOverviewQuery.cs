@@ -34,20 +34,37 @@ public class PortfolioOverviewQuery : IPortfolioOverviewQuery
         DateTimeOffset? latestAsOfUtc = null;
         bool isMarketClosed = false;
         int unpricedCount = 0;
+        int optionSymbolCount = 0;
 
-        foreach (IGrouping<string, AssetTransaction> group in this._portfolioRepo.GetAllTransactions().GroupBy(t => t.Symbol))
+        List<IGrouping<string, AssetTransaction>> stockGroups = this._portfolioRepo.GetAllTransactions().GroupBy(t => t.Symbol).ToList();
+        List<IGrouping<string, OptionTransaction>> optionGroups = this._optionRepo.GetAll().GroupBy(o => o.Symbol).ToList();
+        List<string> symbols = stockGroups.Select(g => g.Key).Union(optionGroups.Select(g => g.Key)).ToList();
+
+        foreach (string symbol in symbols)
         {
-            FifoPosition position = FifoCalculator.Compute(group);
-            if (position.NetQuantity <= 0)
+            IGrouping<string, AssetTransaction>? stockGroup = stockGroups.FirstOrDefault(g => g.Key == symbol);
+            IGrouping<string, OptionTransaction>? optionGroup = optionGroups.FirstOrDefault(g => g.Key == symbol);
+
+            FifoPosition? stockPosition = stockGroup is not null ? FifoCalculator.Compute(stockGroup) : null;
+            FifoPosition? optionPosition = optionGroup is not null ? FifoCalculator.ComputeOptions(optionGroup) : null;
+            FifoPosition position = stockPosition is not null && optionPosition is not null
+                ? FifoCalculator.Merge(stockPosition, optionPosition)
+                : stockPosition ?? optionPosition!;
+
+            // Include open positions: long (quantity > 0) and short options (quantity < 0).
+            // Purely short stock positions (oversold) remain excluded.
+            if (position.NetQuantity == 0 || (stockPosition is not null && optionPosition is null && position.NetQuantity < 0))
             {
                 continue;
             }
 
-            string currency = group.First().Transaction.Money.Currency;
+            string currency = stockGroup is not null
+                ? stockGroup.First().Transaction.Money.Currency
+                : optionGroup!.First().Transaction.Money.Currency;
             decimal cost = Math.Round(position.TotalCostBasis, 2);
 
-            CachedQuote? lastQuote = await this._marketPriceService.GetLastQuoteAsync(group.Key);
-            Money? freshPrice = await this._marketPriceService.GetCachedPriceAsync(group.Key);
+            CachedQuote? lastQuote = await this._marketPriceService.GetLastQuoteAsync(symbol);
+            Money? freshPrice = await this._marketPriceService.GetCachedPriceAsync(symbol);
 
             bool isPriced = lastQuote is not null;
             bool isStale = isPriced && freshPrice is null;
@@ -59,13 +76,18 @@ public class PortfolioOverviewQuery : IPortfolioOverviewQuery
 
             decimal? marketValue = isPriced ? Math.Round(lastQuote!.Price.Amount * position.NetQuantity, 2) : null;
             decimal? unrealizedPnL = marketValue is null ? null : Math.Round(marketValue.Value - cost, 2);
-            decimal? unrealizedPnLPct = marketValue is null || cost == 0
+            decimal? unrealizedPnLPct = marketValue is null || cost == 0 || position.NetQuantity <= 0
                 ? null
                 : Math.Round((marketValue.Value / cost) - 1, 4);
 
+            if (optionGroup is not null)
+            {
+                optionSymbolCount++;
+            }
+
             working.Add(new WorkingRow
             {
-                Symbol = group.Key,
+                Symbol = symbol,
                 Quantity = position.NetQuantity,
                 Cost = cost,
                 Currency = currency,
@@ -76,6 +98,7 @@ public class PortfolioOverviewQuery : IPortfolioOverviewQuery
                 PriceAsOfUtc = lastQuote?.AsOfUtc,
                 IsPriced = isPriced,
                 IsStale = isStale,
+                AssetClass = optionGroup is not null ? (stockGroup is not null ? "Mixed" : "Option") : "Stock",
             });
 
             if (lastQuote is not null && (latestAsOfUtc is null || lastQuote.AsOfUtc > latestAsOfUtc))
@@ -87,6 +110,8 @@ public class PortfolioOverviewQuery : IPortfolioOverviewQuery
         // Convert own-currency values to EUR using the latest rate at or before the as-of date.
         decimal investedEur = 0;
         decimal marketEur = 0;
+        decimal investedEurLong = 0;
+        decimal marketEurLong = 0;
 
         foreach (WorkingRow row in working.Where(r => r.IsPriced))
         {
@@ -97,15 +122,21 @@ public class PortfolioOverviewQuery : IPortfolioOverviewQuery
                 continue;
             }
 
+            bool isLong = row.Quantity > 0;
             investedEur += row.CostEur.Value;
             marketEur += row.MarketValueEur.Value;
+            if (isLong)
+            {
+                investedEurLong += row.CostEur.Value;
+                marketEurLong += row.MarketValueEur.Value;
+            }
         }
 
-        // Weights are only meaningful for positions that contributed to the totals.
-        foreach (WorkingRow row in working.Where(r => r.CostEur is not null && r.MarketValueEur is not null))
+        // Weights are only meaningful for long positions that contributed to the totals.
+        foreach (WorkingRow row in working.Where(r => r.CostEur is not null && r.MarketValueEur is not null && r.Quantity > 0))
         {
-            row.PurchaseWeight = investedEur == 0 ? null : row.CostEur!.Value / investedEur;
-            row.CurrentWeight = marketEur == 0 ? null : row.MarketValueEur!.Value / marketEur;
+            row.PurchaseWeight = investedEurLong == 0 ? null : row.CostEur!.Value / investedEurLong;
+            row.CurrentWeight = marketEurLong == 0 ? null : row.MarketValueEur!.Value / marketEurLong;
             if (row.PurchaseWeight is not null && row.CurrentWeight is not null)
             {
                 row.WeightDelta = row.CurrentWeight.Value - row.PurchaseWeight.Value;
@@ -113,20 +144,20 @@ public class PortfolioOverviewQuery : IPortfolioOverviewQuery
         }
 
         List<PortfolioPositionRowDto> rows = working.Select(row => row.ToDto()).ToList();
-        decimal pnlPct = investedEur == 0 ? 0 : (marketEur / investedEur) - 1;
+        decimal pnlPct = investedEurLong == 0 ? 0 : (marketEurLong / investedEurLong) - 1;
 
         return new PortfolioOverviewDto(
             Math.Round(marketEur, 2),
             Math.Round(investedEur, 2),
             Math.Round(marketEur - investedEur, 2),
-            investedEur == 0 ? null : Math.Round(pnlPct, 4),
+            investedEurLong == 0 ? null : Math.Round(pnlPct, 4),
             rows.Where(r => r.MarketValueEur is not null && r.PriceAsOfUtc is not null).Max(r => r.PriceAsOfUtc),
             isMarketClosed,
             unpricedCount,
-            this._optionRepo.GetAll().Select(o => o.Symbol).Distinct().Count(),
+            optionSymbolCount,
             rows,
-            BuildSlices(rows, investedEur, current: false),
-            BuildSlices(rows, marketEur, current: true));
+            BuildSlices(rows, investedEurLong, current: false),
+            BuildSlices(rows, marketEurLong, current: true));
     }
 
     private static IReadOnlyList<AllocationSliceDto> BuildSlices(IReadOnlyList<PortfolioPositionRowDto> rows, decimal totalEur, bool current)
@@ -137,7 +168,7 @@ public class PortfolioOverviewQuery : IPortfolioOverviewQuery
         }
 
         List<PortfolioPositionRowDto> counted = rows
-            .Where(r => r.CostEur is not null && r.MarketValueEur is not null)
+            .Where(r => r.CostEur is not null && r.MarketValueEur is not null && r.Quantity > 0)
             .OrderByDescending(r => current ? r.CurrentWeight!.Value : r.PurchaseWeight!.Value)
             .ToList();
 
@@ -200,6 +231,7 @@ public class PortfolioOverviewQuery : IPortfolioOverviewQuery
         public DateTimeOffset? PriceAsOfUtc { get; init; }
         public bool IsPriced { get; init; }
         public bool IsStale { get; init; }
+        public string AssetClass { get; init; } = "Stock";
         public decimal? CostEur { get; set; }
         public decimal? MarketValueEur { get; set; }
         public decimal? PurchaseWeight { get; set; }
@@ -222,6 +254,7 @@ public class PortfolioOverviewQuery : IPortfolioOverviewQuery
             this.LastPrice,
             this.PriceAsOfUtc,
             this.IsPriced,
-            this.IsStale);
+            this.IsStale,
+            this.AssetClass);
     }
 }

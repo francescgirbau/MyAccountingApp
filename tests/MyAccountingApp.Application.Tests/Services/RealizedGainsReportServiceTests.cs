@@ -31,7 +31,7 @@ public class RealizedGainsReportServiceTests
         FakePortfolioRepo repo = new();
         repo.AddOrUpdate(Buy("AAPL", 100, 10, new DateTime(2024, 1, 15)));
         repo.AddOrUpdate(Sell("AAPL", 150, 10, new DateTime(2025, 6, 1)));
-        RealizedGainsReportService service = new(repo, new InMemoryTransactionRepository());
+        RealizedGainsReportService service = new(repo, new InMemoryTransactionRepository(), new FakeOptionRepository());
 
         RealizedGainsReportDto report = await service.GetRealizedGainsAsync(2025);
 
@@ -57,7 +57,7 @@ public class RealizedGainsReportServiceTests
         repo.AddOrUpdate(Buy("AAPL", 100, 10, new DateTime(2025, 1, 15)));
         repo.AddOrUpdate(Sell("AAPL", 120, 5, new DateTime(2025, 6, 1)));
         repo.AddOrUpdate(Sell("AAPL", 140, 5, new DateTime(2025, 7, 1)));
-        RealizedGainsReportService service = new(repo, new InMemoryTransactionRepository());
+        RealizedGainsReportService service = new(repo, new InMemoryTransactionRepository(), new FakeOptionRepository());
 
         RealizedGainsReportDto report = await service.GetRealizedGainsAsync(2025);
 
@@ -74,7 +74,7 @@ public class RealizedGainsReportServiceTests
     {
         FakePortfolioRepo repo = new();
         repo.AddOrUpdate(Buy("AAPL", 100, 10, new DateTime(2024, 1, 15)));
-        RealizedGainsReportService service = new(repo, new InMemoryTransactionRepository());
+        RealizedGainsReportService service = new(repo, new InMemoryTransactionRepository(), new FakeOptionRepository());
 
         RealizedGainsReportDto report = await service.GetRealizedGainsAsync(2025);
 
@@ -90,7 +90,7 @@ public class RealizedGainsReportServiceTests
         repo.AddOrUpdate(WithholdingTx(new DateTime(2025, 4, 1), 20m, "USD"));
         repo.AddOrUpdate(WithholdingTx(new DateTime(2024, 12, 1), 10m, "EUR"));
         repo.AddOrUpdate(new Transaction(Guid.NewGuid(), new DateTime(2025, 5, 1), "Dividend", new Money(50m, "USD"), TransactionCategory.DIVIDEND));
-        RealizedGainsReportService service = new(new FakePortfolioRepo(), repo);
+        RealizedGainsReportService service = new(new FakePortfolioRepo(), repo, new FakeOptionRepository());
 
         WithholdingReportDto report = await service.GetWithholdingAsync(2025);
 

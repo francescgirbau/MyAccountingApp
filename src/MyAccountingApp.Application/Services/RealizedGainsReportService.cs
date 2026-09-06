@@ -9,11 +9,16 @@ public class RealizedGainsReportService : IRealizedGainsReportService
 {
     private readonly IPortfolioRepository _portfolioRepo;
     private readonly ITransactionRepository _transactionRepo;
+    private readonly IOptionTransactionRepository _optionRepo;
 
-    public RealizedGainsReportService(IPortfolioRepository portfolioRepo, ITransactionRepository transactionRepo)
+    public RealizedGainsReportService(
+        IPortfolioRepository portfolioRepo,
+        ITransactionRepository transactionRepo,
+        IOptionTransactionRepository optionRepo)
     {
         this._portfolioRepo = portfolioRepo;
         this._transactionRepo = transactionRepo;
+        this._optionRepo = optionRepo;
     }
 
     public Task<RealizedGainsReportDto> GetRealizedGainsAsync(int year)

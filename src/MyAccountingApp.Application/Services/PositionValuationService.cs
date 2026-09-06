@@ -10,6 +10,7 @@ namespace MyAccountingApp.Application.Services;
 public class PositionValuationService : IPositionValuationService
 {
     private readonly IPortfolioRepository _portfolioRepo;
+    private readonly IOptionTransactionRepository _optionRepo;
     private readonly IPositionEngine _positionEngine;
     private readonly IToEurConverter _toEurConverter;
 
@@ -17,14 +18,17 @@ public class PositionValuationService : IPositionValuationService
     /// Initializes a new instance of the <see cref="PositionValuationService"/> class.
     /// </summary>
     /// <param name="portfolioRepo">Repository holding the asset transactions.</param>
+    /// <param name="optionRepo">Repository holding the option transactions.</param>
     /// <param name="positionEngine">Engine computing positions and market prices.</param>
     /// <param name="toEurConverter">Converter used for the EUR valuation.</param>
     public PositionValuationService(
         IPortfolioRepository portfolioRepo,
+        IOptionTransactionRepository optionRepo,
         IPositionEngine positionEngine,
         IToEurConverter toEurConverter)
     {
         this._portfolioRepo = portfolioRepo;
+        this._optionRepo = optionRepo;
         this._positionEngine = positionEngine;
         this._toEurConverter = toEurConverter;
     }
@@ -32,14 +36,16 @@ public class PositionValuationService : IPositionValuationService
     /// <inheritdoc/>
     public async Task<IReadOnlyList<PositionValuationDto>> GetValuationsAsync(DateOnly asOf, CancellationToken cancellationToken = default)
     {
-        string[] symbols = this._portfolioRepo.GetAllTransactions().Select(t => t.Symbol).Distinct().ToArray();
+        string[] stockSymbols = this._portfolioRepo.GetAllTransactions().Select(t => t.Symbol).Distinct().ToArray();
+        string[] optionSymbols = this._optionRepo.GetAll().Select(o => o.Symbol).Distinct().ToArray();
+        string[] symbols = stockSymbols.Union(optionSymbols).ToArray();
         List<PositionValuationDto> result = new();
 
         foreach (string symbol in symbols)
         {
             PortfolioPositionDto? position = await this._positionEngine.GetPosition(symbol, includePrice: true);
 
-            if (position is null || position.NetQuantity <= 0)
+            if (position is null || position.NetQuantity == 0)
             {
                 continue;
             }

@@ -17,8 +17,8 @@ RUN dotnet restore src/MyAccountingApp.Api/MyAccountingApp.Api.csproj
 RUN dotnet restore src/MyAccountingApp.Web/MyAccountingApp.Web.csproj
 
 COPY . .
-RUN dotnet publish src/MyAccountingApp.Web/MyAccountingApp.Web.csproj -c Release -o /web
-RUN dotnet publish src/MyAccountingApp.Api/MyAccountingApp.Api.csproj -c Release -o /app
+RUN dotnet publish src/MyAccountingApp.Web/MyAccountingApp.Web.csproj -c Release --no-restore -o /web
+RUN dotnet publish src/MyAccountingApp.Api/MyAccountingApp.Api.csproj -c Release --no-restore -o /app
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app

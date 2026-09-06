@@ -8,33 +8,52 @@ namespace MyAccountingApp.Application.Services;
 public class PositionEngine : IPositionEngine
 {
     private readonly IPortfolioRepository _portfolioRepo;
+    private readonly IOptionTransactionRepository _optionRepo;
     private readonly IMarketPriceService _marketPriceService;
 
-    public PositionEngine(IPortfolioRepository portfolioRepo, IMarketPriceService marketPriceService)
+    public PositionEngine(
+        IPortfolioRepository portfolioRepo,
+        IOptionTransactionRepository optionRepo,
+        IMarketPriceService marketPriceService)
     {
         this._portfolioRepo = portfolioRepo;
+        this._optionRepo = optionRepo;
         this._marketPriceService = marketPriceService;
     }
 
     public async Task<PortfolioPositionDto?> GetPosition(string symbol, bool includePrice = true)
     {
-        var transactions = this._portfolioRepo.GetAssetTransactions(symbol).ToList();
+        var assetTransactions = this._portfolioRepo.GetAssetTransactions(symbol).ToList();
+        var optionTransactions = this._optionRepo.GetAll().Where(o => o.Symbol == symbol).ToList();
 
-        if (transactions.Count == 0)
+        if (assetTransactions.Count == 0 && optionTransactions.Count == 0)
         {
             return null;
         }
 
-        FifoPosition position = FifoCalculator.Compute(transactions);
-        string currency = transactions[0].Transaction.Money.Currency;
+        FifoPosition? stockPosition = assetTransactions.Count > 0 ? FifoCalculator.Compute(assetTransactions) : null;
+        FifoPosition? optionPosition = optionTransactions.Count > 0 ? FifoCalculator.ComputeOptions(optionTransactions) : null;
+        FifoPosition position = stockPosition is not null && optionPosition is not null
+            ? FifoCalculator.Merge(stockPosition, optionPosition)
+            : stockPosition ?? optionPosition!;
 
-        decimal avgCost = position.NetQuantity > 0 ? Math.Round(position.TotalCostBasis / position.NetQuantity, 4) : 0;
+        string currency = assetTransactions.Count > 0
+            ? assetTransactions[0].Transaction.Money.Currency
+            : optionTransactions[0].Transaction.Money.Currency;
+        bool hasOptions = optionTransactions.Count > 0;
 
-        Money? marketPrice = includePrice && position.NetQuantity > 0 ? await this._marketPriceService.GetPriceAsync(symbol) : null;
+        decimal avgCost = position.NetQuantity != 0 ? Math.Round(position.TotalCostBasis / position.NetQuantity, 4) : 0;
 
-        decimal? unrealizedGainLoss = marketPrice is not null && position.NetQuantity > 0
+        bool priceEnabled = includePrice && position.NetQuantity != 0;
+        Money? marketPrice = priceEnabled ? await this._marketPriceService.GetPriceAsync(symbol) : null;
+
+        decimal? unrealizedGainLoss = marketPrice is not null && position.NetQuantity != 0
             ? Math.Round((marketPrice.Amount - avgCost) * position.NetQuantity, 2)
             : null;
+
+        string assetClass = hasOptions
+            ? (assetTransactions.Count > 0 ? "Mixed" : "Option")
+            : "Stock";
 
         return new PortfolioPositionDto(
             symbol,
@@ -54,6 +73,7 @@ public class PositionEngine : IPositionEngine
             marketPrice?.Amount,
             unrealizedGainLoss,
             position.UnmatchedSellQuantity > 0,
-            Math.Round(position.UnmatchedSellQuantity, 4));
+            Math.Round(position.UnmatchedSellQuantity, 4),
+            assetClass);
     }
 }
