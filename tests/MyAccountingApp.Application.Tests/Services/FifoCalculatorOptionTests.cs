@@ -37,8 +37,8 @@ public class FifoCalculatorOptionTests
         Assert.Equal(0m, position.TotalCostBasis, 2);
         Assert.Equal(40m, position.RealizedGainLoss, 2);
         Assert.Empty(position.OpenLots);
-        Assert.Equal(1, position.Sales.Count);
-        Assert.Equal(40m, position.Sales[0].RealizedGainLoss, 2);
+        FifoSale sale = Assert.Single(position.Sales);
+        Assert.Equal(40m, sale.RealizedGainLoss, 2);
     }
 
     [Fact]
@@ -77,9 +77,9 @@ public class FifoCalculatorOptionTests
         Assert.Equal(0m, position.TotalCostBasis, 2);
         Assert.Equal(60m, position.RealizedGainLoss, 2);
         Assert.Empty(position.OpenLots);
-        Assert.Equal(1, position.Sales.Count);
-        Assert.Equal(300m, position.Sales[0].Proceeds, 2);
-        Assert.Equal(240m, position.Sales[0].CostBasis, 2);
+        FifoSale sale = Assert.Single(position.Sales);
+        Assert.Equal(300m, sale.Proceeds, 2);
+        Assert.Equal(240m, sale.CostBasis, 2);
     }
 
     [Fact]

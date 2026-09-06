@@ -172,6 +172,7 @@ public class DashboardQueryTests
         FakePfRepo pfRepo = new();
         pfRepo.Add(CreateAsset("AAPL", new DateTime(2026, 1, 5), 10, 1000, AssetTransactionType.Buy));
         FakeOptionRepo optRepo = new();
+
         // Open long option: buy 50 premium, no close -> cost basis 50.
         optRepo.Add(CreateOption("SPX", new DateTime(2026, 3, 10), 50, AssetTransactionType.Buy));
         DashboardQuery query = new(new FakeTxRepo(), pfRepo, optRepo, new FakeValidationQuery());

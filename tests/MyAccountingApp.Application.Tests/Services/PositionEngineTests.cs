@@ -258,6 +258,7 @@ public class PositionEngineTests
     {
         FakePortfolioRepo repo = new();
         FakeOptionRepository optionRepo = new();
+
         // Open short: sell 3 @100 premium, current price 80 -> gain 60, market value -240.
         optionRepo.Add(Opt("SPX", 100, 3, AssetTransactionType.Sell, "EUR"));
         PositionEngine engine = new(repo, optionRepo, new FakeMarketPriceService(new Dictionary<string, Money> { { "SPX", new Money(80m, "EUR") } }));

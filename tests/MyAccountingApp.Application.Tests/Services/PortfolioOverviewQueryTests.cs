@@ -250,6 +250,7 @@ public class PortfolioOverviewQueryTests
     {
         FakePfRepo pfRepo = new();
         FakeOptionRepo optionRepo = new();
+
         // Open short 3 options at 100 premium each (credit 300), current price 80 (gain).
         optionRepo.Add(Option("SPX", "EUR", 3, 100m, AssetTransactionType.Sell));
         FakeMarketPriceService prices = new(new Dictionary<string, Money> { { "SPX", new Money(80m, "EUR") } });
