@@ -176,6 +176,10 @@ else
                        OnClick="@OpenBulkCategoryDialog" StartIcon="@Icons.Material.Filled.Edit">
                 Change category
             </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Error" Size="Size.Small" Class="ml-2"
+                       OnClick="@OpenBulkDeleteDialog" StartIcon="@Icons.Material.Filled.Delete">
+                Delete
+            </MudButton>
             <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="@ClearSelection" Size="Size.Small" />
         </MudPaper>
     }
@@ -327,6 +331,24 @@ else
     </DialogActions>
 </MudDialog>
 
+<MudDialog @bind-Visible="_showBulkDeleteDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete transactions</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-4">
+            <strong>@_selected.Count</strong> selected transaction(s) will be permanently deleted. This cannot be undone.
+        </MudText>
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">Only visible rows are affected.</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@CloseBulkDeleteDialog">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@ConfirmBulkDeleteAsync">
+            Delete @_selected.Count
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
 <MudDialog @bind-Visible="_showFxDialog">
     <TitleContent>
         <MudText Typo="Typo.h6">New FX Conversion</MudText>
@@ -413,6 +435,7 @@ else
     private bool _showFxDialog;
     private bool _showDeleteDialog;
     private bool _showBulkCategoryDialog;
+    private bool _showBulkDeleteDialog;
     private Guid? _editingId;
     private TransactionDto? _deletingTx;
     private HashSet<TransactionDto> _selected = new();
@@ -969,6 +992,68 @@ else
             {
                 string details = string.Join("; ", result.Failures.Select(f => f.Error));
                 Snackbar.Add($"{result.Updated} updated, {result.Failures.Count} failed: {details}", Severity.Warning);
+            }
+
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void OpenBulkDeleteDialog()
+    {
+        _showBulkDeleteDialog = true;
+    }
+
+    private void CloseBulkDeleteDialog()
+    {
+        _showBulkDeleteDialog = false;
+    }
+
+    private async Task ConfirmBulkDeleteAsync()
+    {
+        if (_selected.Count == 0)
+        {
+            return;
+        }
+
+        List<TransactionDto> targets = _selected.Where(s => _filteredTransactions.Any(f => f.Id == s.Id)).ToList();
+        if (targets.Count == 0)
+        {
+            Snackbar.Add("No visible rows selected", Severity.Warning);
+            return;
+        }
+
+        var payload = new BulkDeleteRequest { Ids = targets.Select(t => t.Id).ToList() };
+
+        try
+        {
+            HttpResponseMessage response = await Http.PostAsJsonAsync("/api/transactions/bulk-delete", payload);
+            if (!response.IsSuccessStatusCode)
+            {
+                string body = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Bulk delete failed ({(int)response.StatusCode}): {Trim(body)}", Severity.Error);
+                return;
+            }
+
+            BulkDeleteResultDto? result = await response.Content.ReadFromJsonAsync<BulkDeleteResultDto>();
+            _showBulkDeleteDialog = false;
+            _selected.Clear();
+
+            if (result is null)
+            {
+                Snackbar.Add("Bulk delete failed", Severity.Error);
+            }
+            else if (result.Failures.Count == 0)
+            {
+                Snackbar.Add($"{result.Deleted} transaction(s) deleted", Severity.Success);
+            }
+            else
+            {
+                string details = string.Join("; ", result.Failures.Select(f => f.Error));
+                Snackbar.Add($"{result.Deleted} deleted, {result.Failures.Count} failed: {details}", Severity.Warning);
             }
 
             await LoadDataAsync();
