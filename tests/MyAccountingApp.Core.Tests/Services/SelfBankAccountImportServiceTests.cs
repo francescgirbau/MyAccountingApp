@@ -90,7 +90,7 @@ public class SelfBankAccountImportServiceTests
     }
 
     [Fact]
-    public async Task ParseAllAsync_TfiRecibida_BecomesTransfer()
+    public async Task ParseAllAsync_TfiRecibida_BecomesDeposit()
     {
         string csv = $"{Header}\n2025-10-01;2025-10-01;TFI RECIBIDA;Sin Categoría;240.00;";
         string file = Path.GetTempFileName();
@@ -101,7 +101,47 @@ public class SelfBankAccountImportServiceTests
 
             var (txs, _, _) = await service.ParseAllAsync(file);
 
-            Assert.Equal(TransactionCategory.TRANSFER, Assert.Single(txs).Category);
+            Assert.Equal(TransactionCategory.DEPOSIT, Assert.Single(txs).Category);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_AbonoTrf_BecomesDeposit()
+    {
+        string csv = $"{Header}\n2025-10-01;2025-10-01;Abono TRF De F GIRBAU LLISTUELLA;Sin Categoría;100.00;";
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv, Encoding.Latin1);
+            SelfBankAccountImportService service = new();
+
+            var (txs, _, _) = await service.ParseAllAsync(file);
+
+            Assert.Equal(TransactionCategory.DEPOSIT, Assert.Single(txs).Category);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_AbonoTrfFromOtherSource_BecomesDeposit()
+    {
+        string csv = $"{Header}\n2025-10-01;2025-10-01;Abono TRF De PayPal Europe S.a.r.l.;Sin Categoría;0.01;";
+        string file = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(file, csv, Encoding.Latin1);
+            SelfBankAccountImportService service = new();
+
+            var (txs, _, _) = await service.ParseAllAsync(file);
+
+            Assert.Equal(TransactionCategory.DEPOSIT, Assert.Single(txs).Category);
         }
         finally
         {

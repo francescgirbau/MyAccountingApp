@@ -16,7 +16,7 @@ using MyAccountingApp.Domain.ValueObjects;
 public class SelfBankAccountImportService : IBrokerImportService
 {
     private static readonly string[] TransferOutKeywords = { "TRF A COBAS", "TRF A FRANCESC", "TRF A GIRBAU" };
-    private static readonly string[] TransferInKeywords = { "TFI RECIBIDA", "ABONO TRF DE F GIRBAU", "ABONO TRF DE FRANCESC", "ABONO TRF DE GIRBAU" };
+    private static readonly string[] DepositInKeywords = { "TFI RECIBIDA", "ABONO TRF DE" };
     private static readonly string[] TermDepositKeywords = { "APERTURA DEPOSITO", "VENCIMIENTO DEPOSITO" };
     private static readonly string[] InterestKeywords = { "INTERESES DEPOSITO", "INTERESES " };
     private static readonly string[] ExpenseKeywords = { "CLUB TRIATLO", "O2 MOVIL", "MUTUALITAT", "O2 MÓVIL" };
@@ -83,10 +83,10 @@ public class SelfBankAccountImportService : IBrokerImportService
             return TransactionCategory.TRANSFER;
         }
 
-        // Incoming transfers from broker
-        if (TransferInKeywords.Any(k => m.Contains(k)))
+        // Incoming transfers are deposits (money entering the account)
+        if (DepositInKeywords.Any(k => m.Contains(k)))
         {
-            return TransactionCategory.TRANSFER;
+            return TransactionCategory.DEPOSIT;
         }
 
         // Term deposits (internal moves)
