@@ -328,6 +328,61 @@ public class AnnualSummaryServiceTests
             fxLeg: leg);
     }
 
+    [Fact]
+    public void GetByYear_IncludesOptionPremiumsInInvesting()
+    {
+        AssetTransaction[] assets = new AssetTransaction[]
+        {
+            AssetTx(2020, 300, AssetTransactionType.Buy),
+            AssetTx(2020, 150, AssetTransactionType.Sell),
+        };
+        OptionTransaction[] options = new OptionTransaction[]
+        {
+            OptionTx(2020, 6, 50, AssetTransactionType.Buy),
+            OptionTx(2020, 6, 30, AssetTransactionType.Sell),
+        };
+        var svc = CreateService(Array.Empty<Transaction>(), assets, options);
+
+        AnnualSummaryDto? result = svc.GetByYear(2020);
+
+        Assert.NotNull(result);
+        Assert.Equal(350m, result.Investing.Purchases);
+        Assert.Equal(180m, result.Investing.Sales);
+        Assert.Equal(-170m, result.Investing.NetInvestedCash);
+    }
+
+    [Fact]
+    public void GetByYear_IncludesOptionPremiumsInMonthlyInvesting()
+    {
+        OptionTransaction[] options = new OptionTransaction[]
+        {
+            OptionTx(2024, 1, 40, AssetTransactionType.Buy),
+            OptionTx(2024, 6, 25, AssetTransactionType.Sell),
+        };
+        var svc = CreateService(Array.Empty<Transaction>(), Array.Empty<AssetTransaction>(), options);
+
+        AnnualSummaryDto? result = svc.GetByYear(2024);
+
+        Assert.NotNull(result);
+        MonthlySummaryDto monthJan = Assert.Single(result.Months, m => m.Month == 1);
+        Assert.Equal(40m, monthJan.Investing.Purchases);
+        Assert.Equal(0m, monthJan.Investing.Sales);
+        MonthlySummaryDto monthJun = Assert.Single(result.Months, m => m.Month == 6);
+        Assert.Equal(0m, monthJun.Investing.Purchases);
+        Assert.Equal(25m, monthJun.Investing.Sales);
+    }
+
+    [Fact]
+    public void GetByYear_ExcludesOptionPremiumsFromOtherYears()
+    {
+        OptionTransaction[] options = new OptionTransaction[] { OptionTx(2019, 6, 500, AssetTransactionType.Buy) };
+        var svc = CreateService(Array.Empty<Transaction>(), Array.Empty<AssetTransaction>(), options);
+
+        AnnualSummaryDto? result = svc.GetByYear(2024);
+
+        Assert.Null(result);
+    }
+
     private static AssetTransaction AssetTx(int year, decimal amount, AssetTransactionType type)
     {
         TransactionCategory cat = type == AssetTransactionType.Buy
@@ -344,13 +399,31 @@ public class AnnualSummaryServiceTests
         return new AssetTransaction(tx, "TEST", 10, type);
     }
 
+    private static OptionTransaction OptionTx(int year, int month, decimal amount, AssetTransactionType type)
+    {
+        TransactionCategory cat = type == AssetTransactionType.Buy
+            ? TransactionCategory.INVESTMENT
+            : TransactionCategory.DIVESTMENT;
+
+        Transaction tx = new Transaction(
+            Guid.NewGuid(),
+            new DateTime(year, month, 1),
+            "Option",
+            new Money(amount, "EUR"),
+            cat);
+
+        return new OptionTransaction(tx, "TEST-OPT", "ISIN", 1, type);
+    }
+
     private static IAnnualSummaryService CreateService(
         IEnumerable<Transaction> transactions,
-        IEnumerable<AssetTransaction> assetTransactions)
+        IEnumerable<AssetTransaction> assetTransactions,
+        IEnumerable<OptionTransaction>? options = null)
     {
         return new AnnualSummaryService(
             new FakeTxRepo(transactions),
-            new FakePfRepo(assetTransactions));
+            new FakePfRepo(assetTransactions),
+            new FakeOptionRepo(options));
     }
 
     private sealed class FakeTxRepo : ITransactionRepository
@@ -395,5 +468,28 @@ public class AnnualSummaryServiceTests
 
         public bool Delete(Guid transactionId) => true;
         public int DeleteByYear(int year) => this._transactions.RemoveAll(t => t.Transaction.Date.Year == year);
+    }
+
+    private sealed class FakeOptionRepo : IOptionTransactionRepository
+    {
+        private readonly List<OptionTransaction> _transactions;
+
+        public FakeOptionRepo(IEnumerable<OptionTransaction>? txs) => this._transactions = txs?.ToList() ?? new List<OptionTransaction>();
+
+        public void Add(OptionTransaction tx) => this._transactions.Add(tx);
+
+        public void Update(OptionTransaction tx) => this._transactions.RemoveAll(t => t.Transaction.Id == tx.Transaction.Id);
+
+        public IEnumerable<OptionTransaction> GetAll() => this._transactions;
+
+        public bool Delete(Guid id) => this._transactions.RemoveAll(t => t.Transaction.Id == id) > 0;
+
+        public int DeleteByYear(int year) => this._transactions.RemoveAll(t => t.Transaction.Date.Year == year);
+
+        public void Initialize(IEnumerable<OptionTransaction> transactions)
+        {
+            this._transactions.Clear();
+            this._transactions.AddRange(transactions);
+        }
     }
 }
