@@ -8,11 +8,16 @@ namespace MyAccountingApp.Application.Services;
 public class PositionEngine : IPositionEngine
 {
     private readonly IPortfolioRepository _portfolioRepo;
+    private readonly IOptionTransactionRepository _optionRepo;
     private readonly IMarketPriceService _marketPriceService;
 
-    public PositionEngine(IPortfolioRepository portfolioRepo, IMarketPriceService marketPriceService)
+    public PositionEngine(
+        IPortfolioRepository portfolioRepo,
+        IOptionTransactionRepository optionRepo,
+        IMarketPriceService marketPriceService)
     {
         this._portfolioRepo = portfolioRepo;
+        this._optionRepo = optionRepo;
         this._marketPriceService = marketPriceService;
     }
 

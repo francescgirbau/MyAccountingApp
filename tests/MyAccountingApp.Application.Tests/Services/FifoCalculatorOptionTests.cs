@@ -155,7 +155,9 @@ public class FifoCalculatorOptionTests
         {
             new AssetTransaction(
                 new Transaction(Guid.NewGuid(), d1, "Buy VET", new Money(500, "EUR"), TransactionCategory.INVESTMENT),
-                "VET", 10, AssetTransactionType.Buy),
+                "VET",
+                10,
+                AssetTransactionType.Buy),
         });
 
         FifoPosition option = FifoCalculator.ComputeOptions(new[]
@@ -182,8 +184,16 @@ public class FifoCalculatorOptionTests
 
         FifoPosition compute = FifoCalculator.Compute(new[]
         {
-            new AssetTransaction(new Transaction(Guid.NewGuid(), d1, "Buy", new Money(200, "EUR"), TransactionCategory.INVESTMENT), "VET", 2, AssetTransactionType.Buy),
-            new AssetTransaction(new Transaction(Guid.NewGuid(), d2, "Sell", new Money(150, "EUR"), TransactionCategory.DIVESTMENT), "VET", 1, AssetTransactionType.Sell),
+            new AssetTransaction(
+                new Transaction(Guid.NewGuid(), d1, "Buy", new Money(200, "EUR"), TransactionCategory.INVESTMENT),
+                "VET",
+                2,
+                AssetTransactionType.Buy),
+            new AssetTransaction(
+                new Transaction(Guid.NewGuid(), d2, "Sell", new Money(150, "EUR"), TransactionCategory.DIVESTMENT),
+                "VET",
+                1,
+                AssetTransactionType.Sell),
         });
 
         Assert.True(compute.NetQuantity > 0);

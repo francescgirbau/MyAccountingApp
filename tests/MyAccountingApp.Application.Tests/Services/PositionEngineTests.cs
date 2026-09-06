@@ -33,12 +33,15 @@ public class PositionEngineTests
         return new AssetTransaction(tx, symbol, quantity, AssetTransactionType.Sell);
     }
 
+    private static PositionEngine CreateEngine(FakePortfolioRepo repo, IMarketPriceService priceService) =>
+        new(repo, new FakeOptionRepository(), priceService);
+
     [Fact]
     public async Task GetPosition_ReturnsNull_WhenNoTransactions()
     {
         FakePortfolioRepo repo = new();
         FakeMarketPriceService priceService = new();
-        PositionEngine engine = new(repo, priceService);
+        PositionEngine engine = CreateEngine(repo, priceService);
 
         var result = await engine.GetPosition("AAPL");
 
@@ -52,7 +55,7 @@ public class PositionEngineTests
         FakePortfolioRepo repo = new();
         repo.AddOrUpdate(Buy("AAPL", 150, 10, date));
         FakeMarketPriceService priceService = new();
-        PositionEngine engine = new(repo, priceService);
+        PositionEngine engine = CreateEngine(repo, priceService);
 
         var result = await engine.GetPosition("AAPL");
 
@@ -82,7 +85,7 @@ public class PositionEngineTests
         repo.AddOrUpdate(Buy("AAPL", 100, 10, date1));
         repo.AddOrUpdate(Buy("AAPL", 200, 10, date2));
         FakeMarketPriceService priceService = new();
-        PositionEngine engine = new(repo, priceService);
+        PositionEngine engine = CreateEngine(repo, priceService);
 
         var result = await engine.GetPosition("AAPL");
 
@@ -102,7 +105,7 @@ public class PositionEngineTests
         repo.AddOrUpdate(Buy("AAPL", 100, 10, buyDate));
         repo.AddOrUpdate(Sell("AAPL", 150, 10, sellDate));
         FakeMarketPriceService priceService = new();
-        PositionEngine engine = new(repo, priceService);
+        PositionEngine engine = CreateEngine(repo, priceService);
 
         var result = await engine.GetPosition("AAPL");
 
@@ -126,7 +129,7 @@ public class PositionEngineTests
         repo.AddOrUpdate(Buy("AAPL", 200, 10, buyDate2));
         repo.AddOrUpdate(Sell("AAPL", 150, 5, sellDate));
         FakeMarketPriceService priceService = new();
-        PositionEngine engine = new(repo, priceService);
+        PositionEngine engine = CreateEngine(repo, priceService);
 
         var result = await engine.GetPosition("AAPL");
 
@@ -143,7 +146,7 @@ public class PositionEngineTests
         FakePortfolioRepo repo = new();
         repo.AddOrUpdate(Buy("UNKN", 100, 10, new DateTime(2024, 1, 15)));
         FakeMarketPriceService priceService = new();
-        PositionEngine engine = new(repo, priceService);
+        PositionEngine engine = CreateEngine(repo, priceService);
 
         var result = await engine.GetPosition("UNKN");
 
@@ -161,7 +164,7 @@ public class PositionEngineTests
         repo.AddOrUpdate(Buy("AAPL", 100, 10, buyDate));
         repo.AddOrUpdate(Sell("AAPL", 150, 15, sellDate));
         FakeMarketPriceService priceService = new();
-        PositionEngine engine = new(repo, priceService);
+        PositionEngine engine = CreateEngine(repo, priceService);
 
         var result = await engine.GetPosition("AAPL");
 
@@ -185,7 +188,7 @@ public class PositionEngineTests
         repo.AddOrUpdate(Buy("AAPL", 100, 10, buyDate));
         repo.AddOrUpdate(Sell("AAPL", 150, 10, sellDate));
         FakeMarketPriceService priceService = new();
-        PositionEngine engine = new(repo, priceService);
+        PositionEngine engine = CreateEngine(repo, priceService);
 
         var result = await engine.GetPosition("AAPL");
 
@@ -204,7 +207,7 @@ public class PositionEngineTests
         repo.AddOrUpdate(Sell("AAPL", 150, 7, new DateTime(2024, 6, 1)));
         repo.AddOrUpdate(Sell("AAPL", 150, 5, new DateTime(2024, 7, 1)));
         FakeMarketPriceService priceService = new();
-        PositionEngine engine = new(repo, priceService);
+        PositionEngine engine = CreateEngine(repo, priceService);
 
         var result = await engine.GetPosition("AAPL");
 
@@ -220,7 +223,7 @@ public class PositionEngineTests
         FakePortfolioRepo repo = new();
         repo.AddOrUpdate(Buy("AAPL", 150, 10, new DateTime(2024, 1, 15)));
         ThrowingMarketPriceService priceService = new();
-        PositionEngine engine = new(repo, priceService);
+        PositionEngine engine = CreateEngine(repo, priceService);
 
         var result = await engine.GetPosition("AAPL", includePrice: false);
 

@@ -25,12 +25,13 @@ public class PositionValuationServiceTests
     private static PositionValuationService CreateService(FakePortfolioRepo repo, FakeApiQuotaManager quota, FakeConversionRepository? conversionRepo = null)
     {
         FakeMarketPriceService priceService = new();
-        PositionEngine engine = new(repo, priceService);
+        FakeOptionRepository optionRepo = new();
+        PositionEngine engine = new(repo, optionRepo, priceService);
         FakeConversionRepository conversions = conversionRepo ?? new FakeConversionRepository();
         FakePendingConversionQueue queue = new();
         CurrencyRateService rateService = new(conversions, new FakeCurrencyConverter(), Currencies.EUR, quota, queue);
         ToEurConverter converter = new(rateService);
-        return new PositionValuationService(repo, engine, converter);
+        return new PositionValuationService(repo, optionRepo, engine, converter);
     }
 
     [Fact]
