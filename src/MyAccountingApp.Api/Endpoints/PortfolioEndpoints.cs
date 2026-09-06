@@ -7,13 +7,21 @@ namespace MyAccountingApp.Api.Endpoints;
 
 public static class PortfolioEndpoints
 {
+    private static string[] GetSymbolUnion(IPortfolioRepository repo, IOptionTransactionRepository optionRepo)
+    {
+        return repo.GetAllTransactions().Select(t => t.Symbol)
+            .Union(optionRepo.GetAll().Select(o => o.Symbol))
+            .Distinct()
+            .ToArray();
+    }
+
     public static void MapPortfolioEndpoints(this WebApplication app)
     {
         const string prefix = ApiEndpoints.ApiPrefix;
 
-        app.MapGet($"{prefix}/portfolio", async (IPortfolioRepository repo, IPositionEngine positionEngine, bool includePrices = false) =>
+        app.MapGet($"{prefix}/portfolio", async (IPortfolioRepository repo, IOptionTransactionRepository optionRepo, IPositionEngine positionEngine, bool includePrices = false) =>
         {
-            string[] symbols = repo.GetAllTransactions().Select(t => t.Symbol).Distinct().ToArray();
+            string[] symbols = GetSymbolUnion(repo, optionRepo);
             PortfolioPositionDto?[] positions = await Task.WhenAll(symbols.Select(s => positionEngine.GetPosition(s, includePrices)));
             return Results.Ok(positions.Where(p => p is not null).ToList());
         });
@@ -30,9 +38,9 @@ public static class PortfolioEndpoints
             return position is not null ? Results.Ok(position) : Results.NotFound(new { symbol, message = "No transactions found for this symbol" });
         });
 
-        app.MapPost($"{prefix}/portfolio/refresh-prices", async (IPortfolioRepository repo, IPositionEngine positionEngine, IMarketPriceService priceService) =>
+        app.MapPost($"{prefix}/portfolio/refresh-prices", async (IPortfolioRepository repo, IOptionTransactionRepository optionRepo, IPositionEngine positionEngine, IMarketPriceService priceService) =>
         {
-            string[] symbols = repo.GetAllTransactions().Select(t => t.Symbol).Distinct().ToArray();
+            string[] symbols = GetSymbolUnion(repo, optionRepo);
             await Task.WhenAll(symbols.Select(s => priceService.RefreshPriceAsync(s)));
             PortfolioPositionDto?[] positions = await Task.WhenAll(symbols.Select(s => positionEngine.GetPosition(s, true)));
             return Results.Ok(positions.Where(p => p is not null).ToList());

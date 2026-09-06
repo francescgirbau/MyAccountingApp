@@ -22,16 +22,16 @@ public class PositionValuationServiceTests
         return new AssetTransaction(tx, symbol, quantity, AssetTransactionType.Buy);
     }
 
-    private static PositionValuationService CreateService(FakePortfolioRepo repo, FakeApiQuotaManager quota, FakeConversionRepository? conversionRepo = null)
+    private static PositionValuationService CreateService(FakePortfolioRepo repo, FakeApiQuotaManager quota, FakeConversionRepository? conversionRepo = null, FakeOptionRepository? optionRepo = null)
     {
         FakeMarketPriceService priceService = new();
-        FakeOptionRepository optionRepo = new();
-        PositionEngine engine = new(repo, optionRepo, priceService);
+        FakeOptionRepository options = optionRepo ?? new FakeOptionRepository();
+        PositionEngine engine = new(repo, options, priceService);
         FakeConversionRepository conversions = conversionRepo ?? new FakeConversionRepository();
         FakePendingConversionQueue queue = new();
         CurrencyRateService rateService = new(conversions, new FakeCurrencyConverter(), Currencies.EUR, quota, queue);
         ToEurConverter converter = new(rateService);
-        return new PositionValuationService(repo, optionRepo, engine, converter);
+        return new PositionValuationService(repo, options, engine, converter);
     }
 
     [Fact]
@@ -112,6 +112,35 @@ public class PositionValuationServiceTests
         IReadOnlyList<PositionValuationDto> result = await service.GetValuationsAsync(new DateOnly(2023, 12, 1));
 
         Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetValuationsAsync_IncludesShortOption_WithNegativeValueEur()
+    {
+        FakePortfolioRepo repo = new();
+        FakeOptionRepository optionRepo = new();
+        optionRepo.Add(new OptionTransaction(
+            new Transaction(Guid.NewGuid(), new DateTime(2024, 1, 10), "Sell SPX", new Money(300, "EUR"), TransactionCategory.DIVESTMENT),
+            "SPX",
+            "ISIN",
+            3,
+            AssetTransactionType.Sell));
+        FakeMarketPriceService priceService = new(new Dictionary<string, Money> { { "SPX", new Money(80m, "EUR") } });
+        PositionEngine engine = new(repo, optionRepo, priceService);
+        FakeConversionRepository conversions = new();
+        FakeApiQuotaManager quota = new();
+        FakePendingConversionQueue queue = new();
+        CurrencyRateService rateService = new(conversions, new FakeCurrencyConverter(), Currencies.EUR, quota, queue);
+        ToEurConverter converter = new(rateService);
+        PositionValuationService service = new(repo, optionRepo, engine, converter);
+
+        IReadOnlyList<PositionValuationDto> result = await service.GetValuationsAsync(new DateOnly(2023, 12, 1));
+
+        PositionValuationDto valuation = Assert.Single(result);
+        Assert.Equal("SPX", valuation.Symbol);
+        Assert.Equal(-3, valuation.NetQuantity);
+        Assert.Equal(-240m, valuation.ValueEur);
+        Assert.Equal(60m, valuation.UnrealizedGainLossEur);
     }
 
     private sealed class FakePortfolioRepo : IPortfolioRepository

@@ -233,6 +233,93 @@ public class PositionEngineTests
         Assert.Equal(10, result.NetQuantity);
     }
 
+    [Fact]
+    public async Task GetPosition_WithLongOption_ReturnsOptionPosition()
+    {
+        FakePortfolioRepo repo = new();
+        FakeOptionRepository optionRepo = new();
+        optionRepo.Add(Opt("VET", 30, 2, AssetTransactionType.Buy, "EUR"));
+        PositionEngine engine = new(repo, optionRepo, new FakeMarketPriceService(new Dictionary<string, Money> { { "VET", new Money(35m, "EUR") } }));
+
+        var result = await engine.GetPosition("VET");
+
+        Assert.NotNull(result);
+        Assert.Equal("Option", result.AssetClass);
+        Assert.Equal(2, result.NetQuantity);
+        Assert.Equal(60m, result.TotalCostBasis);
+        Assert.Equal(30m, result.AverageUnitaryCost);
+        Assert.Equal(35m, result.MarketPrice);
+        Assert.Equal(10m, result.UnrealizedGainLoss);
+        Assert.False(result.HasShortfall);
+    }
+
+    [Fact]
+    public async Task GetPosition_WithShortOption_ReturnsNegativeCostAndUnrealized()
+    {
+        FakePortfolioRepo repo = new();
+        FakeOptionRepository optionRepo = new();
+        // Open short: sell 3 @100 premium, current price 80 -> gain 60, market value -240.
+        optionRepo.Add(Opt("SPX", 100, 3, AssetTransactionType.Sell, "EUR"));
+        PositionEngine engine = new(repo, optionRepo, new FakeMarketPriceService(new Dictionary<string, Money> { { "SPX", new Money(80m, "EUR") } }));
+
+        var result = await engine.GetPosition("SPX");
+
+        Assert.NotNull(result);
+        Assert.Equal("Option", result.AssetClass);
+        Assert.Equal(-3, result.NetQuantity);
+        Assert.Equal(-300m, result.TotalCostBasis);
+        Assert.Equal(100m, result.AverageUnitaryCost);
+        Assert.Equal(80m, result.MarketPrice);
+        Assert.Equal(60m, result.UnrealizedGainLoss);
+        Assert.False(result.HasShortfall);
+        Assert.Equal(0, result.UnmatchedSellQuantity);
+    }
+
+    [Fact]
+    public async Task GetPosition_WithShortOptionClosed_ComputesRealizedGain()
+    {
+        FakePortfolioRepo repo = new();
+        FakeOptionRepository optionRepo = new();
+        optionRepo.Add(Opt("SPX", 100, 3, AssetTransactionType.Sell, "EUR", new DateTime(2024, 1, 10)));
+        optionRepo.Add(Opt("SPX", 80, 3, AssetTransactionType.Buy, "EUR", new DateTime(2024, 3, 10)));
+        PositionEngine engine = new(repo, optionRepo, new FakeMarketPriceService(new Dictionary<string, Money> { { "SPX", new Money(80m, "EUR") } }));
+
+        var result = await engine.GetPosition("SPX");
+
+        Assert.NotNull(result);
+        Assert.Equal(0, result.NetQuantity);
+        Assert.Equal(60m, result.RealizedGainLoss);
+        Assert.False(result.HasShortfall);
+    }
+
+    [Fact]
+    public async Task GetPosition_MergesStockAndOptionForSameSymbol_AsMixed()
+    {
+        FakePortfolioRepo repo = new();
+        repo.AddOrUpdate(Buy("VET", 50, 10, new DateTime(2024, 1, 10)));
+        FakeOptionRepository optionRepo = new();
+        optionRepo.Add(Opt("VET", 100, 3, AssetTransactionType.Sell, "EUR", new DateTime(2024, 2, 10)));
+        PositionEngine engine = new(repo, optionRepo, new FakeMarketPriceService(new Dictionary<string, Money> { { "VET", new Money(60m, "EUR") } }));
+
+        var result = await engine.GetPosition("VET");
+
+        Assert.NotNull(result);
+        Assert.Equal("Mixed", result.AssetClass);
+        Assert.Equal(7, result.NetQuantity); // 10 stock - 3 short options
+        Assert.Equal(200m, result.TotalCostBasis); // 500 - 300 credit
+        Assert.Equal(2, result.OpenLots.Count);
+    }
+
+    private static OptionTransaction Opt(string symbol, decimal premium, decimal quantity, AssetTransactionType type, string currency, DateTime? date = null)
+    {
+        DateTime d = date ?? new DateTime(2024, 1, 15);
+        TransactionCategory category = type == AssetTransactionType.Buy
+            ? TransactionCategory.INVESTMENT
+            : TransactionCategory.DIVESTMENT;
+        Transaction tx = new(Guid.NewGuid(), d, $"Opt {symbol}", new Money(premium * quantity, currency), category);
+        return new OptionTransaction(tx, symbol, "ISIN", quantity, type);
+    }
+
     private sealed class ThrowingMarketPriceService : IMarketPriceService
     {
         public Task<Money?> GetPriceAsync(string symbol) => throw new InvalidOperationException("Price service should not be called");

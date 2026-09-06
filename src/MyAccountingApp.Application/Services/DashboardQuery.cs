@@ -34,7 +34,7 @@ public class DashboardQuery : IDashboardQuery
         List<OptionTransaction> allOptionTransactions = this._optionRepo.GetAll().ToList();
 
         CashSnapshotDto cash = BuildCashSnapshot(allTransactions, allAssetTransactions, allOptionTransactions, asOf);
-        PortfolioSnapshotDto portfolio = BuildPortfolioSnapshot(allAssetTransactions, asOf.Year);
+        PortfolioSnapshotDto portfolio = BuildPortfolioSnapshot(allAssetTransactions, allOptionTransactions, asOf.Year);
         List<DashboardAlertDto> alerts = BuildAlerts(allTransactions, allAssetTransactions, allOptionTransactions);
         this.AddDataQualityAlert(alerts);
 
@@ -114,23 +114,37 @@ public class DashboardQuery : IDashboardQuery
                 Math.Round(SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In) - SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out), 2)));
     }
 
-    private static PortfolioSnapshotDto BuildPortfolioSnapshot(List<AssetTransaction> allAssetTransactions, int year)
+    private static PortfolioSnapshotDto BuildPortfolioSnapshot(List<AssetTransaction> allAssetTransactions, List<OptionTransaction> allOptionTransactions, int year)
     {
         decimal totalCostBasis = 0;
         decimal realizedYtd = 0;
         int openPositionCount = 0;
         int symbolCount = 0;
 
-        foreach (IGrouping<string, AssetTransaction> symbolGroup in allAssetTransactions.GroupBy(t => t.Symbol))
+        List<IGrouping<string, AssetTransaction>> stockGroups = allAssetTransactions.GroupBy(t => t.Symbol).ToList();
+        List<IGrouping<string, OptionTransaction>> optionGroups = allOptionTransactions.GroupBy(o => o.Symbol).ToList();
+        List<string> symbols = stockGroups.Select(g => g.Key).Union(optionGroups.Select(g => g.Key)).ToList();
+
+        foreach (string symbol in symbols)
         {
             symbolCount++;
 
-            List<AssetTransaction> ordered = symbolGroup.OrderBy(t => t.Transaction.Date).ToList();
-            (decimal costBasis, decimal realized) = ComputeFifo(ordered, year);
-            totalCostBasis += costBasis;
-            realizedYtd += realized;
+            IGrouping<string, AssetTransaction>? stockGroup = stockGroups.FirstOrDefault(g => g.Key == symbol);
+            IGrouping<string, OptionTransaction>? optionGroup = optionGroups.FirstOrDefault(g => g.Key == symbol);
 
-            if (ordered.Sum(t => t.Type == AssetTransactionType.Buy ? t.Quantity : -t.Quantity) > 0)
+            FifoPosition? stockPosition = stockGroup is not null ? FifoCalculator.Compute(stockGroup) : null;
+            FifoPosition? optionPosition = optionGroup is not null ? FifoCalculator.ComputeOptions(optionGroup) : null;
+            FifoPosition position = stockPosition is not null && optionPosition is not null
+                ? FifoCalculator.Merge(stockPosition, optionPosition)
+                : stockPosition ?? optionPosition!;
+
+            totalCostBasis += position.TotalCostBasis;
+            realizedYtd += position.Sales.Where(s => s.Date.Year == year).Sum(s => s.RealizedGainLoss);
+
+            bool isOpen = optionPosition is not null
+                ? position.NetQuantity != 0
+                : position.NetQuantity > 0;
+            if (isOpen)
             {
                 openPositionCount++;
             }
@@ -144,45 +158,6 @@ public class DashboardQuery : IDashboardQuery
             openPositionCount,
             symbolCount,
             0);
-    }
-
-    private static (decimal CostBasis, decimal Realized) ComputeFifo(List<AssetTransaction> ordered, int year)
-    {
-        List<FifoLot> lots = new();
-        decimal realized = 0;
-
-        foreach (AssetTransaction tx in ordered)
-        {
-            if (tx.Type == AssetTransactionType.Buy)
-            {
-                lots.Add(new FifoLot(tx.Quantity, tx.Transaction.Money.Amount));
-            }
-            else
-            {
-                decimal sellQty = tx.Quantity;
-                decimal matchedCostBasis = 0;
-
-                foreach (FifoLot lot in lots.Where(l => l.RemainingQuantity > 0))
-                {
-                    if (sellQty <= 0)
-                    {
-                        break;
-                    }
-
-                    decimal consumed = Math.Min(sellQty, lot.RemainingQuantity);
-                    matchedCostBasis += consumed * lot.UnitaryCost;
-                    decimal proceeds = (consumed / tx.Quantity) * tx.Transaction.Money.Amount;
-                    realized += tx.Transaction.Date.Year == year
-                        ? (proceeds - (consumed * lot.UnitaryCost))
-                        : 0;
-                    lot.RemainingQuantity -= consumed;
-                    sellQty -= consumed;
-                }
-            }
-        }
-
-        decimal costBasis = lots.Where(l => l.RemainingQuantity > 0).Sum(l => l.RemainingQuantity * l.UnitaryCost);
-        return (costBasis, realized);
     }
 
     private static List<DashboardAlertDto> BuildAlerts(List<Transaction> allTransactions, List<AssetTransaction> allAssetTransactions, List<OptionTransaction> allOptionTransactions)
@@ -222,21 +197,6 @@ public class DashboardQuery : IDashboardQuery
                 "DATA_QUALITY",
                 $"{validation.Warnings.Count} data quality warning(s) found",
                 "/data-quality"));
-        }
-    }
-
-    private sealed class FifoLot
-    {
-        public decimal TotalQuantity { get; }
-        public decimal TotalCost { get; }
-        public decimal UnitaryCost => this.TotalCost / this.TotalQuantity;
-        public decimal RemainingQuantity { get; set; }
-
-        public FifoLot(decimal quantity, decimal totalCost)
-        {
-            this.TotalQuantity = quantity;
-            this.TotalCost = totalCost;
-            this.RemainingQuantity = quantity;
         }
     }
 }

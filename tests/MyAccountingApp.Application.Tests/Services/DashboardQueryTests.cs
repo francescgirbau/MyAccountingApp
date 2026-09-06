@@ -166,6 +166,55 @@ public class DashboardQueryTests
         Assert.Equal("UNCONVERTED_CURRENCY", alert.Code);
     }
 
+    [Fact]
+    public async Task GetAsync_ShouldIncludeOptionCostBasisInPortfolioSnapshot()
+    {
+        FakePfRepo pfRepo = new();
+        pfRepo.Add(CreateAsset("AAPL", new DateTime(2026, 1, 5), 10, 1000, AssetTransactionType.Buy));
+        FakeOptionRepo optRepo = new();
+        // Open long option: buy 50 premium, no close -> cost basis 50.
+        optRepo.Add(CreateOption("SPX", new DateTime(2026, 3, 10), 50, AssetTransactionType.Buy));
+        DashboardQuery query = new(new FakeTxRepo(), pfRepo, optRepo, new FakeValidationQuery());
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        Assert.Equal(1050, dashboard.Portfolio.TotalCostBasisEur);
+        Assert.Equal(0, dashboard.Portfolio.RealizedGainLossYtdEur);
+        Assert.Equal(2, dashboard.Portfolio.OpenPositionCount);
+        Assert.Equal(2, dashboard.Portfolio.SymbolCount);
+    }
+
+    [Fact]
+    public async Task GetAsync_ShouldCountShortOptionAsOpenPosition()
+    {
+        FakeOptionRepo optRepo = new();
+        optRepo.Add(CreateOption("SPX", new DateTime(2026, 3, 10), 100, AssetTransactionType.Sell));
+        DashboardQuery query = new(new FakeTxRepo(), new FakePfRepo(), optRepo, new FakeValidationQuery());
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        Assert.Equal(-100, dashboard.Portfolio.TotalCostBasisEur);
+        Assert.Equal(1, dashboard.Portfolio.OpenPositionCount);
+        Assert.Equal(1, dashboard.Portfolio.SymbolCount);
+        Assert.Equal(0, dashboard.Portfolio.RealizedGainLossYtdEur);
+    }
+
+    [Fact]
+    public async Task GetAsync_ShouldIncludeOptionRealizedPnlYtd()
+    {
+        FakeOptionRepo optRepo = new();
+        optRepo.Add(CreateOption("SPX", new DateTime(2026, 3, 10), 100, AssetTransactionType.Sell));
+        optRepo.Add(CreateOption("SPX", new DateTime(2026, 4, 12), 70, AssetTransactionType.Buy));
+        DashboardQuery query = new(new FakeTxRepo(), new FakePfRepo(), optRepo, new FakeValidationQuery());
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        Assert.Equal(0, dashboard.Portfolio.TotalCostBasisEur);
+        Assert.Equal(30, dashboard.Portfolio.RealizedGainLossYtdEur);
+        Assert.Equal(0, dashboard.Portfolio.OpenPositionCount);
+        Assert.Equal(1, dashboard.Portfolio.SymbolCount);
+    }
+
     private static AssetTransaction CreateAsset(string symbol, DateTime date, decimal quantity, decimal amount, AssetTransactionType type)
     {
         Transaction transaction = new(date, "Test " + symbol, new Money(amount, "EUR"), TransactionCategory.EXPENSE);

@@ -29,7 +29,8 @@ public sealed record PortfolioPositionRowDto(
     decimal? LastPrice,
     DateTimeOffset? PriceAsOfUtc,
     bool IsPriced,
-    bool IsStale);
+    bool IsStale,
+    string AssetClass = "Stock");
 
 public sealed record AllocationSliceDto(
     string Key,

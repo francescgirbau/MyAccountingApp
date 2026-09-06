@@ -12,4 +12,5 @@ public record PortfolioPositionDto(
     decimal? MarketPrice,
     decimal? UnrealizedGainLoss,
     bool HasShortfall,
-    decimal UnmatchedSellQuantity);
+    decimal UnmatchedSellQuantity,
+    string AssetClass = "Stock");
