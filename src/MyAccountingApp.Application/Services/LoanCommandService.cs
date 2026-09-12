@@ -20,72 +20,6 @@ public sealed class LoanCommandService : ILoanCommandService
         this._loanQuery = loanQuery;
     }
 
-    public LoanSummaryDto CreateLoan(CreateLoanRequest request)
-    {
-        if (!Enum.TryParse<LoanDirection>(request.Direction, ignoreCase: true, out LoanDirection direction))
-        {
-            throw new ArgumentException($"Invalid direction: {request.Direction}", nameof(request.Direction));
-        }
-
-        Money principal = new(request.Amount, request.Currency);
-        Loan loan = new(Guid.NewGuid(), request.Counterparty, direction, principal, request.StartDate, request.Notes);
-        this._loanRepo.Add(loan);
-
-        LoanMovement disbursement = this.CreateMovement(loan, principal.Amount, request.StartDate, LoanMovementType.Disbursement);
-        this._movementRepo.Add(disbursement);
-
-        return this._loanQuery.GetById(loan.Id)!;
-    }
-
-    public LoanSummaryDto AddRepayment(Guid loanId, AddLoanRepaymentRequest request)
-    {
-        Loan? loan = this._loanRepo.GetById(loanId);
-        if (loan is null)
-        {
-            throw new InvalidOperationException("Loan not found.");
-        }
-
-        if (request.Amount <= 0)
-        {
-            throw new ArgumentException("Repayment amount must be greater than zero.", nameof(request.Amount));
-        }
-
-        LoanMovement repayment = this.CreateMovement(loan, request.Amount, request.Date, LoanMovementType.Repayment);
-        this._movementRepo.Add(repayment);
-
-        return this._loanQuery.GetById(loanId)!;
-    }
-
-    public bool CloseLoan(Guid loanId)
-    {
-        Loan? loan = this._loanRepo.GetById(loanId);
-        if (loan is null)
-        {
-            return false;
-        }
-
-        loan.Close();
-        this._loanRepo.Update(loan);
-        return true;
-    }
-
-    public bool DeleteLoan(Guid loanId)
-    {
-        foreach (LoanMovement movement in this._movementRepo.GetByLoan(loanId).ToList())
-        {
-            this._movementRepo.Delete(movement.Id);
-        }
-
-        return this._loanRepo.Delete(loanId);
-    }
-
-    private LoanMovement CreateMovement(Loan loan, decimal amount, DateTime date, LoanMovementType type)
-    {
-        Money money = new(amount, loan.Principal.Currency);
-        Transaction transaction = new(date, BuildDescription(loan, type), money, MapCategory(loan.Direction, type));
-        return new LoanMovement(Guid.NewGuid(), loan.Id, transaction, type);
-    }
-
     /// <summary>
     /// Maps a loan cash movement to the transaction category used for cash-flow bookkeeping:
     /// Borrowed disbursement and Lent repayment are cash in (DEPOSIT); Lent disbursement and
@@ -110,4 +44,70 @@ public sealed class LoanCommandService : ILoanCommandService
             : $"Repayment from {loan.Counterparty}",
         _ => throw new ArgumentOutOfRangeException(),
     };
+
+    private LoanMovement CreateMovement(Loan loan, decimal amount, DateTime date, LoanMovementType type)
+    {
+        Money money = new(amount, loan.Principal.Currency);
+        Transaction transaction = new(date, BuildDescription(loan, type), money, MapCategory(loan.Direction, type));
+        return new LoanMovement(Guid.NewGuid(), loan.Id, transaction, type);
+    }
+
+    public LoanSummaryDto CreateLoan(CreateLoanRequest request)
+    {
+        if (!Enum.TryParse<LoanDirection>(request.Direction, ignoreCase: true, out LoanDirection direction))
+        {
+            throw new ArgumentException($"Invalid direction: {request.Direction}", nameof(request.Direction));
+        }
+
+        Money principal = new(request.Amount, request.Currency);
+        Loan loan = new(Guid.NewGuid(), request.Counterparty, direction, principal, request.StartDate, request.Notes);
+        this._loanRepo.Add(loan);
+
+        LoanMovement disbursement = this.CreateMovement(loan, principal.Amount, request.StartDate, LoanMovementType.Disbursement);
+        this._movementRepo.Add(disbursement);
+
+        return this._loanQuery.GetById(loan.Id) ?? throw new InvalidOperationException("Loan could not be loaded after creation.");
+    }
+
+    public LoanSummaryDto AddRepayment(Guid loanId, AddLoanRepaymentRequest request)
+    {
+        Loan? loan = this._loanRepo.GetById(loanId);
+        if (loan is null)
+        {
+            throw new InvalidOperationException("Loan not found.");
+        }
+
+        if (request.Amount <= 0)
+        {
+            throw new ArgumentException("Repayment amount must be greater than zero.", nameof(request.Amount));
+        }
+
+        LoanMovement repayment = this.CreateMovement(loan, request.Amount, request.Date, LoanMovementType.Repayment);
+        this._movementRepo.Add(repayment);
+
+        return this._loanQuery.GetById(loanId) ?? throw new InvalidOperationException("Loan could not be loaded after repayment.");
+    }
+
+    public bool CloseLoan(Guid loanId)
+    {
+        Loan? loan = this._loanRepo.GetById(loanId);
+        if (loan is null)
+        {
+            return false;
+        }
+
+        loan.Close();
+        this._loanRepo.Update(loan);
+        return true;
+    }
+
+    public bool DeleteLoan(Guid loanId)
+    {
+        foreach (LoanMovement movement in this._movementRepo.GetByLoan(loanId).ToList())
+        {
+            this._movementRepo.Delete(movement.Id);
+        }
+
+        return this._loanRepo.Delete(loanId);
+    }
 }

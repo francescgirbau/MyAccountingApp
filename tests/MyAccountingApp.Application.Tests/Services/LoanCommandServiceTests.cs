@@ -154,7 +154,9 @@ public class LoanCommandServiceTests
         bool closed = service.CloseLoan(loanId);
 
         Assert.True(closed);
-        Assert.True(loanRepo.GetById(loanId)!.IsClosed);
+        Loan? updated = loanRepo.GetById(loanId);
+        Assert.True(updated is not null);
+        Assert.True(updated.IsClosed);
     }
 
     [Fact]
