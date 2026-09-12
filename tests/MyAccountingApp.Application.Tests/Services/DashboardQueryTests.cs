@@ -5,6 +5,7 @@ using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
 using MyAccountingApp.Domain.ValueObjects;
+using MyAccountingApp.TestUtilities.Fakes;
 
 namespace MyAccountingApp.Application.Tests.Services;
 
@@ -214,6 +215,79 @@ public class DashboardQueryTests
         Assert.Equal(30, dashboard.Portfolio.RealizedGainLossYtdEur);
         Assert.Equal(0, dashboard.Portfolio.OpenPositionCount);
         Assert.Equal(1, dashboard.Portfolio.SymbolCount);
+    }
+
+    [Fact]
+    public async Task GetAsync_Loans_DoNotAffectOperatingOrInvestingTotals()
+    {
+        FakeTxRepo txRepo = new();
+        txRepo.Add(new Transaction(new DateTime(2026, 1, 10), "Salary", new Money(1000, "EUR"), TransactionCategory.INCOME));
+        FakeLoanRepository loanRepo = new();
+        FakeLoanMovementRepository movementRepo = new();
+        Guid loanId = Guid.NewGuid();
+        loanRepo.Add(new Loan(loanId, "Berta", LoanDirection.Borrowed, new Money(5000, "EUR"), new DateTime(2025, 3, 1)));
+        movementRepo.Add(CreateLoanMovement(loanId, 5000, new DateTime(2025, 3, 1), LoanMovementType.Disbursement));
+        movementRepo.Add(CreateLoanMovement(loanId, 500, new DateTime(2025, 6, 1), LoanMovementType.Repayment));
+        LoanQuery loanQuery = new(loanRepo, movementRepo);
+        DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery(), loanQuery);
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        Assert.Equal(1000, dashboard.Cash.OperatingYtd.Income);
+        Assert.Equal(0, dashboard.Cash.InvestingYtd.NetInvestedCash);
+        Assert.Equal(0, dashboard.Cash.InternalYtd.Deposits);
+        Assert.Equal(0, dashboard.Cash.InternalYtd.Transfers);
+        Assert.NotNull(dashboard.Cash.LoansYtd);
+        Assert.Equal(5000, dashboard.Cash.LoansYtd.Disbursed);
+        Assert.Equal(500, dashboard.Cash.LoansYtd.Repaid);
+        Assert.Equal(4500, dashboard.Cash.LoansYtd.NetOutstanding);
+    }
+
+    [Fact]
+    public async Task GetAsync_LoansYtd_IsNull_WhenNoLoanQuery()
+    {
+        DashboardQuery query = new(new FakeTxRepo(), new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery());
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        Assert.Null(dashboard.Cash.LoansYtd);
+    }
+
+    [Fact]
+    public async Task GetAsync_LoansYtd_IsNull_WhenNoLoansExist()
+    {
+        LoanQuery loanQuery = new(new FakeLoanRepository(), new FakeLoanMovementRepository());
+        DashboardQuery query = new(new FakeTxRepo(), new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery(), loanQuery);
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        Assert.Null(dashboard.Cash.LoansYtd);
+    }
+
+    [Fact]
+    public async Task GetAsync_Loans_AreSeparateBucket_WhenLent()
+    {
+        FakeLoanRepository loanRepo = new();
+        FakeLoanMovementRepository movementRepo = new();
+        Guid loanId = Guid.NewGuid();
+        loanRepo.Add(new Loan(loanId, "Pere", LoanDirection.Lent, new Money(2000, "EUR"), new DateTime(2025, 1, 10)));
+        movementRepo.Add(CreateLoanMovement(loanId, 2000, new DateTime(2025, 1, 10), LoanMovementType.Disbursement));
+        movementRepo.Add(CreateLoanMovement(loanId, 800, new DateTime(2025, 2, 1), LoanMovementType.Repayment));
+        LoanQuery loanQuery = new(loanRepo, movementRepo);
+        DashboardQuery query = new(new FakeTxRepo(), new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery(), loanQuery);
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        Assert.NotNull(dashboard.Cash.LoansYtd);
+        Assert.Equal(2000, dashboard.Cash.LoansYtd.Disbursed);
+        Assert.Equal(800, dashboard.Cash.LoansYtd.Repaid);
+        Assert.Equal(1200, dashboard.Cash.LoansYtd.NetOutstanding);
+    }
+
+    private static LoanMovement CreateLoanMovement(Guid loanId, decimal amount, DateTime date, LoanMovementType type)
+    {
+        Transaction transaction = new(date, "Loan movement", new Money(amount, "EUR"), TransactionCategory.DEPOSIT);
+        return new LoanMovement(Guid.NewGuid(), loanId, transaction, type);
     }
 
     private static AssetTransaction CreateAsset(string symbol, DateTime date, decimal quantity, decimal amount, AssetTransactionType type)

@@ -163,6 +163,14 @@ public class CashSnapshotDto
     public OperatingCashFlowDto OperatingYtd { get; set; } = new();
     public InvestingCashFlowDto InvestingYtd { get; set; } = new();
     public InternalCashFlowDto InternalYtd { get; set; } = new();
+    public LoanCashFlowDto? LoansYtd { get; set; }
+}
+
+public class LoanCashFlowDto
+{
+    public decimal Disbursed { get; set; }
+    public decimal Repaid { get; set; }
+    public decimal NetOutstanding { get; set; }
 }
 
 public class OperatingCashFlowDto
