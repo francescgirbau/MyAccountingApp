@@ -19,5 +19,6 @@ public static class ApiEndpoints
         app.MapDashboardEndpoints();
         app.MapDataQualityEndpoints();
         app.MapReportsEndpoints();
+        app.MapLoansEndpoints();
     }
 }

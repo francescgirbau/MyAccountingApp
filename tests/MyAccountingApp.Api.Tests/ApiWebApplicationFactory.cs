@@ -33,6 +33,10 @@ public class ApiWebApplicationFactory : WebApplicationFactory<Program>
             services.AddSingleton<IPortfolioRepository>(new InMemoryPortfolioRepository());
             services.RemoveAll<IOptionTransactionRepository>();
             services.AddSingleton<IOptionTransactionRepository>(new JsonOptionTransactionRepository(Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.json")));
+            services.RemoveAll<ILoanRepository>();
+            services.AddSingleton<ILoanRepository>(new JsonLoanRepository(Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}-loans.json")));
+            services.RemoveAll<ILoanMovementRepository>();
+            services.AddSingleton<ILoanMovementRepository>(new JsonLoanMovementRepository(Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}-loan-movements.json")));
             services.RemoveAll<IPendingConversionQueue>();
             services.AddSingleton<IPendingConversionQueue>(new FakePendingConversionQueue());
             services.RemoveAll<IMarketPriceService>();
