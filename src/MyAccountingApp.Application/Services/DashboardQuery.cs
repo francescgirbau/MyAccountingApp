@@ -14,17 +14,20 @@ public class DashboardQuery : IDashboardQuery
     private readonly IPortfolioRepository _portfolioRepo;
     private readonly IOptionTransactionRepository _optionRepo;
     private readonly IValidationQuery _validationQuery;
+    private readonly ILoanQuery? _loanQuery;
 
     public DashboardQuery(
         ITransactionRepository transactionRepo,
         IPortfolioRepository portfolioRepo,
         IOptionTransactionRepository optionRepo,
-        IValidationQuery validationQuery)
+        IValidationQuery validationQuery,
+        ILoanQuery? loanQuery = null)
     {
         this._transactionRepo = transactionRepo;
         this._portfolioRepo = portfolioRepo;
         this._optionRepo = optionRepo;
         this._validationQuery = validationQuery;
+        this._loanQuery = loanQuery;
     }
 
     public Task<DashboardDto> GetAsync(DateOnly asOf)
@@ -32,8 +35,9 @@ public class DashboardQuery : IDashboardQuery
         List<Transaction> allTransactions = this._transactionRepo.GetAll().ToList();
         List<AssetTransaction> allAssetTransactions = this._portfolioRepo.GetAllTransactions().ToList();
         List<OptionTransaction> allOptionTransactions = this._optionRepo.GetAll().ToList();
+        List<LoanSummaryDto>? loanSummaries = this._loanQuery?.GetAll();
 
-        CashSnapshotDto cash = BuildCashSnapshot(allTransactions, allAssetTransactions, allOptionTransactions, asOf);
+        CashSnapshotDto cash = BuildCashSnapshot(allTransactions, allAssetTransactions, allOptionTransactions, asOf, loanSummaries);
         PortfolioSnapshotDto portfolio = BuildPortfolioSnapshot(allAssetTransactions, allOptionTransactions, asOf.Year);
         List<DashboardAlertDto> alerts = BuildAlerts(allTransactions, allAssetTransactions, allOptionTransactions);
         this.AddDataQualityAlert(alerts);
@@ -41,7 +45,7 @@ public class DashboardQuery : IDashboardQuery
         return Task.FromResult(new DashboardDto(asOf, cash, portfolio, alerts));
     }
 
-    private static CashSnapshotDto BuildCashSnapshot(List<Transaction> allTransactions, List<AssetTransaction> allAssetTransactions, List<OptionTransaction> allOptionTransactions, DateOnly asOf)
+    private static CashSnapshotDto BuildCashSnapshot(List<Transaction> allTransactions, List<AssetTransaction> allAssetTransactions, List<OptionTransaction> allOptionTransactions, DateOnly asOf, List<LoanSummaryDto>? loanSummaries)
     {
         DateTime end = asOf.ToDateTime(new TimeOnly(23, 59, 59));
         DateTime yearStart = new DateTime(asOf.Year, 1, 1);
@@ -111,7 +115,21 @@ public class DashboardQuery : IDashboardQuery
                 Math.Round(depositsYtd, 2),
                 Math.Round(SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out), 2),
                 Math.Round(SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In), 2),
-                Math.Round(SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In) - SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out), 2)));
+                Math.Round(SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In) - SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out), 2)),
+            BuildLoansYtd(loanSummaries));
+    }
+
+    private static LoanCashFlowDto? BuildLoansYtd(List<LoanSummaryDto>? loanSummaries)
+    {
+        if (loanSummaries is null || loanSummaries.Count == 0)
+        {
+            return null;
+        }
+
+        return new LoanCashFlowDto(
+            Math.Round(loanSummaries.Sum(l => l.Principal), 2),
+            Math.Round(loanSummaries.Sum(l => l.Repaid), 2),
+            Math.Round(loanSummaries.Sum(l => l.Outstanding), 2));
     }
 
     private static PortfolioSnapshotDto BuildPortfolioSnapshot(List<AssetTransaction> allAssetTransactions, List<OptionTransaction> allOptionTransactions, int year)

@@ -135,6 +135,10 @@ public static class DependencyInjection
         builder.Services.AddSingleton<IVaultSessionListener>(new VaultSessionService(repo, transactionRepo, portfolioRepo));
         builder.Services.AddSingleton<IOptionTransactionRepository>(
             new JsonOptionTransactionRepository("data/options.json", vaultService));
+        builder.Services.AddSingleton<ILoanRepository>(
+            new JsonLoanRepository("data/loans.json", vaultService));
+        builder.Services.AddSingleton<ILoanMovementRepository>(
+            new JsonLoanMovementRepository("data/loan-movements.json", vaultService));
         builder.Services.AddSingleton<InteractiveBrokersImportService>(sp =>
         {
             ICsvParser csvParser = new InteractiveBrokersCsvParser();
@@ -174,6 +178,8 @@ public static class DependencyInjection
         builder.Services.AddSingleton<ITransferMatchingService, TransferMatchingService>();
         builder.Services.AddSingleton<IAssetTransactionCommandService, AssetTransactionCommandService>();
         builder.Services.AddSingleton<IOptionTransactionCommandService, OptionTransactionCommandService>();
+        builder.Services.AddSingleton<ILoanQuery, LoanQuery>();
+        builder.Services.AddSingleton<ILoanCommandService, LoanCommandService>();
         builder.Services.AddSingleton<ITransactionCommandService, TransactionCommandService>();
         builder.Services.AddSingleton<IPortfolioQuery, PortfolioQuery>();
         builder.Services.AddSingleton<IPortfolioOverviewQuery, PortfolioOverviewQuery>();

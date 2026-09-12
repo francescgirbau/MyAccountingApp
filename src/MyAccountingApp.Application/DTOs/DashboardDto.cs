@@ -10,7 +10,8 @@ public sealed record CashSnapshotDto(
     OperatingCashFlowDto OperatingMtd,
     OperatingCashFlowDto OperatingYtd,
     InvestingCashFlowDto InvestingYtd,
-    InternalCashFlowDto InternalYtd);
+    InternalCashFlowDto InternalYtd,
+    LoanCashFlowDto? LoansYtd = null);
 
 public sealed record OperatingCashFlowDto(
     decimal Income,

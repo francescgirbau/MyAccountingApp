@@ -39,6 +39,21 @@ public class OptionTransactionDto
     public string Type { get; set; } = string.Empty;
 }
 
+public class LoanSummaryDto
+{
+    public Guid LoanId { get; set; }
+    public string Counterparty { get; set; } = string.Empty;
+    public string Direction { get; set; } = string.Empty;
+    public decimal Principal { get; set; }
+    public string Currency { get; set; } = string.Empty;
+    public decimal Repaid { get; set; }
+    public decimal Outstanding { get; set; }
+    public bool IsOverpaid { get; set; }
+    public bool IsClosed { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime? LastMovementDate { get; set; }
+}
+
 public class PortfolioPositionDto
 {
     public string Symbol { get; set; } = string.Empty;
@@ -163,6 +178,14 @@ public class CashSnapshotDto
     public OperatingCashFlowDto OperatingYtd { get; set; } = new();
     public InvestingCashFlowDto InvestingYtd { get; set; } = new();
     public InternalCashFlowDto InternalYtd { get; set; } = new();
+    public LoanCashFlowDto? LoansYtd { get; set; }
+}
+
+public class LoanCashFlowDto
+{
+    public decimal Disbursed { get; set; }
+    public decimal Repaid { get; set; }
+    public decimal NetOutstanding { get; set; }
 }
 
 public class OperatingCashFlowDto

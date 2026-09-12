@@ -1,0 +1,342 @@
+@page "/loans"
+@using System.Text.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>Loans</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Loans</MudText>
+
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (_loans.Count == 0)
+{
+    <MudPaper Class="pa-8 text-center" Outlined="true">
+        <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Size="Size.Large" Class="mud-text-secondary" />
+        <MudText Typo="Typo.h5" Class="mt-4">No loans yet</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">Track money you borrowed or lent and stay on top of the outstanding balance.</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="@(() => OpenNewLoanDialog())">
+            New loan
+        </MudButton>
+    </MudPaper>
+}
+else
+{
+    <MudTable Items="@_loans" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true">
+        <ToolBarContent>
+            <MudText Typo="Typo.subtitle1">@_loans.Count loans</MudText>
+            <MudSpacer />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="@(() => OpenNewLoanDialog())">
+                New loan
+            </MudButton>
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@LoadDataAsync" Size="Size.Small" />
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh><MudTableSortLabel SortBy="new Func<LoanSummaryDto, object>(l => l.Counterparty)">Counterparty</MudTableSortLabel></MudTh>
+            <MudTh>Direction</MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<LoanSummaryDto, object>(l => l.Principal)">Principal</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<LoanSummaryDto, object>(l => l.Repaid)">Repaid</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<LoanSummaryDto, object>(l => l.Outstanding)">Outstanding</MudTableSortLabel></MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Last movement</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Counterparty">@context.Counterparty</MudTd>
+            <MudTd DataLabel="Direction">
+                <MudChip T="string" Size="Size.Small" Color="@_DirectionColor(context.Direction)">@context.Direction</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Principal">@context.Principal.ToString("N2") @context.Currency</MudTd>
+            <MudTd DataLabel="Repaid">@context.Repaid.ToString("N2")</MudTd>
+            <MudTd DataLabel="Outstanding" Class="@(context.IsOverpaid ? "red--text" : "")">@context.Outstanding.ToString("N2")</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Size="Size.Small" Color="@(context.IsClosed ? Color.Secondary : Color.Primary)"
+                         Variant="Variant.Outlined">
+                    @(context.IsClosed ? "Closed" : "Open")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Last movement">@(context.LastMovementDate?.ToString("yyyy-MM-dd") ?? "—")</MudTd>
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Payment" Size="Size.Small" aria-label="Add repayment"
+                               OnClick="@(() => OpenRepaymentDialog(context))" Disabled="@context.IsClosed" />
+                <MudIconButton Icon="@Icons.Material.Filled.Lock" Size="Size.Small" aria-label="Close loan"
+                               OnClick="@(() => CloseLoanAsync(context))" Disabled="@context.IsClosed" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" aria-label="Delete loan"
+                               OnClick="@(() => OpenDeleteDialog(context))" />
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+<MudDialog @bind-Visible="_showNewLoanDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">New loan</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_newLoanCounterparty" Label="Counterparty (who)" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="string" @bind-Value="_newLoanDirection" Label="Direction" Variant="Variant.Outlined" FullWidth="true">
+                    <MudSelectItem T="string" Value="@("Borrowed")">Borrowed (I owe)</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Lent")">Lent (they owe me)</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField T="string" @bind-Value="_newLoanCurrency" Label="Currency" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudNumericField T="decimal" @bind-Value="_newLoanAmount" Label="Principal" Variant="Variant.Outlined" Min="@(0.01m)" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudDatePicker @bind-Date="_newLoanDate" Label="Start date" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_newLoanNotes" Label="Notes (optional)" Variant="Variant.Outlined" Lines="2" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Error" OnClick="@(() => _showNewLoanDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@IsNewLoanInvalid()" OnClick="@CreateLoanAsync">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_showRepaymentDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Add repayment</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_repaymentTarget is not null)
+        {
+            <MudText Typo="Typo.body2" Class="mb-4">
+                Repayment for <strong>@_repaymentTarget.Counterparty</strong>
+                (@@_repaymentTarget.Direction, @_repaymentTarget.Outstanding.ToString("N2") @_repaymentTarget.Currency outstanding).
+            </MudText>
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudDatePicker @bind-Date="_repaymentDate" Label="Date" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudNumericField T="decimal" @bind-Value="_repaymentAmount" Label="Amount" Variant="Variant.Outlined" Min="@(0.01m)" />
+                </MudItem>
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Error" OnClick="@(() => _showRepaymentDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@(_repaymentAmount <= 0)" OnClick="@AddRepaymentAsync">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_showDeleteDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete loan</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>Are you sure you want to delete this loan?</MudText>
+        @if (_deleteTarget is not null)
+        {
+            <MudText Typo="Typo.body2" Class="mt-2">
+                <strong>@_deleteTarget.Counterparty</strong> — @_deleteTarget.Principal.ToString("N2") @_deleteTarget.Currency (@_deleteTarget.Direction).
+            </MudText>
+        }
+        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">All its movements will be removed as well. This action cannot be undone.</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Error" OnClick="@(() => _showDeleteDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="@DeleteLoanAsync">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private List<LoanSummaryDto> _loans = new();
+    private bool _loading = true;
+
+    private bool _showNewLoanDialog;
+    private string _newLoanCounterparty = string.Empty;
+    private string _newLoanDirection = "Borrowed";
+    private decimal _newLoanAmount;
+    private string _newLoanCurrency = "EUR";
+    private DateTime? _newLoanDate;
+    private string _newLoanNotes = string.Empty;
+
+    private bool _showRepaymentDialog;
+    private LoanSummaryDto? _repaymentTarget;
+    private DateTime? _repaymentDate;
+    private decimal _repaymentAmount;
+
+    private bool _showDeleteDialog;
+    private LoanSummaryDto? _deleteTarget;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            _loans = await Http.GetFromJsonAsync<List<LoanSummaryDto>>("/api/loans") ?? new();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private bool IsNewLoanInvalid() =>
+        string.IsNullOrWhiteSpace(_newLoanCounterparty) ||
+        _newLoanAmount <= 0 ||
+        string.IsNullOrWhiteSpace(_newLoanCurrency) ||
+        !_newLoanDate.HasValue;
+
+    private void OpenNewLoanDialog()
+    {
+        _newLoanCounterparty = string.Empty;
+        _newLoanDirection = "Borrowed";
+        _newLoanAmount = 0;
+        _newLoanCurrency = "EUR";
+        _newLoanDate = DateTime.Today;
+        _newLoanNotes = string.Empty;
+        _showNewLoanDialog = true;
+    }
+
+    private async Task CreateLoanAsync()
+    {
+        var payload = new
+        {
+            startDate = _newLoanDate ?? DateTime.Today,
+            counterparty = _newLoanCounterparty.Trim(),
+            amount = _newLoanAmount,
+            currency = _newLoanCurrency.Trim(),
+            direction = _newLoanDirection,
+            notes = string.IsNullOrWhiteSpace(_newLoanNotes) ? null : _newLoanNotes.Trim(),
+        };
+
+        try
+        {
+            HttpResponseMessage response = await Http.PostAsJsonAsync("/api/loans", payload);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Loan created", Severity.Success);
+                _showNewLoanDialog = false;
+                await LoadDataAsync();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to create loan: {await response.Content.ReadAsStringAsync()}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error creating loan: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void OpenRepaymentDialog(LoanSummaryDto loan)
+    {
+        _repaymentTarget = loan;
+        _repaymentDate = DateTime.Today;
+        _repaymentAmount = 0;
+        _showRepaymentDialog = true;
+    }
+
+    private async Task AddRepaymentAsync()
+    {
+        if (_repaymentTarget is null || !_repaymentDate.HasValue)
+        {
+            return;
+        }
+
+        var payload = new
+        {
+            date = _repaymentDate.Value,
+            amount = _repaymentAmount,
+        };
+
+        try
+        {
+            HttpResponseMessage response = await Http.PostAsJsonAsync($"/api/loans/{_repaymentTarget.LoanId}/repayments", payload);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Repayment added", Severity.Success);
+                _showRepaymentDialog = false;
+                await LoadDataAsync();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to add repayment: {await response.Content.ReadAsStringAsync()}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error adding repayment: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task CloseLoanAsync(LoanSummaryDto loan)
+    {
+        try
+        {
+            HttpResponseMessage response = await Http.PatchAsync($"/api/loans/{loan.LoanId}/close", null);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Loan closed", Severity.Success);
+                await LoadDataAsync();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to close loan: {await response.Content.ReadAsStringAsync()}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error closing loan: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void OpenDeleteDialog(LoanSummaryDto loan)
+    {
+        _deleteTarget = loan;
+        _showDeleteDialog = true;
+    }
+
+    private async Task DeleteLoanAsync()
+    {
+        if (_deleteTarget is null)
+        {
+            return;
+        }
+
+        try
+        {
+            HttpResponseMessage response = await Http.DeleteAsync($"/api/loans/{_deleteTarget.LoanId}");
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Loan deleted", Severity.Success);
+                _showDeleteDialog = false;
+                await LoadDataAsync();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to delete loan: {await response.Content.ReadAsStringAsync()}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error deleting loan: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private static Color _DirectionColor(string direction) =>
+        direction == "Lent" ? Color.Success : Color.Warning;
+}
