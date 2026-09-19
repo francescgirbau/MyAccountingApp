@@ -10,15 +10,18 @@ public class AnnualSummaryService : IAnnualSummaryService
     private readonly ITransactionRepository transactionRepo;
     private readonly IPortfolioRepository portfolioRepo;
     private readonly IOptionTransactionRepository optionRepo;
+    private readonly ILoanMovementRepository? loanMovementRepo;
 
     public AnnualSummaryService(
         ITransactionRepository transactionRepo,
         IPortfolioRepository portfolioRepo,
-        IOptionTransactionRepository optionRepo)
+        IOptionTransactionRepository optionRepo,
+        ILoanMovementRepository? loanMovementRepo = null)
     {
         this.transactionRepo = transactionRepo ?? throw new ArgumentNullException(nameof(transactionRepo));
         this.portfolioRepo = portfolioRepo ?? throw new ArgumentNullException(nameof(portfolioRepo));
         this.optionRepo = optionRepo ?? throw new ArgumentNullException(nameof(optionRepo));
+        this.loanMovementRepo = loanMovementRepo;
     }
 
     private static (int PairCount, int UnmatchedLegCount) CountFx(List<Domain.Entities.Transaction> yearTxs)
@@ -42,7 +45,7 @@ public class AnnualSummaryService : IAnnualSummaryService
 
     public List<AnnualSummaryDto> GetAll()
     {
-        List<Domain.Entities.Transaction> transactions = this.transactionRepo.GetAll().ToList();
+        List<Domain.Entities.Transaction> transactions = this.LoadAllTransactions();
         List<Domain.Entities.AssetTransaction> assetTransactions = this.portfolioRepo.GetAllTransactions().ToList();
         List<Domain.Entities.OptionTransaction> optionTransactions = this.optionRepo.GetAll().ToList();
 
@@ -66,7 +69,7 @@ public class AnnualSummaryService : IAnnualSummaryService
 
     public AnnualSummaryDto? GetByYear(int year)
     {
-        List<Domain.Entities.Transaction> transactions = this.transactionRepo.GetAll().ToList();
+        List<Domain.Entities.Transaction> transactions = this.LoadAllTransactions();
         List<Domain.Entities.AssetTransaction> assetTransactions = this.portfolioRepo.GetAllTransactions().ToList();
         List<Domain.Entities.OptionTransaction> optionTransactions = this.optionRepo.GetAll().ToList();
 
@@ -80,6 +83,17 @@ public class AnnualSummaryService : IAnnualSummaryService
         }
 
         return this.BuildSummary(year, transactions, assetTransactions, optionTransactions);
+    }
+
+    private List<Domain.Entities.Transaction> LoadAllTransactions()
+    {
+        List<Domain.Entities.Transaction> transactions = this.transactionRepo.GetAll().ToList();
+        if (this.loanMovementRepo is not null)
+        {
+            transactions.AddRange(this.loanMovementRepo.GetAll().Select(m => m.Transaction));
+        }
+
+        return transactions;
     }
 
     private AnnualSummaryDto BuildSummary(

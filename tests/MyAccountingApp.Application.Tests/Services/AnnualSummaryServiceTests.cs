@@ -9,6 +9,7 @@ using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
 using MyAccountingApp.Domain.ValueObjects;
+using MyAccountingApp.TestUtilities.Fakes;
 using Xunit;
 
 public class AnnualSummaryServiceTests
@@ -188,6 +189,51 @@ public class AnnualSummaryServiceTests
     }
 
     [Fact]
+    public void GetByYear_IncludesLoanMovementsInInternalTransfersAndDeposits()
+    {
+        Transaction[] txs = new Transaction[]
+        {
+            Tx(2026, 1000, TransactionCategory.INCOME),
+        };
+        Guid loanId = Guid.NewGuid();
+        LoanMovement[] movements = new LoanMovement[]
+        {
+            LoanMv(loanId, 5000, 2026, 3, TransactionCategory.DEPOSIT),
+            LoanMv(loanId, 500, 2026, 6, TransactionCategory.TRANSFER),
+        };
+        var svc = CreateService(txs, Array.Empty<AssetTransaction>(), movements: movements);
+
+        AnnualSummaryDto? result = svc.GetByYear(2026);
+
+        Assert.NotNull(result);
+        Assert.Equal(1000m, result.Operating.Income);
+        Assert.Equal(5000m, result.Internal.Deposits);
+        Assert.Equal(500m, result.Internal.Transfers);
+
+        Assert.Equal(2, result.Months.Count);
+        Assert.Equal(5000m, result.Months[0].Internal.Deposits);
+        Assert.Equal(0m, result.Months[0].Internal.Transfers);
+        Assert.Equal(500m, result.Months[1].Internal.Transfers);
+    }
+
+    [Fact]
+    public void GetAll_IncludesLoanMovementYears()
+    {
+        Guid loanId = Guid.NewGuid();
+        LoanMovement[] movements = new LoanMovement[]
+        {
+            LoanMv(loanId, 5000, 2025, 3, TransactionCategory.DEPOSIT),
+        };
+        var svc = CreateService(Array.Empty<Transaction>(), Array.Empty<AssetTransaction>(), movements: movements);
+
+        List<AnnualSummaryDto> result = svc.GetAll();
+
+        AnnualSummaryDto? year = Assert.Single(result);
+        Assert.Equal(2025, year.Year);
+        Assert.Equal(5000m, year.Internal.Deposits);
+    }
+
+    [Fact]
     public void GetByYear_ExcludesFxLegsFromTransfersAndDeposits()
     {
         Guid pairId = Guid.NewGuid();
@@ -316,6 +362,17 @@ public class AnnualSummaryServiceTests
             category);
     }
 
+    private static LoanMovement LoanMv(Guid loanId, decimal amount, int year, int month, TransactionCategory category)
+    {
+        Transaction transaction = new(
+            Guid.NewGuid(),
+            new DateTime(year, month, 1),
+            "Loan movement",
+            new Money(amount, "EUR"),
+            category);
+        return new LoanMovement(Guid.NewGuid(), loanId, transaction, LoanMovementType.Disbursement);
+    }
+
     private static Transaction FxTx(int year, decimal amount, string currency, FxLeg leg, Guid pairId, int month = 6)
     {
         return new Transaction(
@@ -418,12 +475,23 @@ public class AnnualSummaryServiceTests
     private static IAnnualSummaryService CreateService(
         IEnumerable<Transaction> transactions,
         IEnumerable<AssetTransaction> assetTransactions,
-        IEnumerable<OptionTransaction>? options = null)
+        IEnumerable<OptionTransaction>? options = null,
+        IEnumerable<LoanMovement>? movements = null)
     {
+        FakeLoanMovementRepository movementRepo = new();
+        if (movements is not null)
+        {
+            foreach (LoanMovement movement in movements)
+            {
+                movementRepo.Add(movement);
+            }
+        }
+
         return new AnnualSummaryService(
             new FakeTxRepo(transactions),
             new FakePfRepo(assetTransactions),
-            new FakeOptionRepo(options));
+            new FakeOptionRepo(options),
+            movementRepo);
     }
 
     private sealed class FakeTxRepo : ITransactionRepository

@@ -48,7 +48,7 @@ public sealed class LoanCommandService : ILoanCommandService
     private LoanMovement CreateMovement(Loan loan, decimal amount, DateTime date, LoanMovementType type)
     {
         Money money = new(amount, loan.Principal.Currency);
-        Transaction transaction = new(date, BuildDescription(loan, type), money, MapCategory(loan.Direction, type));
+        Transaction transaction = new(date, BuildDescription(loan, type), money, MapCategory(loan.Direction, type), "Loan");
         return new LoanMovement(Guid.NewGuid(), loan.Id, transaction, type);
     }
 

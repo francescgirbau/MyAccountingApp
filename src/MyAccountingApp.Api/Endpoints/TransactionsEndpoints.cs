@@ -15,9 +15,11 @@ public static class TransactionsEndpoints
     {
         const string prefix = ApiEndpoints.ApiPrefix;
 
-        app.MapGet($"{prefix}/transactions", (ITransactionRepository repo, string? categories = null) =>
+        app.MapGet($"{prefix}/transactions", (ITransactionRepository repo, ILoanMovementRepository loanRepo, string? categories = null) =>
         {
-            IEnumerable<Transaction> transactions = repo.GetAll();
+            List<Transaction> loanTransactions = loanRepo.GetAll().Select(m => m.Transaction).ToList();
+            HashSet<Guid> loanTransactionIds = loanTransactions.Select(t => t.Id).ToHashSet();
+            IEnumerable<Transaction> transactions = repo.GetAll().Concat(loanTransactions);
 
             if (!string.IsNullOrWhiteSpace(categories))
             {
@@ -27,7 +29,11 @@ public static class TransactionsEndpoints
                 transactions = TransactionCategoryFilter.FilterByCategories(transactions, parsed, t => t.Category.ToString());
             }
 
-            List<TransactionDto> result = transactions.Select(t => t.ToDto()).ToList();
+            List<TransactionDto> result = transactions
+                .Select(t => loanTransactionIds.Contains(t.Id)
+                    ? t.ToDto() with { Source = "Loan" }
+                    : t.ToDto())
+                .ToList();
             return Results.Ok(result);
         });
 

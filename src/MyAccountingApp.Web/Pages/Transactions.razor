@@ -256,8 +256,8 @@ else
                 }
             </MudTd>
             <MudTd DataLabel="Actions">
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => OpenEditDialog(context))" />
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => OpenDeleteDialog(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Disabled="@(context.Source == "Loan")" OnClick="@(() => OpenEditDialog(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" Disabled="@(context.Source == "Loan")" OnClick="@(() => OpenDeleteDialog(context))" />
             </MudTd>
         </RowTemplate>
         <PagerContent>
@@ -957,7 +957,7 @@ else
             return;
         }
 
-        List<TransactionDto> targets = _selected.Where(s => _filteredTransactions.Any(f => f.Id == s.Id)).ToList();
+        List<TransactionDto> targets = _selected.Where(s => _filteredTransactions.Any(f => f.Id == s.Id) && s.Source != "Loan").ToList();
         if (targets.Count == 0)
         {
             Snackbar.Add("No visible rows selected", Severity.Warning);
@@ -1023,7 +1023,7 @@ else
             return;
         }
 
-        List<TransactionDto> targets = _selected.Where(s => _filteredTransactions.Any(f => f.Id == s.Id)).ToList();
+        List<TransactionDto> targets = _selected.Where(s => _filteredTransactions.Any(f => f.Id == s.Id) && s.Source != "Loan").ToList();
         if (targets.Count == 0)
         {
             Snackbar.Add("No visible rows selected", Severity.Warning);
