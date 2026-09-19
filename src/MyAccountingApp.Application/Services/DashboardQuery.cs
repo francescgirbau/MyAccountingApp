@@ -15,24 +15,32 @@ public class DashboardQuery : IDashboardQuery
     private readonly IOptionTransactionRepository _optionRepo;
     private readonly IValidationQuery _validationQuery;
     private readonly ILoanQuery? _loanQuery;
+    private readonly ILoanMovementRepository? _loanMovementRepo;
 
     public DashboardQuery(
         ITransactionRepository transactionRepo,
         IPortfolioRepository portfolioRepo,
         IOptionTransactionRepository optionRepo,
         IValidationQuery validationQuery,
-        ILoanQuery? loanQuery = null)
+        ILoanQuery? loanQuery = null,
+        ILoanMovementRepository? loanMovementRepo = null)
     {
         this._transactionRepo = transactionRepo;
         this._portfolioRepo = portfolioRepo;
         this._optionRepo = optionRepo;
         this._validationQuery = validationQuery;
         this._loanQuery = loanQuery;
+        this._loanMovementRepo = loanMovementRepo;
     }
 
     public Task<DashboardDto> GetAsync(DateOnly asOf)
     {
         List<Transaction> allTransactions = this._transactionRepo.GetAll().ToList();
+        if (this._loanMovementRepo is not null)
+        {
+            allTransactions.AddRange(this._loanMovementRepo.GetAll().Select(m => m.Transaction));
+        }
+
         List<AssetTransaction> allAssetTransactions = this._portfolioRepo.GetAllTransactions().ToList();
         List<OptionTransaction> allOptionTransactions = this._optionRepo.GetAll().ToList();
         List<LoanSummaryDto>? loanSummaries = this._loanQuery?.GetAll();
@@ -79,9 +87,9 @@ public class DashboardQuery : IDashboardQuery
         decimal incomeMtdTotal = incomeMtd + SumCategory(mtd, t => t.Category == TransactionCategory.DIVIDEND) + SumCategory(mtd, t => t.Category == TransactionCategory.INTEREST);
         decimal expensesMtdTotal = SumCategory(mtd, t => t.Category == TransactionCategory.EXPENSE) + SumCategory(mtd, t => t.Category == TransactionCategory.FEE) + SumCategory(mtd, t => t.Category == TransactionCategory.WITHHOLDING_TAX);
 
-        // Internal YTD
-        decimal transfersYtd = SumCategory(ytd, t => t.Category == TransactionCategory.TRANSFER);
-        decimal depositsYtd = SumCategory(ytd, t => t.Category == TransactionCategory.DEPOSIT);
+        // Internal YTD (loan movements are real cash in/out, counted alongside transfers/deposits)
+        decimal transfersYtd = SumCategory(ytd, t => t.Category is TransactionCategory.TRANSFER or TransactionCategory.LOAN_OUT);
+        decimal depositsYtd = SumCategory(ytd, t => t.Category is TransactionCategory.DEPOSIT or TransactionCategory.LOAN_IN);
         decimal fxOutYtd = SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out);
         decimal fxInYtd = SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In);
 

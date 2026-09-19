@@ -128,7 +128,7 @@ public class LoanQueryTests
 
     private static LoanMovement CreateMovement(Guid loanId, decimal amount, DateTime date, LoanMovementType type)
     {
-        Transaction transaction = new(date, "Loan movement", new Money(amount, "EUR"), TransactionCategory.DEPOSIT);
+        Transaction transaction = new(date, "Loan movement", new Money(amount, "EUR"), TransactionCategory.LOAN_IN);
         return new LoanMovement(Guid.NewGuid(), loanId, transaction, type);
     }
 }

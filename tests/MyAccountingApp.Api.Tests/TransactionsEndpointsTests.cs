@@ -363,4 +363,66 @@ public class TransactionsEndpointsTests
         Assert.Equal(id, failure.GetProperty("id").GetGuid());
         Assert.Contains("FX_CONVERSION requires a pair", failure.GetProperty("error").GetString());
     }
+
+    [Fact]
+    public async Task Get_ShouldIncludeLoanMovements_WithLoanSource()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        HttpResponseMessage created = await client.PostAsJsonAsync(
+            "/api/loans",
+            new
+            {
+                startDate = new DateTime(2026, 3, 1),
+                counterparty = "Berta",
+                amount = 5000m,
+                currency = "EUR",
+                direction = "Borrowed",
+                notes = "Personal loan",
+            });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+
+        // Act
+        HttpResponseMessage response = await client.GetAsync("/api/transactions");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        JsonElement.ArrayEnumerator rows = document.RootElement.EnumerateArray();
+
+        JsonElement loanRow = Assert.Single(rows, row => row.GetProperty("source").GetString() == "Loan");
+        Assert.Equal("LOAN_IN", loanRow.GetProperty("category").GetString());
+        Assert.Equal(5000m, loanRow.GetProperty("money").GetProperty("amount").GetDecimal());
+    }
+
+    [Fact]
+    public async Task Get_CategoriesFilter_ShouldIncludeLoanMovements()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        HttpResponseMessage created = await client.PostAsJsonAsync(
+            "/api/loans",
+            new
+            {
+                startDate = new DateTime(2026, 3, 1),
+                counterparty = "Berta",
+                amount = 5000m,
+                currency = "EUR",
+                direction = "Borrowed",
+                notes = "Personal loan",
+            });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+
+        // Act
+        HttpResponseMessage response = await client.GetAsync("/api/transactions?categories=LOAN_IN");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        JsonElement.ArrayEnumerator rows = document.RootElement.EnumerateArray();
+        Assert.All(rows, row => Assert.Equal("LOAN_IN", row.GetProperty("category").GetString()));
+        Assert.Contains(rows, row => row.GetProperty("source").GetString() == "Loan");
+    }
 }

@@ -218,7 +218,33 @@ public class DashboardQueryTests
     }
 
     [Fact]
-    public async Task GetAsync_Loans_DoNotAffectOperatingOrInvestingTotals()
+    public async Task GetAsync_Loans_FlowIntoInternalYtd_ButNotOperatingOrInvesting()
+    {
+        FakeTxRepo txRepo = new();
+        txRepo.Add(new Transaction(new DateTime(2026, 1, 10), "Salary", new Money(1000, "EUR"), TransactionCategory.INCOME));
+        FakeLoanRepository loanRepo = new();
+        FakeLoanMovementRepository movementRepo = new();
+        Guid loanId = Guid.NewGuid();
+        loanRepo.Add(new Loan(loanId, "Berta", LoanDirection.Borrowed, new Money(5000, "EUR"), new DateTime(2026, 3, 1)));
+        movementRepo.Add(CreateLoanMovement(loanId, 5000, new DateTime(2026, 3, 1), LoanMovementType.Disbursement, TransactionCategory.LOAN_IN));
+        movementRepo.Add(CreateLoanMovement(loanId, 500, new DateTime(2026, 6, 1), LoanMovementType.Repayment, TransactionCategory.LOAN_OUT));
+        LoanQuery loanQuery = new(loanRepo, movementRepo);
+        DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery(), loanQuery, movementRepo);
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        Assert.Equal(1000, dashboard.Cash.OperatingYtd.Income);
+        Assert.Equal(0, dashboard.Cash.InvestingYtd.NetInvestedCash);
+        Assert.Equal(5000, dashboard.Cash.InternalYtd.Deposits);
+        Assert.Equal(500, dashboard.Cash.InternalYtd.Transfers);
+        Assert.NotNull(dashboard.Cash.LoansYtd);
+        Assert.Equal(5000, dashboard.Cash.LoansYtd.Disbursed);
+        Assert.Equal(500, dashboard.Cash.LoansYtd.Repaid);
+        Assert.Equal(4500, dashboard.Cash.LoansYtd.NetOutstanding);
+    }
+
+    [Fact]
+    public async Task GetAsync_Loans_DoNotAffectOperatingOrInvestingTotals_WhenOutOfYear()
     {
         FakeTxRepo txRepo = new();
         txRepo.Add(new Transaction(new DateTime(2026, 1, 10), "Salary", new Money(1000, "EUR"), TransactionCategory.INCOME));
@@ -226,21 +252,19 @@ public class DashboardQueryTests
         FakeLoanMovementRepository movementRepo = new();
         Guid loanId = Guid.NewGuid();
         loanRepo.Add(new Loan(loanId, "Berta", LoanDirection.Borrowed, new Money(5000, "EUR"), new DateTime(2025, 3, 1)));
-        movementRepo.Add(CreateLoanMovement(loanId, 5000, new DateTime(2025, 3, 1), LoanMovementType.Disbursement));
-        movementRepo.Add(CreateLoanMovement(loanId, 500, new DateTime(2025, 6, 1), LoanMovementType.Repayment));
+        movementRepo.Add(CreateLoanMovement(loanId, 5000, new DateTime(2025, 3, 1), LoanMovementType.Disbursement, TransactionCategory.LOAN_IN));
+        movementRepo.Add(CreateLoanMovement(loanId, 500, new DateTime(2025, 6, 1), LoanMovementType.Repayment, TransactionCategory.LOAN_OUT));
         LoanQuery loanQuery = new(loanRepo, movementRepo);
-        DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery(), loanQuery);
+        DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery(), loanQuery, movementRepo);
 
         DashboardDto dashboard = await query.GetAsync(AsOf);
 
+        // Loan movements in 2025 are outside the 2026 YTD window: they must not leak into 2026 Internal totals.
         Assert.Equal(1000, dashboard.Cash.OperatingYtd.Income);
         Assert.Equal(0, dashboard.Cash.InvestingYtd.NetInvestedCash);
         Assert.Equal(0, dashboard.Cash.InternalYtd.Deposits);
         Assert.Equal(0, dashboard.Cash.InternalYtd.Transfers);
         Assert.NotNull(dashboard.Cash.LoansYtd);
-        Assert.Equal(5000, dashboard.Cash.LoansYtd.Disbursed);
-        Assert.Equal(500, dashboard.Cash.LoansYtd.Repaid);
-        Assert.Equal(4500, dashboard.Cash.LoansYtd.NetOutstanding);
     }
 
     [Fact]
@@ -271,10 +295,10 @@ public class DashboardQueryTests
         FakeLoanMovementRepository movementRepo = new();
         Guid loanId = Guid.NewGuid();
         loanRepo.Add(new Loan(loanId, "Pere", LoanDirection.Lent, new Money(2000, "EUR"), new DateTime(2025, 1, 10)));
-        movementRepo.Add(CreateLoanMovement(loanId, 2000, new DateTime(2025, 1, 10), LoanMovementType.Disbursement));
-        movementRepo.Add(CreateLoanMovement(loanId, 800, new DateTime(2025, 2, 1), LoanMovementType.Repayment));
+        movementRepo.Add(CreateLoanMovement(loanId, 2000, new DateTime(2025, 1, 10), LoanMovementType.Disbursement, TransactionCategory.LOAN_OUT));
+        movementRepo.Add(CreateLoanMovement(loanId, 800, new DateTime(2025, 2, 1), LoanMovementType.Repayment, TransactionCategory.LOAN_IN));
         LoanQuery loanQuery = new(loanRepo, movementRepo);
-        DashboardQuery query = new(new FakeTxRepo(), new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery(), loanQuery);
+        DashboardQuery query = new(new FakeTxRepo(), new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery(), loanQuery, movementRepo);
 
         DashboardDto dashboard = await query.GetAsync(AsOf);
 
@@ -284,9 +308,9 @@ public class DashboardQueryTests
         Assert.Equal(1200, dashboard.Cash.LoansYtd.NetOutstanding);
     }
 
-    private static LoanMovement CreateLoanMovement(Guid loanId, decimal amount, DateTime date, LoanMovementType type)
+    private static LoanMovement CreateLoanMovement(Guid loanId, decimal amount, DateTime date, LoanMovementType type, TransactionCategory category)
     {
-        Transaction transaction = new(date, "Loan movement", new Money(amount, "EUR"), TransactionCategory.DEPOSIT);
+        Transaction transaction = new(date, "Loan movement", new Money(amount, "EUR"), category);
         return new LoanMovement(Guid.NewGuid(), loanId, transaction, type);
     }
 

@@ -10,7 +10,7 @@ namespace MyAccountingApp.Application.Tests.Services;
 public class LoanCommandServiceTests
 {
     [Fact]
-    public void CreateLoan_AddsLoanAndDisbursement_WithDepositCategory_WhenBorrowed()
+    public void CreateLoan_AddsLoanAndDisbursement_WithLoanInCategory_WhenBorrowed()
     {
         FakeLoanRepository loanRepo = new();
         FakeLoanMovementRepository movementRepo = new();
@@ -34,7 +34,7 @@ public class LoanCommandServiceTests
         Assert.Equal(LoanMovementType.Disbursement, disbursement.Type);
         Assert.Equal(loan.Id, disbursement.LoanId);
         Assert.Equal(1000m, disbursement.Transaction.Money.Amount);
-        Assert.Equal(TransactionCategory.DEPOSIT, disbursement.Transaction.Category);
+        Assert.Equal(TransactionCategory.LOAN_IN, disbursement.Transaction.Category);
 
         Assert.Equal(loan.Id, created.LoanId);
         Assert.Equal(1000m, created.Principal);
@@ -43,7 +43,7 @@ public class LoanCommandServiceTests
     }
 
     [Fact]
-    public void CreateLoan_AddsDisbursement_WithTransferCategory_WhenLent()
+    public void CreateLoan_AddsDisbursement_WithLoanOutCategory_WhenLent()
     {
         FakeLoanRepository loanRepo = new();
         FakeLoanMovementRepository movementRepo = new();
@@ -57,7 +57,7 @@ public class LoanCommandServiceTests
             "Lent"));
 
         LoanMovement disbursement = Assert.Single(movementRepo.GetAll());
-        Assert.Equal(TransactionCategory.TRANSFER, disbursement.Transaction.Category);
+        Assert.Equal(TransactionCategory.LOAN_OUT, disbursement.Transaction.Category);
         Assert.Equal("Loan to Pere", disbursement.Transaction.Description);
     }
 
@@ -88,7 +88,7 @@ public class LoanCommandServiceTests
     }
 
     [Fact]
-    public void AddRepayment_CreatesRepayment_WithTransferCategory_WhenBorrowed()
+    public void AddRepayment_CreatesRepayment_WithLoanOutCategory_WhenBorrowed()
     {
         FakeLoanRepository loanRepo = new();
         FakeLoanMovementRepository movementRepo = new();
@@ -101,14 +101,14 @@ public class LoanCommandServiceTests
 
         LoanMovement repayment = movementRepo.GetByLoan(loanId).Single(m => m.Type == LoanMovementType.Repayment);
         Assert.Equal(250m, repayment.Transaction.Money.Amount);
-        Assert.Equal(TransactionCategory.TRANSFER, repayment.Transaction.Category);
+        Assert.Equal(TransactionCategory.LOAN_OUT, repayment.Transaction.Category);
         Assert.Equal("Repayment to Berta", repayment.Transaction.Description);
         Assert.Equal(250m, updated.Repaid);
         Assert.Equal(750m, updated.Outstanding);
     }
 
     [Fact]
-    public void AddRepayment_CreatesRepayment_WithDepositCategory_WhenLent()
+    public void AddRepayment_CreatesRepayment_WithLoanInCategory_WhenLent()
     {
         FakeLoanRepository loanRepo = new();
         FakeLoanMovementRepository movementRepo = new();
@@ -120,7 +120,7 @@ public class LoanCommandServiceTests
         service.AddRepayment(loanId, new AddLoanRepaymentRequest(new DateTime(2025, 5, 1), 100m));
 
         LoanMovement repayment = movementRepo.GetByLoan(loanId).Single(m => m.Type == LoanMovementType.Repayment);
-        Assert.Equal(TransactionCategory.DEPOSIT, repayment.Transaction.Category);
+        Assert.Equal(TransactionCategory.LOAN_IN, repayment.Transaction.Category);
         Assert.Equal("Repayment from Pere", repayment.Transaction.Description);
     }
 
@@ -195,7 +195,7 @@ public class LoanCommandServiceTests
 
     private static LoanMovement CreateMovement(Guid loanId, decimal amount, DateTime date, LoanMovementType type)
     {
-        Transaction transaction = new(date, "Loan movement", new Money(amount, "EUR"), TransactionCategory.DEPOSIT);
+        Transaction transaction = new(date, "Loan movement", new Money(amount, "EUR"), TransactionCategory.LOAN_IN);
         return new LoanMovement(Guid.NewGuid(), loanId, transaction, type);
     }
 }

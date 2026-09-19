@@ -88,7 +88,7 @@ else if (Year.HasValue)
                         <MudText Typo="Typo.subtitle2">Transfers out</MudText>
                         <MudTooltip Placement="Placement.Top">
                             <ChildContent>
-                                <MudText Typo="Typo.h5" Class="cursor-pointer" @onclick="@(() => NavigateToTransactions("TRANSFER"))">@_summary.Internal.Transfers.ToString("N2") €</MudText>
+                                <MudText Typo="Typo.h5" Class="cursor-pointer" @onclick="@(() => NavigateToTransactions("TRANSFER,LOAN_OUT"))">@_summary.Internal.Transfers.ToString("N2") €</MudText>
                             </ChildContent>
                             <TooltipContent><span>View transfers in Transactions</span></TooltipContent>
                         </MudTooltip>
@@ -97,7 +97,7 @@ else if (Year.HasValue)
                         <MudText Typo="Typo.subtitle2">Deposits in</MudText>
                         <MudTooltip Placement="Placement.Top">
                             <ChildContent>
-                                <MudText Typo="Typo.h5" Color="Color.Success" Class="cursor-pointer" @onclick="@(() => NavigateToTransactions("DEPOSIT"))">@_summary.Internal.Deposits.ToString("N2") €</MudText>
+                                <MudText Typo="Typo.h5" Color="Color.Success" Class="cursor-pointer" @onclick="@(() => NavigateToTransactions("DEPOSIT,LOAN_IN"))">@_summary.Internal.Deposits.ToString("N2") €</MudText>
                             </ChildContent>
                             <TooltipContent><span>View deposits in Transactions</span></TooltipContent>
                         </MudTooltip>
