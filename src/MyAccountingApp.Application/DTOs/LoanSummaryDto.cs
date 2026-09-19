@@ -11,4 +11,5 @@ public sealed record LoanSummaryDto(
     bool IsOverpaid,
     bool IsClosed,
     DateTime StartDate,
-    DateTime? LastMovementDate);
+    DateTime? LastMovementDate,
+    List<LoanMovementDto> Movements);

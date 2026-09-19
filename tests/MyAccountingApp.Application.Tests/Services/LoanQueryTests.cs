@@ -102,6 +102,47 @@ public class LoanQueryTests
     }
 
     [Fact]
+    public void GetAll_ListsMovements_OrderedByDate_WithAllFields()
+    {
+        FakeLoanRepository loanRepo = new();
+        Guid loanId = Guid.NewGuid();
+        loanRepo.Add(CreateLoan(loanId, principal: 1000));
+        FakeLoanMovementRepository movementRepo = new();
+        movementRepo.Add(CreateMovement(loanId, 1000, new DateTime(2025, 3, 10), LoanMovementType.Disbursement));
+        movementRepo.Add(CreateMovement(loanId, 150, new DateTime(2025, 5, 1), LoanMovementType.Repayment));
+        movementRepo.Add(CreateMovement(loanId, 50, new DateTime(2025, 4, 1), LoanMovementType.Repayment));
+        LoanQuery query = new(loanRepo, movementRepo);
+
+        LoanSummaryDto summary = Assert.Single(query.GetAll());
+
+        Assert.Equal(3, summary.Movements.Count);
+
+        // Ordered by date ascending: disbursement first, then the two repayments.
+        Assert.Equal(new DateTime(2025, 3, 10), summary.Movements[0].Date);
+        Assert.Equal("Disbursement", summary.Movements[0].Type);
+        Assert.Equal(1000m, summary.Movements[0].Amount);
+        Assert.Equal("EUR", summary.Movements[0].Currency);
+        Assert.Equal(new DateTime(2025, 4, 1), summary.Movements[1].Date);
+        Assert.Equal("Repayment", summary.Movements[1].Type);
+        Assert.Equal(50m, summary.Movements[1].Amount);
+        Assert.Equal(new DateTime(2025, 5, 1), summary.Movements[2].Date);
+        Assert.Equal(150m, summary.Movements[2].Amount);
+    }
+
+    [Fact]
+    public void GetAll_ReturnsEmptyMovements_WhenLoanHasNoMovements()
+    {
+        FakeLoanRepository loanRepo = new();
+        Guid loanId = Guid.NewGuid();
+        loanRepo.Add(CreateLoan(loanId, principal: 1000));
+        LoanQuery query = new(loanRepo, new FakeLoanMovementRepository());
+
+        LoanSummaryDto summary = Assert.Single(query.GetAll());
+
+        Assert.Empty(summary.Movements);
+    }
+
+    [Fact]
     public void GetById_ReturnsSummary_WhenFound()
     {
         FakeLoanRepository loanRepo = new();
