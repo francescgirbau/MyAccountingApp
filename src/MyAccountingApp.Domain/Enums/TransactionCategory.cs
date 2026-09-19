@@ -13,4 +13,6 @@ public enum TransactionCategory
     INVESTMENT = 8,
     FX_CONVERSION = 9,
     DIVESTMENT = 10,
+    LOAN_IN = 11,
+    LOAN_OUT = 12,
 }

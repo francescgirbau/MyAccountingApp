@@ -21,16 +21,18 @@ public sealed class LoanCommandService : ILoanCommandService
     }
 
     /// <summary>
-    /// Maps a loan cash movement to the transaction category used for cash-flow bookkeeping:
-    /// Borrowed disbursement and Lent repayment are cash in (DEPOSIT); Lent disbursement and
-    /// Borrowed repayment are cash out (TRANSFER).
+    /// Maps a loan cash movement to the transaction category used for cash-flow bookkeeping.
+    /// Loan movements are real cash in/out: they count inside the Internal totals, but keep their
+    /// own category so they are shown as loan movements (not as deposits/transfers) in the UI.
+    /// Borrowed disbursement and Lent repayment are cash in (LOAN_IN); Lent disbursement and
+    /// Borrowed repayment are cash out (LOAN_OUT).
     /// </summary>
     private static TransactionCategory MapCategory(LoanDirection direction, LoanMovementType type) => (direction, type) switch
     {
-        (LoanDirection.Borrowed, LoanMovementType.Disbursement) => TransactionCategory.DEPOSIT,
-        (LoanDirection.Borrowed, LoanMovementType.Repayment) => TransactionCategory.TRANSFER,
-        (LoanDirection.Lent, LoanMovementType.Disbursement) => TransactionCategory.TRANSFER,
-        (LoanDirection.Lent, LoanMovementType.Repayment) => TransactionCategory.DEPOSIT,
+        (LoanDirection.Borrowed, LoanMovementType.Disbursement) => TransactionCategory.LOAN_IN,
+        (LoanDirection.Borrowed, LoanMovementType.Repayment) => TransactionCategory.LOAN_OUT,
+        (LoanDirection.Lent, LoanMovementType.Disbursement) => TransactionCategory.LOAN_OUT,
+        (LoanDirection.Lent, LoanMovementType.Repayment) => TransactionCategory.LOAN_IN,
         _ => throw new ArgumentOutOfRangeException(),
     };
 

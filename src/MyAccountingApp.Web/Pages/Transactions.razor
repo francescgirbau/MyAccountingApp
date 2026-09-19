@@ -220,7 +220,7 @@ else
         <RowTemplate>
             <MudTd DataLabel="Date">@context.Date.ToString("yyyy-MM-dd")</MudTd>
             <MudTd DataLabel="Description">@context.Description</MudTd>
-            <MudTd DataLabel="Amount"><span class="@(context.Category == "EXPENSE" || context.Category == "FEE" || context.Category == "WITHHOLDING_TAX" || context.Category == "TRANSFER" ? "red--text" : "green--text")">@context.Money.Amount.ToString("N2")</span></MudTd>
+            <MudTd DataLabel="Amount"><span class="@(context.Category == "EXPENSE" || context.Category == "FEE" || context.Category == "WITHHOLDING_TAX" || context.Category == "TRANSFER" || context.Category == "LOAN_OUT" ? "red--text" : "green--text")">@context.Money.Amount.ToString("N2")</span></MudTd>
             <MudTd DataLabel="Curr.">@context.Money.Currency</MudTd>
             <MudTd DataLabel="Category">
                 @if (GetCategoryTooltip(context.Category) is string tip)
@@ -424,7 +424,7 @@ else
     private HashSet<string> _selectedCategories = new(StringComparer.OrdinalIgnoreCase);
     private string? _searchText { get; set; }
 
-    private static readonly string[] _categories = { "INCOME", "EXPENSE", "TRANSFER", "DEPOSIT", "DIVIDEND", "FEE", "WITHHOLDING_TAX", "INTEREST", "FX_CONVERSION" };
+    private static readonly string[] _categories = { "INCOME", "EXPENSE", "TRANSFER", "DEPOSIT", "DIVIDEND", "FEE", "WITHHOLDING_TAX", "INTEREST", "FX_CONVERSION", "LOAN_IN", "LOAN_OUT" };
     private static readonly string[] _monthNames =
     {
         "January", "February", "March", "April", "May", "June",
@@ -622,8 +622,8 @@ else
                 decimal expense = g.Where(t => t.Category is "EXPENSE" or "FEE" or "WITHHOLDING_TAX").Sum(t => t.Money.Amount);
                 decimal investingPurchase = g.Where(t => t.Category == "INVESTMENT").Sum(t => t.Money.Amount);
                 decimal investingSale = g.Where(t => t.Category == "DIVESTMENT").Sum(t => t.Money.Amount);
-                decimal transfer = g.Where(t => t.Category == "TRANSFER").Sum(t => t.Money.Amount);
-                decimal deposit = g.Where(t => t.Category == "DEPOSIT").Sum(t => t.Money.Amount);
+                decimal transfer = g.Where(t => t.Category is "TRANSFER" or "LOAN_OUT").Sum(t => t.Money.Amount);
+                decimal deposit = g.Where(t => t.Category is "DEPOSIT" or "LOAN_IN").Sum(t => t.Money.Amount);
                 decimal fxOut = g.Where(t => t.Category == "FX_CONVERSION" && t.FxLeg == "Out").Sum(t => t.Money.Amount);
                 decimal fxIn = g.Where(t => t.Category == "FX_CONVERSION" && t.FxLeg == "In").Sum(t => t.Money.Amount);
                 return new FilterCurrencySummary
@@ -662,7 +662,7 @@ else
     }
 
     private static readonly string[] OperatingBucket = { "INCOME", "EXPENSE", "DIVIDEND", "INTEREST", "FEE", "WITHHOLDING_TAX" };
-    private static readonly string[] InternalBucket = { "TRANSFER", "DEPOSIT" };
+    private static readonly string[] InternalBucket = { "TRANSFER", "DEPOSIT", "LOAN_IN", "LOAN_OUT" };
     private static readonly string[] FxBucket = { "FX_CONVERSION" };
 
     private static bool IsBucketActive(IEnumerable<string> bucket, IReadOnlySet<string> selected) => bucket.All(selected.Contains);
@@ -707,6 +707,8 @@ else
         "TRANSFER" => "Internal transfer out",
         "DEPOSIT" => "Internal transfer in",
         "FX_CONVERSION" => "Currency exchange",
+        "LOAN_IN" => "Loan received",
+        "LOAN_OUT" => "Loan repaid",
         _ => category,
     };
 
@@ -717,6 +719,8 @@ else
         "TRANSFER" => "Internal same-currency move out; not P/L.",
         "DEPOSIT" => "Internal same-currency move in; not P/L.",
         "FX_CONVERSION" => "Two-leg currency conversion; not P/L.",
+        "LOAN_IN" => "Loan cash in (borrowed funds or lent-loan repayment); real cash, not P/L.",
+        "LOAN_OUT" => "Loan cash out (disbursement or repayment); real cash, not P/L.",
         _ => null,
     };
 
@@ -728,6 +732,8 @@ else
         "DEPOSIT" => Color.Warning,
         "INVESTMENT" or "DIVESTMENT" => Color.Info,
         "FX_CONVERSION" => Color.Secondary,
+        "LOAN_IN" => Color.Success,
+        "LOAN_OUT" => Color.Warning,
         _ => Color.Default,
     };
 

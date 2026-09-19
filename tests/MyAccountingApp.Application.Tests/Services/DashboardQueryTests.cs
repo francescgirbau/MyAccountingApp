@@ -226,8 +226,8 @@ public class DashboardQueryTests
         FakeLoanMovementRepository movementRepo = new();
         Guid loanId = Guid.NewGuid();
         loanRepo.Add(new Loan(loanId, "Berta", LoanDirection.Borrowed, new Money(5000, "EUR"), new DateTime(2026, 3, 1)));
-        movementRepo.Add(CreateLoanMovement(loanId, 5000, new DateTime(2026, 3, 1), LoanMovementType.Disbursement, TransactionCategory.DEPOSIT));
-        movementRepo.Add(CreateLoanMovement(loanId, 500, new DateTime(2026, 6, 1), LoanMovementType.Repayment, TransactionCategory.TRANSFER));
+        movementRepo.Add(CreateLoanMovement(loanId, 5000, new DateTime(2026, 3, 1), LoanMovementType.Disbursement, TransactionCategory.LOAN_IN));
+        movementRepo.Add(CreateLoanMovement(loanId, 500, new DateTime(2026, 6, 1), LoanMovementType.Repayment, TransactionCategory.LOAN_OUT));
         LoanQuery loanQuery = new(loanRepo, movementRepo);
         DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery(), loanQuery, movementRepo);
 
@@ -252,8 +252,8 @@ public class DashboardQueryTests
         FakeLoanMovementRepository movementRepo = new();
         Guid loanId = Guid.NewGuid();
         loanRepo.Add(new Loan(loanId, "Berta", LoanDirection.Borrowed, new Money(5000, "EUR"), new DateTime(2025, 3, 1)));
-        movementRepo.Add(CreateLoanMovement(loanId, 5000, new DateTime(2025, 3, 1), LoanMovementType.Disbursement, TransactionCategory.DEPOSIT));
-        movementRepo.Add(CreateLoanMovement(loanId, 500, new DateTime(2025, 6, 1), LoanMovementType.Repayment, TransactionCategory.TRANSFER));
+        movementRepo.Add(CreateLoanMovement(loanId, 5000, new DateTime(2025, 3, 1), LoanMovementType.Disbursement, TransactionCategory.LOAN_IN));
+        movementRepo.Add(CreateLoanMovement(loanId, 500, new DateTime(2025, 6, 1), LoanMovementType.Repayment, TransactionCategory.LOAN_OUT));
         LoanQuery loanQuery = new(loanRepo, movementRepo);
         DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery(), loanQuery, movementRepo);
 
@@ -295,8 +295,8 @@ public class DashboardQueryTests
         FakeLoanMovementRepository movementRepo = new();
         Guid loanId = Guid.NewGuid();
         loanRepo.Add(new Loan(loanId, "Pere", LoanDirection.Lent, new Money(2000, "EUR"), new DateTime(2025, 1, 10)));
-        movementRepo.Add(CreateLoanMovement(loanId, 2000, new DateTime(2025, 1, 10), LoanMovementType.Disbursement, TransactionCategory.TRANSFER));
-        movementRepo.Add(CreateLoanMovement(loanId, 800, new DateTime(2025, 2, 1), LoanMovementType.Repayment, TransactionCategory.DEPOSIT));
+        movementRepo.Add(CreateLoanMovement(loanId, 2000, new DateTime(2025, 1, 10), LoanMovementType.Disbursement, TransactionCategory.LOAN_OUT));
+        movementRepo.Add(CreateLoanMovement(loanId, 800, new DateTime(2025, 2, 1), LoanMovementType.Repayment, TransactionCategory.LOAN_IN));
         LoanQuery loanQuery = new(loanRepo, movementRepo);
         DashboardQuery query = new(new FakeTxRepo(), new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery(), loanQuery, movementRepo);
 

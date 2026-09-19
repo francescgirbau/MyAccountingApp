@@ -164,13 +164,13 @@ public class AnnualSummaryService : IAnnualSummaryService
 
         decimal netInvestedCash = investmentSales - investmentPurchases;
 
-        // Internal breakdown
+        // Internal breakdown (loan movements are real cash in/out, counted alongside transfers/deposits)
         decimal transfers = yearEurCashTxs
-            .Where(t => t.Category == TransactionCategory.TRANSFER)
+            .Where(t => t.Category is TransactionCategory.TRANSFER or TransactionCategory.LOAN_OUT)
             .Sum(t => t.Money.Amount);
 
         decimal deposits = yearEurCashTxs
-            .Where(t => t.Category == TransactionCategory.DEPOSIT)
+            .Where(t => t.Category is TransactionCategory.DEPOSIT or TransactionCategory.LOAN_IN)
             .Sum(t => t.Money.Amount);
 
         decimal fxOut = yearEurCashTxs
@@ -292,13 +292,13 @@ public class AnnualSummaryService : IAnnualSummaryService
 
             decimal netInvestedCash = investmentSales - investmentPurchases;
 
-            // Internal breakdown
+            // Internal breakdown (loan movements are real cash in/out, counted alongside transfers/deposits)
             decimal transfers = monthEurCashTxs
-                .Where(t => t.Category == TransactionCategory.TRANSFER)
+                .Where(t => t.Category is TransactionCategory.TRANSFER or TransactionCategory.LOAN_OUT)
                 .Sum(t => t.Money.Amount);
 
             decimal deposits = monthEurCashTxs
-                .Where(t => t.Category == TransactionCategory.DEPOSIT)
+                .Where(t => t.Category is TransactionCategory.DEPOSIT or TransactionCategory.LOAN_IN)
                 .Sum(t => t.Money.Amount);
 
             decimal fxOut = monthEurCashTxs

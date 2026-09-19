@@ -35,6 +35,8 @@ public class FxConversionPairingTests
         Assert.True(TransactionCategory.FX_CONVERSION.IsInternalCashMove());
         Assert.True(TransactionCategory.TRANSFER.IsInternalCashMove());
         Assert.True(TransactionCategory.DEPOSIT.IsInternalCashMove());
+        Assert.True(TransactionCategory.LOAN_IN.IsInternalCashMove());
+        Assert.True(TransactionCategory.LOAN_OUT.IsInternalCashMove());
         Assert.False(TransactionCategory.INCOME.IsInternalCashMove());
     }
 

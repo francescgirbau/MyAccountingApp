@@ -14,6 +14,8 @@ public static class TransactionCategoryExtensions
     public static bool IsInternalCashMove(this TransactionCategory category) =>
         category is TransactionCategory.TRANSFER
             or TransactionCategory.DEPOSIT
+            or TransactionCategory.LOAN_IN
+            or TransactionCategory.LOAN_OUT
             or TransactionCategory.FX_CONVERSION;
 
     public static bool IsInvestingCashFlow(this TransactionCategory category) =>

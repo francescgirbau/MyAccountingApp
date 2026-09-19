@@ -392,7 +392,7 @@ public class TransactionsEndpointsTests
         JsonElement.ArrayEnumerator rows = document.RootElement.EnumerateArray();
 
         JsonElement loanRow = Assert.Single(rows, row => row.GetProperty("source").GetString() == "Loan");
-        Assert.Equal("DEPOSIT", loanRow.GetProperty("category").GetString());
+        Assert.Equal("LOAN_IN", loanRow.GetProperty("category").GetString());
         Assert.Equal(5000m, loanRow.GetProperty("money").GetProperty("amount").GetDecimal());
     }
 
@@ -416,13 +416,13 @@ public class TransactionsEndpointsTests
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
 
         // Act
-        HttpResponseMessage response = await client.GetAsync("/api/transactions?categories=DEPOSIT");
+        HttpResponseMessage response = await client.GetAsync("/api/transactions?categories=LOAN_IN");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         JsonElement.ArrayEnumerator rows = document.RootElement.EnumerateArray();
-        Assert.All(rows, row => Assert.Equal("DEPOSIT", row.GetProperty("category").GetString()));
+        Assert.All(rows, row => Assert.Equal("LOAN_IN", row.GetProperty("category").GetString()));
         Assert.Contains(rows, row => row.GetProperty("source").GetString() == "Loan");
     }
 }

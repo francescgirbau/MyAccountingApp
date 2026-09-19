@@ -198,8 +198,8 @@ public class AnnualSummaryServiceTests
         Guid loanId = Guid.NewGuid();
         LoanMovement[] movements = new LoanMovement[]
         {
-            LoanMv(loanId, 5000, 2026, 3, TransactionCategory.DEPOSIT),
-            LoanMv(loanId, 500, 2026, 6, TransactionCategory.TRANSFER),
+            LoanMv(loanId, 5000, 2026, 3, TransactionCategory.LOAN_IN),
+            LoanMv(loanId, 500, 2026, 6, TransactionCategory.LOAN_OUT),
         };
         var svc = CreateService(txs, Array.Empty<AssetTransaction>(), movements: movements);
 
@@ -222,7 +222,7 @@ public class AnnualSummaryServiceTests
         Guid loanId = Guid.NewGuid();
         LoanMovement[] movements = new LoanMovement[]
         {
-            LoanMv(loanId, 5000, 2025, 3, TransactionCategory.DEPOSIT),
+            LoanMv(loanId, 5000, 2025, 3, TransactionCategory.LOAN_IN),
         };
         var svc = CreateService(Array.Empty<Transaction>(), Array.Empty<AssetTransaction>(), movements: movements);
 
