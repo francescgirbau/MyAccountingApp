@@ -49,6 +49,7 @@ public class DashboardQuery : IDashboardQuery
         PortfolioSnapshotDto portfolio = BuildPortfolioSnapshot(allAssetTransactions, allOptionTransactions, asOf.Year);
         List<DashboardAlertDto> alerts = BuildAlerts(allTransactions, allAssetTransactions, allOptionTransactions);
         this.AddDataQualityAlert(alerts);
+        this.AddLoanDuplicateAlert(alerts);
 
         return Task.FromResult(new DashboardDto(asOf, cash, portfolio, alerts));
     }
@@ -210,6 +211,20 @@ public class DashboardQuery : IDashboardQuery
         return alerts;
     }
 
+    private static bool MovementDuplicatesManual(Transaction movementTx, bool movementIsCashIn, Transaction manual)
+    {
+        bool manualIsCashIn = manual.Category is TransactionCategory.DEPOSIT
+            or TransactionCategory.INCOME
+            or TransactionCategory.DIVIDEND
+            or TransactionCategory.INTEREST
+            or TransactionCategory.LOAN_IN;
+
+        return movementIsCashIn == manualIsCashIn
+            && DateOnly.FromDateTime(movementTx.Date) == DateOnly.FromDateTime(manual.Date)
+            && movementTx.Money.Amount == manual.Money.Amount
+            && string.Equals(movementTx.Money.Currency, manual.Money.Currency, StringComparison.OrdinalIgnoreCase);
+    }
+
     private void AddDataQualityAlert(List<DashboardAlertDto> alerts)
     {
         ValidationResult validation = this._validationQuery.ValidateAll();
@@ -230,5 +245,44 @@ public class DashboardQuery : IDashboardQuery
                 $"{validation.Warnings.Count} data quality warning(s) found",
                 "/data-quality"));
         }
+    }
+
+    private void AddLoanDuplicateAlert(List<DashboardAlertDto> alerts)
+    {
+        if (this._loanMovementRepo is null)
+        {
+            return;
+        }
+
+        List<Transaction> manualTransactions = this._transactionRepo.GetAll().ToList();
+        List<LoanMovement> movements = this._loanMovementRepo.GetAll().ToList();
+        List<Guid> duplicatedManualIds = new();
+
+        foreach (LoanMovement movement in movements)
+        {
+            Transaction movementTx = movement.Transaction;
+            bool movementIsCashIn = movementTx.Category == TransactionCategory.LOAN_IN;
+
+            foreach (Transaction manual in manualTransactions)
+            {
+                if (MovementDuplicatesManual(movementTx, movementIsCashIn, manual)
+                    && !duplicatedManualIds.Contains(manual.Id))
+                {
+                    duplicatedManualIds.Add(manual.Id);
+                }
+            }
+        }
+
+        if (duplicatedManualIds.Count == 0)
+        {
+            return;
+        }
+
+        string ids = string.Join(",", duplicatedManualIds);
+        alerts.Add(new DashboardAlertDto(
+            "warning",
+            "LOAN_MANUAL_DUPLICATE",
+            $"{duplicatedManualIds.Count} manual transaction(s) appear to duplicate a loan movement (same date and amount); delete the manual transaction(s) so the loan movement is the single record of that cash flow.",
+            $"/transactions?ids={ids}&issue={Uri.EscapeDataString("Loan movement duplicate")}"));
     }
 }
