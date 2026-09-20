@@ -164,13 +164,22 @@ public class AnnualSummaryService : IAnnualSummaryService
 
         decimal netInvestedCash = investmentSales - investmentPurchases;
 
-        // Internal breakdown (loan movements are real cash in/out, counted alongside transfers/deposits)
+        // Internal breakdown: transfers/deposits are true inter-account moves;
+        // loan movements are real cash shown in their own loan buckets.
         decimal transfers = yearEurCashTxs
-            .Where(t => t.Category is TransactionCategory.TRANSFER or TransactionCategory.LOAN_OUT)
+            .Where(t => t.Category == TransactionCategory.TRANSFER)
             .Sum(t => t.Money.Amount);
 
         decimal deposits = yearEurCashTxs
-            .Where(t => t.Category is TransactionCategory.DEPOSIT or TransactionCategory.LOAN_IN)
+            .Where(t => t.Category == TransactionCategory.DEPOSIT)
+            .Sum(t => t.Money.Amount);
+
+        decimal loanIn = yearEurCashTxs
+            .Where(t => t.Category == TransactionCategory.LOAN_IN)
+            .Sum(t => t.Money.Amount);
+
+        decimal loanOut = yearEurCashTxs
+            .Where(t => t.Category == TransactionCategory.LOAN_OUT)
             .Sum(t => t.Money.Amount);
 
         decimal fxOut = yearEurCashTxs
@@ -207,6 +216,9 @@ public class AnnualSummaryService : IAnnualSummaryService
                 Math.Round(fxOut, 2),
                 Math.Round(fxIn, 2),
                 Math.Round(fxNet, 2),
+                Math.Round(loanIn, 2),
+                Math.Round(loanOut, 2),
+                Math.Round(loanIn - loanOut, 2),
                 pairCount,
                 unmatchedLegCount),
             months,
@@ -292,13 +304,22 @@ public class AnnualSummaryService : IAnnualSummaryService
 
             decimal netInvestedCash = investmentSales - investmentPurchases;
 
-            // Internal breakdown (loan movements are real cash in/out, counted alongside transfers/deposits)
+            // Internal breakdown: transfers/deposits are true inter-account moves;
+            // loan movements are real cash shown in their own loan buckets.
             decimal transfers = monthEurCashTxs
-                .Where(t => t.Category is TransactionCategory.TRANSFER or TransactionCategory.LOAN_OUT)
+                .Where(t => t.Category == TransactionCategory.TRANSFER)
                 .Sum(t => t.Money.Amount);
 
             decimal deposits = monthEurCashTxs
-                .Where(t => t.Category is TransactionCategory.DEPOSIT or TransactionCategory.LOAN_IN)
+                .Where(t => t.Category == TransactionCategory.DEPOSIT)
+                .Sum(t => t.Money.Amount);
+
+            decimal loanIn = monthEurCashTxs
+                .Where(t => t.Category == TransactionCategory.LOAN_IN)
+                .Sum(t => t.Money.Amount);
+
+            decimal loanOut = monthEurCashTxs
+                .Where(t => t.Category == TransactionCategory.LOAN_OUT)
                 .Sum(t => t.Money.Amount);
 
             decimal fxOut = monthEurCashTxs
@@ -331,6 +352,9 @@ public class AnnualSummaryService : IAnnualSummaryService
                     Math.Round(fxOut, 2),
                     Math.Round(fxIn, 2),
                     Math.Round(fxNet, 2),
+                    Math.Round(loanIn, 2),
+                    Math.Round(loanOut, 2),
+                    Math.Round(loanIn - loanOut, 2),
                     0,
                     0),
                 monthTxs.Count,

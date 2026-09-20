@@ -20,6 +20,9 @@ public record MonthlyInternalDto(
     decimal FxOut,
     decimal FxIn,
     decimal FxNet,
+    decimal LoanIn,
+    decimal LoanOut,
+    decimal LoanNet,
     int FxPairCount,
     int FxUnmatchedLegCount);
 
@@ -51,6 +54,9 @@ public record AnnualInternalDto(
     decimal FxOut,
     decimal FxIn,
     decimal FxNet,
+    decimal LoanIn,
+    decimal LoanOut,
+    decimal LoanNet,
     int FxPairCount,
     int FxUnmatchedLegCount);
 

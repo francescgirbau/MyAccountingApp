@@ -87,9 +87,12 @@ public class DashboardQuery : IDashboardQuery
         decimal incomeMtdTotal = incomeMtd + SumCategory(mtd, t => t.Category == TransactionCategory.DIVIDEND) + SumCategory(mtd, t => t.Category == TransactionCategory.INTEREST);
         decimal expensesMtdTotal = SumCategory(mtd, t => t.Category == TransactionCategory.EXPENSE) + SumCategory(mtd, t => t.Category == TransactionCategory.FEE) + SumCategory(mtd, t => t.Category == TransactionCategory.WITHHOLDING_TAX);
 
-        // Internal YTD (loan movements are real cash in/out, counted alongside transfers/deposits)
-        decimal transfersYtd = SumCategory(ytd, t => t.Category is TransactionCategory.TRANSFER or TransactionCategory.LOAN_OUT);
-        decimal depositsYtd = SumCategory(ytd, t => t.Category is TransactionCategory.DEPOSIT or TransactionCategory.LOAN_IN);
+        // Internal YTD: transfers/deposits are true inter-account moves; loan
+        // movements are real cash in/out shown in their own loan buckets.
+        decimal transfersYtd = SumCategory(ytd, t => t.Category == TransactionCategory.TRANSFER);
+        decimal depositsYtd = SumCategory(ytd, t => t.Category == TransactionCategory.DEPOSIT);
+        decimal loanInYtd = SumCategory(ytd, t => t.Category == TransactionCategory.LOAN_IN);
+        decimal loanOutYtd = SumCategory(ytd, t => t.Category == TransactionCategory.LOAN_OUT);
         decimal fxOutYtd = SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out);
         decimal fxInYtd = SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In);
 
@@ -123,7 +126,10 @@ public class DashboardQuery : IDashboardQuery
                 Math.Round(depositsYtd, 2),
                 Math.Round(SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out), 2),
                 Math.Round(SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In), 2),
-                Math.Round(SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In) - SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out), 2)),
+                Math.Round(SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.In) - SumCategory(ytd, t => t.Category == TransactionCategory.FX_CONVERSION && t.FxLeg == FxLeg.Out), 2),
+                Math.Round(loanInYtd, 2),
+                Math.Round(loanOutYtd, 2),
+                Math.Round(loanInYtd - loanOutYtd, 2)),
             BuildLoansYtd(loanSummaries));
     }
 

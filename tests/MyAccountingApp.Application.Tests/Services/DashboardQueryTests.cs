@@ -218,7 +218,7 @@ public class DashboardQueryTests
     }
 
     [Fact]
-    public async Task GetAsync_Loans_FlowIntoInternalYtd_ButNotOperatingOrInvesting()
+    public async Task GetAsync_Loans_FlowIntoInternalYtdLoanBuckets_ButNotOperatingOrInvesting()
     {
         FakeTxRepo txRepo = new();
         txRepo.Add(new Transaction(new DateTime(2026, 1, 10), "Salary", new Money(1000, "EUR"), TransactionCategory.INCOME));
@@ -235,8 +235,13 @@ public class DashboardQueryTests
 
         Assert.Equal(1000, dashboard.Cash.OperatingYtd.Income);
         Assert.Equal(0, dashboard.Cash.InvestingYtd.NetInvestedCash);
-        Assert.Equal(5000, dashboard.Cash.InternalYtd.Deposits);
-        Assert.Equal(500, dashboard.Cash.InternalYtd.Transfers);
+
+        // Loan movements are real cash in/out but live in their own buckets, not Deposits/Transfers.
+        Assert.Equal(0, dashboard.Cash.InternalYtd.Deposits);
+        Assert.Equal(0, dashboard.Cash.InternalYtd.Transfers);
+        Assert.Equal(5000, dashboard.Cash.InternalYtd.LoanIn);
+        Assert.Equal(500, dashboard.Cash.InternalYtd.LoanOut);
+        Assert.Equal(4500, dashboard.Cash.InternalYtd.LoanNet);
         Assert.NotNull(dashboard.Cash.LoansYtd);
         Assert.Equal(5000, dashboard.Cash.LoansYtd.Disbursed);
         Assert.Equal(500, dashboard.Cash.LoansYtd.Repaid);
@@ -264,6 +269,9 @@ public class DashboardQueryTests
         Assert.Equal(0, dashboard.Cash.InvestingYtd.NetInvestedCash);
         Assert.Equal(0, dashboard.Cash.InternalYtd.Deposits);
         Assert.Equal(0, dashboard.Cash.InternalYtd.Transfers);
+        Assert.Equal(0, dashboard.Cash.InternalYtd.LoanIn);
+        Assert.Equal(0, dashboard.Cash.InternalYtd.LoanOut);
+        Assert.Equal(0, dashboard.Cash.InternalYtd.LoanNet);
         Assert.NotNull(dashboard.Cash.LoansYtd);
     }
 
@@ -294,9 +302,9 @@ public class DashboardQueryTests
         FakeLoanRepository loanRepo = new();
         FakeLoanMovementRepository movementRepo = new();
         Guid loanId = Guid.NewGuid();
-        loanRepo.Add(new Loan(loanId, "Pere", LoanDirection.Lent, new Money(2000, "EUR"), new DateTime(2025, 1, 10)));
-        movementRepo.Add(CreateLoanMovement(loanId, 2000, new DateTime(2025, 1, 10), LoanMovementType.Disbursement, TransactionCategory.LOAN_OUT));
-        movementRepo.Add(CreateLoanMovement(loanId, 800, new DateTime(2025, 2, 1), LoanMovementType.Repayment, TransactionCategory.LOAN_IN));
+        loanRepo.Add(new Loan(loanId, "Pere", LoanDirection.Lent, new Money(2000, "EUR"), new DateTime(2026, 1, 10)));
+        movementRepo.Add(CreateLoanMovement(loanId, 2000, new DateTime(2026, 1, 10), LoanMovementType.Disbursement, TransactionCategory.LOAN_OUT));
+        movementRepo.Add(CreateLoanMovement(loanId, 800, new DateTime(2026, 2, 1), LoanMovementType.Repayment, TransactionCategory.LOAN_IN));
         LoanQuery loanQuery = new(loanRepo, movementRepo);
         DashboardQuery query = new(new FakeTxRepo(), new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery(), loanQuery, movementRepo);
 
@@ -306,6 +314,13 @@ public class DashboardQueryTests
         Assert.Equal(2000, dashboard.Cash.LoansYtd.Disbursed);
         Assert.Equal(800, dashboard.Cash.LoansYtd.Repaid);
         Assert.Equal(1200, dashboard.Cash.LoansYtd.NetOutstanding);
+
+        // Lent loans: disbursement goes out (LOAN_OUT), repayment comes in (LOAN_IN).
+        Assert.Equal(0, dashboard.Cash.InternalYtd.Deposits);
+        Assert.Equal(0, dashboard.Cash.InternalYtd.Transfers);
+        Assert.Equal(800, dashboard.Cash.InternalYtd.LoanIn);
+        Assert.Equal(2000, dashboard.Cash.InternalYtd.LoanOut);
+        Assert.Equal(-1200, dashboard.Cash.InternalYtd.LoanNet);
     }
 
     private static LoanMovement CreateLoanMovement(Guid loanId, decimal amount, DateTime date, LoanMovementType type, TransactionCategory category)
