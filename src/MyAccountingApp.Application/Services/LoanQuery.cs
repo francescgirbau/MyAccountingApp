@@ -52,6 +52,16 @@ public sealed class LoanQuery : ILoanQuery
             outstanding < 0,
             loan.IsClosed,
             loan.StartDate,
-            lastMovementDate);
+            lastMovementDate,
+            loanMovements
+                .OrderBy(m => m.Transaction.Date)
+                .Select(m => new LoanMovementDto(
+                    m.Id,
+                    m.Transaction.Date,
+                    m.Type.ToString(),
+                    m.Transaction.Description,
+                    Math.Round(m.Transaction.Money.Amount, 2),
+                    m.Transaction.Money.Currency))
+                .ToList());
     }
 }

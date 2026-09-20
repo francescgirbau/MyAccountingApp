@@ -52,6 +52,17 @@ public class LoanSummaryDto
     public bool IsClosed { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime? LastMovementDate { get; set; }
+    public List<LoanMovementDto> Movements { get; set; } = new();
+}
+
+public class LoanMovementDto
+{
+    public Guid Id { get; set; }
+    public DateTime Date { get; set; }
+    public string Type { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public string Currency { get; set; } = string.Empty;
 }
 
 public class PortfolioPositionDto

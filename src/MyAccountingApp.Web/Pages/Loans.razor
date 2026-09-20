@@ -70,6 +70,33 @@ else
                                OnClick="@(() => OpenDeleteDialog(context))" />
             </MudTd>
         </RowTemplate>
+        <ChildRowContent>
+            @{ LoanSummaryDto loan = context; }
+            <MudText Typo="Typo.subtitle2" Class="py-2">Movements</MudText>
+            @if (loan.Movements.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">No movements yet.</MudText>
+            }
+            else
+            {
+                <MudTable Items="@loan.Movements" Dense="true" Elevation="0" Outlined="false" Hover="true">
+                    <HeaderContent>
+                        <MudTh>Date</MudTh>
+                        <MudTh>Type</MudTh>
+                        <MudTh>Description</MudTh>
+                        <MudTh>Amount</MudTh>
+                    </HeaderContent>
+                    <RowTemplate Context="m">
+                        <MudTd DataLabel="Date">@m.Date.ToString("yyyy-MM-dd")</MudTd>
+                        <MudTd DataLabel="Type">
+                            <MudChip T="string" Size="Size.Small" Color="@_MovementChipColor(m.Type)">@m.Type</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Description">@m.Description</MudTd>
+                        <MudTd DataLabel="Amount" Class="@(IsCashIn(loan, m) ? "green--text" : "red--text")">@m.Amount.ToString("N2") @m.Currency</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </ChildRowContent>
     </MudTable>
 }
 
@@ -339,4 +366,13 @@ else
 
     private static Color _DirectionColor(string direction) =>
         direction == "Lent" ? Color.Success : Color.Warning;
+
+    // A movement is cash in when money flows towards us: borrowed disbursements and
+    // repayments of loans we lent out. Everything else is cash out.
+    private static bool IsCashIn(LoanSummaryDto loan, LoanMovementDto movement) =>
+        (loan.Direction == "Borrowed" && movement.Type == "Disbursement") ||
+        (loan.Direction == "Lent" && movement.Type == "Repayment");
+
+    private static Color _MovementChipColor(string type) =>
+        type == "Repayment" ? Color.Secondary : Color.Info;
 }

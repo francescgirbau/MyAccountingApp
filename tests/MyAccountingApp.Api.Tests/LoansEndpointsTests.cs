@@ -133,6 +133,33 @@ public class LoansEndpointsTests
     }
 
     [Fact]
+    public async Task Loans_GetAll_IncludesMovements_OrderedByDate()
+    {
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        HttpResponseMessage created = await client.PostAsJsonAsync("/api/loans", CreateLoanBody());
+        using JsonDocument createdDocument = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        Guid loanId = createdDocument.RootElement.GetProperty("loanId").GetGuid();
+
+        HttpResponseMessage repayment = await client.PostAsJsonAsync($"/api/loans/{loanId}/repayments", CreateRepaymentBody());
+        Assert.Equal(HttpStatusCode.OK, repayment.StatusCode);
+
+        HttpResponseMessage list = await client.GetAsync("/api/loans");
+        Assert.Equal(HttpStatusCode.OK, list.StatusCode);
+        using JsonDocument listDocument = JsonDocument.Parse(await list.Content.ReadAsStringAsync());
+        JsonElement loan = Assert.Single(listDocument.RootElement.EnumerateArray());
+        JsonElement.ArrayEnumerator movements = loan.GetProperty("movements").EnumerateArray();
+
+        List<JsonElement> movementList = movements.ToList();
+        Assert.Equal(2, movementList.Count);
+        Assert.Equal("Disbursement", movementList[0].GetProperty("type").GetString());
+        Assert.Equal(1000m, movementList[0].GetProperty("amount").GetDecimal());
+        Assert.Equal("Repayment", movementList[1].GetProperty("type").GetString());
+        Assert.Equal(250m, movementList[1].GetProperty("amount").GetDecimal());
+    }
+
+    [Fact]
     public async Task Loans_Delete_CascadesMovements()
     {
         using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
