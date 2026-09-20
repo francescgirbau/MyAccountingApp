@@ -209,6 +209,9 @@ public class InternalCashFlowDto
     public decimal FxOut { get; set; }
     public decimal FxIn { get; set; }
     public decimal FxNet { get; set; }
+    public decimal LoanIn { get; set; }
+    public decimal LoanOut { get; set; }
+    public decimal LoanNet { get; set; }
 }
 
 public class PortfolioSnapshotDto

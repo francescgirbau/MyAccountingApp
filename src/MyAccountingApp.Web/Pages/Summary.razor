@@ -88,7 +88,7 @@ else if (Year.HasValue)
                         <MudText Typo="Typo.subtitle2">Transfers out</MudText>
                         <MudTooltip Placement="Placement.Top">
                             <ChildContent>
-                                <MudText Typo="Typo.h5" Class="cursor-pointer" @onclick="@(() => NavigateToTransactions("TRANSFER,LOAN_OUT"))">@_summary.Internal.Transfers.ToString("N2") €</MudText>
+                                <MudText Typo="Typo.h5" Class="cursor-pointer" @onclick="@(() => NavigateToTransactions("TRANSFER"))">@_summary.Internal.Transfers.ToString("N2") €</MudText>
                             </ChildContent>
                             <TooltipContent><span>View transfers in Transactions</span></TooltipContent>
                         </MudTooltip>
@@ -97,9 +97,27 @@ else if (Year.HasValue)
                         <MudText Typo="Typo.subtitle2">Deposits in</MudText>
                         <MudTooltip Placement="Placement.Top">
                             <ChildContent>
-                                <MudText Typo="Typo.h5" Color="Color.Success" Class="cursor-pointer" @onclick="@(() => NavigateToTransactions("DEPOSIT,LOAN_IN"))">@_summary.Internal.Deposits.ToString("N2") €</MudText>
+                                <MudText Typo="Typo.h5" Color="Color.Success" Class="cursor-pointer" @onclick="@(() => NavigateToTransactions("DEPOSIT"))">@_summary.Internal.Deposits.ToString("N2") €</MudText>
                             </ChildContent>
                             <TooltipContent><span>View deposits in Transactions</span></TooltipContent>
+                        </MudTooltip>
+                    </MudItem>
+                    <MudItem xs="6" md="4">
+                        <MudText Typo="Typo.subtitle2">Loans out (EUR)</MudText>
+                        <MudTooltip Placement="Placement.Top">
+                            <ChildContent>
+                                <MudText Typo="Typo.h5" Class="cursor-pointer" @onclick="@(() => NavigateToTransactions("LOAN_OUT"))">@_summary.Internal.LoanOut.ToString("N2") €</MudText>
+                            </ChildContent>
+                            <TooltipContent><span>View loan repayments/disbursements out in Transactions</span></TooltipContent>
+                        </MudTooltip>
+                    </MudItem>
+                    <MudItem xs="6" md="4">
+                        <MudText Typo="Typo.subtitle2">Loans in (EUR)</MudText>
+                        <MudTooltip Placement="Placement.Top">
+                            <ChildContent>
+                                <MudText Typo="Typo.h5" Color="Color.Success" Class="cursor-pointer" @onclick="@(() => NavigateToTransactions("LOAN_IN"))">@_summary.Internal.LoanIn.ToString("N2") €</MudText>
+                            </ChildContent>
+                            <TooltipContent><span>View loan disbursements/repayments in in Transactions</span></TooltipContent>
                         </MudTooltip>
                     </MudItem>
                     <MudItem xs="6" md="4">
@@ -204,6 +222,7 @@ else if (Year.HasValue)
                     <MudTh>Invest out</MudTh>
                     <MudTh>Invest net</MudTh>
                     <MudTh>FX net (EUR)</MudTh>
+                    <MudTh>Loans net (EUR)</MudTh>
                     <MudTh>Tx</MudTh>
                 </HeaderContent>
                 <RowTemplate>
@@ -215,6 +234,7 @@ else if (Year.HasValue)
                     <MudTd DataLabel="Invest out"><MudText Color="Color.Info">@context.Investing.Sales.ToString("N2") €</MudText></MudTd>
                     <MudTd DataLabel="Invest net"><MudText Color="Color.Info">@context.Investing.NetInvestedCash.ToString("N2") €</MudText></MudTd>
                     <MudTd DataLabel="FX net (EUR)"><MudText Color="@NetColor(context.Internal.FxNet)">@context.Internal.FxNet.ToString("N2") €</MudText></MudTd>
+                    <MudTd DataLabel="Loans net (EUR)"><MudText Color="@NetColor(context.Internal.LoanNet)">@context.Internal.LoanNet.ToString("N2") €</MudText></MudTd>
                     <MudTd DataLabel="Tx">@context.TransactionCount / @context.AssetTransactionCount</MudTd>
                 </RowTemplate>
                 <FooterContent>
@@ -226,6 +246,7 @@ else if (Year.HasValue)
                     <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Info">@_summary.Investing.Sales.ToString("N2") €</MudText></MudTd>
                     <MudTd><MudText Typo="Typo.subtitle2" Color="Color.Info">@_summary.Investing.NetInvestedCash.ToString("N2") €</MudText></MudTd>
                     <MudTd><MudText Typo="Typo.subtitle2" Color="@InternalFxNetColor">@_summary.Internal.FxNet.ToString("N2") €</MudText></MudTd>
+                    <MudTd><MudText Typo="Typo.subtitle2" Color="@InternalLoanNetColor">@_summary.Internal.LoanNet.ToString("N2") €</MudText></MudTd>
                     <MudTd><MudText Typo="Typo.subtitle2">@_summary.TransactionCount / @_summary.AssetTransactionCount</MudText></MudTd>
                 </FooterContent>
             </MudTable>
@@ -274,6 +295,8 @@ else
 
     private Color OperatingNetColor => (_summary?.Operating.NetOperatingCashFlow ?? 0) >= 0 ? Color.Success : Color.Error;
     private Color InternalFxNetColor => (_summary?.Internal.FxNet ?? 0) >= 0 ? Color.Success : Color.Error;
+
+    private Color InternalLoanNetColor => (_summary?.Internal.LoanNet ?? 0) >= 0 ? Color.Success : Color.Error;
     private Color GetNetColor(decimal net) => net >= 0 ? Color.Success : Color.Error;
     private static Color NetColor(decimal net) => net >= 0 ? Color.Success : Color.Error;
 
@@ -371,7 +394,7 @@ else
         }
 
         StringBuilder csv = new();
-        csv.AppendLine("Month,OperatingIncome,OperatingExpenses,OperatingNet,InvestPurchases,InvestSales,InvestNet,FXNet,BankTx,AssetTx");
+        csv.AppendLine("Month,OperatingIncome,OperatingExpenses,OperatingNet,InvestPurchases,InvestSales,InvestNet,FXNet,LoansNet,BankTx,AssetTx");
         foreach (MonthlySummaryDto month in _summary.Months ?? new())
         {
             csv.AppendLine(string.Join(",",
@@ -383,6 +406,7 @@ else
                 month.Investing.Sales.ToString("F2", CultureInfo.InvariantCulture),
                 month.Investing.NetInvestedCash.ToString("F2", CultureInfo.InvariantCulture),
                 month.Internal.FxNet.ToString("F2", CultureInfo.InvariantCulture),
+                month.Internal.LoanNet.ToString("F2", CultureInfo.InvariantCulture),
                 month.TransactionCount,
                 month.AssetTransactionCount));
         }

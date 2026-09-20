@@ -86,4 +86,44 @@ public class DashboardEndpointsTests
         Assert.NotNull(document.RootElement.GetProperty("asOf").GetString());
         Assert.Equal(0, document.RootElement.GetProperty("cash").GetProperty("operatingYtd").GetProperty("income").GetDecimal());
     }
+
+    [Fact]
+    public async Task Dashboard_ShowsLoanMovementsInOwnInternalBuckets()
+    {
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        HttpResponseMessage created = await client.PostAsJsonAsync("/api/loans", new
+        {
+            startDate = new DateTime(2026, 3, 1),
+            counterparty = "Berta",
+            amount = 5000m,
+            currency = "EUR",
+            direction = "Borrowed",
+        });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        using JsonDocument createdDocument = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        Guid loanId = createdDocument.RootElement.GetProperty("loanId").GetGuid();
+
+        HttpResponseMessage repayment = await client.PostAsJsonAsync($"/api/loans/{loanId}/repayments", new
+        {
+            date = new DateTime(2026, 6, 1),
+            amount = 500m,
+        });
+        Assert.Equal(HttpStatusCode.OK, repayment.StatusCode);
+
+        HttpResponseMessage response = await client.GetAsync("/api/dashboard?asOf=2026-08-11");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        JsonElement internalYtd = document.RootElement.GetProperty("cash").GetProperty("internalYtd");
+
+        // Loan movements are real cash in/out but they live in their own buckets,
+        // not merged into Deposits/Transfers (which stay as inter-account moves only).
+        Assert.Equal(5000, internalYtd.GetProperty("loanIn").GetDecimal());
+        Assert.Equal(500, internalYtd.GetProperty("loanOut").GetDecimal());
+        Assert.Equal(4500, internalYtd.GetProperty("loanNet").GetDecimal());
+        Assert.Equal(0, internalYtd.GetProperty("deposits").GetDecimal());
+        Assert.Equal(0, internalYtd.GetProperty("transfers").GetDecimal());
+    }
 }

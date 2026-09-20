@@ -189,7 +189,7 @@ public class AnnualSummaryServiceTests
     }
 
     [Fact]
-    public void GetByYear_IncludesLoanMovementsInInternalTransfersAndDeposits()
+    public void GetByYear_IncludesLoanMovementsInOwnLoanBuckets()
     {
         Transaction[] txs = new Transaction[]
         {
@@ -207,13 +207,19 @@ public class AnnualSummaryServiceTests
 
         Assert.NotNull(result);
         Assert.Equal(1000m, result.Operating.Income);
-        Assert.Equal(5000m, result.Internal.Deposits);
-        Assert.Equal(500m, result.Internal.Transfers);
+
+        // Loan movements stay in their own buckets, not mixed with transfers/deposits.
+        Assert.Equal(0m, result.Internal.Deposits);
+        Assert.Equal(0m, result.Internal.Transfers);
+        Assert.Equal(5000m, result.Internal.LoanIn);
+        Assert.Equal(500m, result.Internal.LoanOut);
+        Assert.Equal(4500m, result.Internal.LoanNet);
 
         Assert.Equal(2, result.Months.Count);
-        Assert.Equal(5000m, result.Months[0].Internal.Deposits);
+        Assert.Equal(5000m, result.Months[0].Internal.LoanIn);
+        Assert.Equal(0m, result.Months[0].Internal.Deposits);
         Assert.Equal(0m, result.Months[0].Internal.Transfers);
-        Assert.Equal(500m, result.Months[1].Internal.Transfers);
+        Assert.Equal(500m, result.Months[1].Internal.LoanOut);
     }
 
     [Fact]
@@ -230,7 +236,8 @@ public class AnnualSummaryServiceTests
 
         AnnualSummaryDto? year = Assert.Single(result);
         Assert.Equal(2025, year.Year);
-        Assert.Equal(5000m, year.Internal.Deposits);
+        Assert.Equal(5000m, year.Internal.LoanIn);
+        Assert.Equal(0m, year.Internal.Deposits);
     }
 
     [Fact]

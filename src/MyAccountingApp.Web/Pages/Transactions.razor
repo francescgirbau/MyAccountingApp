@@ -74,6 +74,9 @@
         <MudChip T="string" Color="@(IsBucketActive(InternalBucket, _selectedCategories) ? Color.Primary : Color.Default)"
                  Variant="@(IsBucketActive(InternalBucket, _selectedCategories) ? Variant.Filled : Variant.Outlined)"
                  OnClick="@(() => ToggleBucket(InternalBucket))">Internal moves</MudChip>
+        <MudChip T="string" Color="@(IsBucketActive(LoanBucket, _selectedCategories) ? Color.Primary : Color.Default)"
+                 Variant="@(IsBucketActive(LoanBucket, _selectedCategories) ? Variant.Filled : Variant.Outlined)"
+                 OnClick="@(() => ToggleBucket(LoanBucket))">Loans</MudChip>
         <MudChip T="string" Color="@(IsBucketActive(FxBucket, _selectedCategories) ? Color.Primary : Color.Default)"
                  Variant="@(IsBucketActive(FxBucket, _selectedCategories) ? Variant.Filled : Variant.Outlined)"
                  OnClick="@(() => ToggleBucket(FxBucket))">FX</MudChip>
@@ -126,6 +129,7 @@ else
                         <th style="text-align:center" colspan="3">Operating</th>
                         <th style="text-align:center" colspan="2">Investing</th>
                         <th style="text-align:center" colspan="2">Internal</th>
+                        <th style="text-align:center" colspan="2">Loans</th>
                         <th style="text-align:center" colspan="2" class="mud-text-secondary">FX</th>
                     </tr>
                     <tr>
@@ -134,6 +138,8 @@ else
                         <th style="text-align:right">Net</th>
                         <th style="text-align:right">Purchases</th>
                         <th style="text-align:right">Sales</th>
+                        <th style="text-align:right">Out</th>
+                        <th style="text-align:right">In</th>
                         <th style="text-align:right">Out</th>
                         <th style="text-align:right">In</th>
                         <th style="text-align:right" class="mud-text-secondary">Out</th>
@@ -154,6 +160,8 @@ else
                             <td style="text-align:right">@s.InvestingSale.ToString("N2")</td>
                             <td style="text-align:right">@s.Transfer.ToString("N2")</td>
                             <td style="text-align:right">@s.Deposit.ToString("N2")</td>
+                            <td style="text-align:right">@s.LoanOut.ToString("N2")</td>
+                            <td style="text-align:right">@s.LoanIn.ToString("N2")</td>
                             <td style="text-align:right" class="mud-text-secondary">@s.FxOut.ToString("N2")</td>
                             <td style="text-align:right" class="mud-text-secondary">@s.FxIn.ToString("N2")</td>
                         </tr>
@@ -161,7 +169,7 @@ else
                 </tbody>
             </MudSimpleTable>
             <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
-                Operating net = Income − Expense. Investing (asset purchase/sale) and internal transfers/deposits are excluded from Operating net; FX legs sit in their own out / in columns (not in Operating net).
+                Operating net = Income − Expense. Investing (asset purchase/sale), internal transfers/deposits and loan movements are excluded from Operating net; FX legs sit in their own out / in columns (not in Operating net), and loan movements have their own out / in columns.
             </MudText>
         }
     </MudPaper>
@@ -622,8 +630,10 @@ else
                 decimal expense = g.Where(t => t.Category is "EXPENSE" or "FEE" or "WITHHOLDING_TAX").Sum(t => t.Money.Amount);
                 decimal investingPurchase = g.Where(t => t.Category == "INVESTMENT").Sum(t => t.Money.Amount);
                 decimal investingSale = g.Where(t => t.Category == "DIVESTMENT").Sum(t => t.Money.Amount);
-                decimal transfer = g.Where(t => t.Category is "TRANSFER" or "LOAN_OUT").Sum(t => t.Money.Amount);
-                decimal deposit = g.Where(t => t.Category is "DEPOSIT" or "LOAN_IN").Sum(t => t.Money.Amount);
+                decimal transfer = g.Where(t => t.Category == "TRANSFER").Sum(t => t.Money.Amount);
+                decimal deposit = g.Where(t => t.Category == "DEPOSIT").Sum(t => t.Money.Amount);
+                decimal loanOut = g.Where(t => t.Category == "LOAN_OUT").Sum(t => t.Money.Amount);
+                decimal loanIn = g.Where(t => t.Category == "LOAN_IN").Sum(t => t.Money.Amount);
                 decimal fxOut = g.Where(t => t.Category == "FX_CONVERSION" && t.FxLeg == "Out").Sum(t => t.Money.Amount);
                 decimal fxIn = g.Where(t => t.Category == "FX_CONVERSION" && t.FxLeg == "In").Sum(t => t.Money.Amount);
                 return new FilterCurrencySummary
@@ -636,6 +646,8 @@ else
                     InvestingSale = investingSale,
                     Transfer = transfer,
                     Deposit = deposit,
+                    LoanOut = loanOut,
+                    LoanIn = loanIn,
                     FxOut = fxOut,
                     FxIn = fxIn,
                     OperatingNet = income - expense,
@@ -656,13 +668,16 @@ else
         public decimal InvestingSale { get; set; }
         public decimal Transfer { get; set; }
         public decimal Deposit { get; set; }
+        public decimal LoanOut { get; set; }
+        public decimal LoanIn { get; set; }
         public decimal FxOut { get; set; }
         public decimal FxIn { get; set; }
         public decimal OperatingNet { get; set; }
     }
 
     private static readonly string[] OperatingBucket = { "INCOME", "EXPENSE", "DIVIDEND", "INTEREST", "FEE", "WITHHOLDING_TAX" };
-    private static readonly string[] InternalBucket = { "TRANSFER", "DEPOSIT", "LOAN_IN", "LOAN_OUT" };
+    private static readonly string[] InternalBucket = { "TRANSFER", "DEPOSIT" };
+    private static readonly string[] LoanBucket = { "LOAN_IN", "LOAN_OUT" };
     private static readonly string[] FxBucket = { "FX_CONVERSION" };
 
     private static bool IsBucketActive(IEnumerable<string> bucket, IReadOnlySet<string> selected) => bucket.All(selected.Contains);

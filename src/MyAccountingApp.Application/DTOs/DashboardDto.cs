@@ -28,7 +28,10 @@ public sealed record InternalCashFlowDto(
     decimal Deposits,
     decimal FxOut,
     decimal FxIn,
-    decimal FxNet);
+    decimal FxNet,
+    decimal LoanIn,
+    decimal LoanOut,
+    decimal LoanNet);
 
 public sealed record PortfolioSnapshotDto(
     decimal TotalCostBasisEur,

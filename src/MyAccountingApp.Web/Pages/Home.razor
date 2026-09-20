@@ -46,7 +46,7 @@ else
                     <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Transfers YTD</MudText>
                     <MudTooltip Placement="Placement.Top">
                         <ChildContent>
-                            <MudText Typo="Typo.h5" Class="cursor-pointer" @onclick="@(() => NavigateToTransactions("TRANSFER,LOAN_OUT"))">@_dashboard.Cash.InternalYtd.Transfers.ToString("N2")</MudText>
+                            <MudText Typo="Typo.h5" Class="cursor-pointer" @onclick="@(() => NavigateToTransactions("TRANSFER"))">@_dashboard.Cash.InternalYtd.Transfers.ToString("N2")</MudText>
                         </ChildContent>
                         <TooltipContent><span>View transfers in Transactions</span></TooltipContent>
                     </MudTooltip>
@@ -59,7 +59,7 @@ else
                     <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Deposits YTD</MudText>
                     <MudTooltip Placement="Placement.Top">
                         <ChildContent>
-                            <MudText Typo="Typo.h5" Class="green--text cursor-pointer" @onclick="@(() => NavigateToTransactions("DEPOSIT,LOAN_IN"))">@_dashboard.Cash.InternalYtd.Deposits.ToString("N2")</MudText>
+                            <MudText Typo="Typo.h5" Class="green--text cursor-pointer" @onclick="@(() => NavigateToTransactions("DEPOSIT"))">@_dashboard.Cash.InternalYtd.Deposits.ToString("N2")</MudText>
                         </ChildContent>
                         <TooltipContent><span>View deposits in Transactions</span></TooltipContent>
                     </MudTooltip>
@@ -77,6 +77,21 @@ else
                             <MudText Typo="Typo.h6" Class="@($"{NetClass(_dashboard.Cash.InternalYtd.FxNet)} cursor-pointer")" @onclick="@(() => NavigateToTransactions("FX_CONVERSION"))">net @_dashboard.Cash.InternalYtd.FxNet.ToString("N2")</MudText>
                         </ChildContent>
                         <TooltipContent><span>View FX conversions in Transactions</span></TooltipContent>
+                    </MudTooltip>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Class="pa-4" Outlined="true">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Loans in/out (EUR)</MudText>
+                    <MudTooltip Placement="Placement.Top">
+                        <ChildContent>
+                            <MudText Typo="Typo.h6" Class="mud-text-secondary cursor-pointer" @onclick="@(() => NavigateToTransactions("LOAN_OUT"))">out @_dashboard.Cash.InternalYtd.LoanOut.ToString("N2")</MudText>
+                            <MudText Typo="Typo.h6" Class="green--text cursor-pointer" @onclick="@(() => NavigateToTransactions("LOAN_IN"))">in @_dashboard.Cash.InternalYtd.LoanIn.ToString("N2")</MudText>
+                            <MudText Typo="Typo.h6" Class="@($"{NetClass(_dashboard.Cash.InternalYtd.LoanNet)} cursor-pointer")" @onclick="@(() => NavigateToTransactions("LOAN_IN,LOAN_OUT"))">net @_dashboard.Cash.InternalYtd.LoanNet.ToString("N2")</MudText>
+                        </ChildContent>
+                        <TooltipContent><span>View loan movements in Transactions</span></TooltipContent>
                     </MudTooltip>
                 </MudCardContent>
             </MudCard>
