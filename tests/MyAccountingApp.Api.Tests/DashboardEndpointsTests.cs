@@ -126,4 +126,78 @@ public class DashboardEndpointsTests
         Assert.Equal(0, internalYtd.GetProperty("deposits").GetDecimal());
         Assert.Equal(0, internalYtd.GetProperty("transfers").GetDecimal());
     }
+
+    [Fact]
+    public async Task Dashboard_FlagsManualTransactionThatDuplicatesLoanMovement()
+    {
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        HttpResponseMessage created = await client.PostAsJsonAsync("/api/loans", new
+        {
+            startDate = new DateTime(2026, 3, 1),
+            counterparty = "Berta",
+            amount = 5000m,
+            currency = "EUR",
+            direction = "Borrowed",
+        });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+
+        HttpResponseMessage manual = await client.PostAsJsonAsync("/api/transactions", new
+        {
+            date = new DateTime(2026, 3, 1),
+            description = "Manual duplicate of loan deposit",
+            amount = 5000m,
+            currency = "EUR",
+            category = "DEPOSIT",
+        });
+        Assert.Equal(HttpStatusCode.Created, manual.StatusCode);
+
+        HttpResponseMessage response = await client.GetAsync("/api/dashboard?asOf=2026-08-11");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        JsonElement alerts = document.RootElement.GetProperty("alerts");
+
+        Assert.Contains(alerts.EnumerateArray(), a =>
+            a.GetProperty("code").GetString() == "LOAN_MANUAL_DUPLICATE"
+            && a.GetProperty("severity").GetString() == "warning"
+            && (a.GetProperty("link").GetString() ?? string.Empty).StartsWith("/transactions?ids="));
+    }
+
+    [Fact]
+    public async Task Dashboard_DoesNotFlagManualTransactionWhenNoLoanMatch()
+    {
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        HttpResponseMessage created = await client.PostAsJsonAsync("/api/loans", new
+        {
+            startDate = new DateTime(2026, 3, 1),
+            counterparty = "Berta",
+            amount = 5000m,
+            currency = "EUR",
+            direction = "Borrowed",
+        });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+
+        HttpResponseMessage manual = await client.PostAsJsonAsync("/api/transactions", new
+        {
+            date = new DateTime(2026, 3, 15),
+            description = "Unrelated deposit",
+            amount = 2500m,
+            currency = "EUR",
+            category = "DEPOSIT",
+        });
+        Assert.Equal(HttpStatusCode.Created, manual.StatusCode);
+
+        HttpResponseMessage response = await client.GetAsync("/api/dashboard?asOf=2026-08-11");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        JsonElement alerts = document.RootElement.GetProperty("alerts");
+
+        Assert.DoesNotContain(alerts.EnumerateArray(), a =>
+            a.GetProperty("code").GetString() == "LOAN_MANUAL_DUPLICATE");
+    }
 }

@@ -433,6 +433,102 @@ public class DashboardQueryTests
         Assert.DoesNotContain(dashboard.Alerts, a => a.Code == "DATA_QUALITY");
     }
 
+    [Fact]
+    public async Task GetAsync_ShouldAddLoanDuplicateAlert_WhenManualDepositMatchesLoanDisbursement()
+    {
+        FakeTxRepo txRepo = new();
+        txRepo.Add(new Transaction(new DateTime(2026, 3, 1), "Manual loan deposit", new Money(5000, "EUR"), TransactionCategory.DEPOSIT));
+        FakeLoanRepository loanRepo = new();
+        FakeLoanMovementRepository movementRepo = new();
+        Guid loanId = Guid.NewGuid();
+        loanRepo.Add(new Loan(loanId, "Berta", LoanDirection.Borrowed, new Money(5000, "EUR"), new DateTime(2026, 3, 1)));
+        movementRepo.Add(CreateLoanMovement(loanId, 5000, new DateTime(2026, 3, 1), LoanMovementType.Disbursement, TransactionCategory.LOAN_IN));
+        LoanQuery loanQuery = new(loanRepo, movementRepo);
+        DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery(), loanQuery, movementRepo);
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        DashboardAlertDto alert = Assert.Single(dashboard.Alerts);
+        Assert.Equal("warning", alert.Severity);
+        Assert.Equal("LOAN_MANUAL_DUPLICATE", alert.Code);
+        Assert.Equal(5000, dashboard.Cash.InternalYtd.Deposits);
+        Assert.Equal(5000, dashboard.Cash.InternalYtd.LoanIn);
+    }
+
+    [Fact]
+    public async Task GetAsync_ShouldAddLoanDuplicateAlert_WhenManualTransferMatchesLoanRepayment()
+    {
+        FakeTxRepo txRepo = new();
+        txRepo.Add(new Transaction(new DateTime(2026, 6, 1), "Manual repayment", new Money(500, "EUR"), TransactionCategory.TRANSFER));
+        FakeLoanRepository loanRepo = new();
+        FakeLoanMovementRepository movementRepo = new();
+        Guid loanId = Guid.NewGuid();
+        loanRepo.Add(new Loan(loanId, "Berta", LoanDirection.Borrowed, new Money(5000, "EUR"), new DateTime(2026, 3, 1)));
+        movementRepo.Add(CreateLoanMovement(loanId, 500, new DateTime(2026, 6, 1), LoanMovementType.Repayment, TransactionCategory.LOAN_OUT));
+        LoanQuery loanQuery = new(loanRepo, movementRepo);
+        DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery(), loanQuery, movementRepo);
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        DashboardAlertDto alert = Assert.Single(dashboard.Alerts);
+        Assert.Equal("LOAN_MANUAL_DUPLICATE", alert.Code);
+        Assert.Contains("/transactions?ids=", alert.Link);
+    }
+
+    [Fact]
+    public async Task GetAsync_ShouldNotAddLoanDuplicateAlert_WhenManualTransactionDiffersInAmount()
+    {
+        FakeTxRepo txRepo = new();
+        txRepo.Add(new Transaction(new DateTime(2026, 3, 1), "Manual deposit", new Money(3000, "EUR"), TransactionCategory.DEPOSIT));
+        FakeLoanRepository loanRepo = new();
+        FakeLoanMovementRepository movementRepo = new();
+        Guid loanId = Guid.NewGuid();
+        loanRepo.Add(new Loan(loanId, "Berta", LoanDirection.Borrowed, new Money(5000, "EUR"), new DateTime(2026, 3, 1)));
+        movementRepo.Add(CreateLoanMovement(loanId, 5000, new DateTime(2026, 3, 1), LoanMovementType.Disbursement, TransactionCategory.LOAN_IN));
+        LoanQuery loanQuery = new(loanRepo, movementRepo);
+        DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery(), loanQuery, movementRepo);
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        Assert.DoesNotContain(dashboard.Alerts, a => a.Code == "LOAN_MANUAL_DUPLICATE");
+    }
+
+    [Fact]
+    public async Task GetAsync_ShouldNotAddLoanDuplicateAlert_WhenManualTransactionDiffersInDate()
+    {
+        FakeTxRepo txRepo = new();
+        txRepo.Add(new Transaction(new DateTime(2026, 3, 2), "Manual deposit", new Money(5000, "EUR"), TransactionCategory.DEPOSIT));
+        FakeLoanRepository loanRepo = new();
+        FakeLoanMovementRepository movementRepo = new();
+        Guid loanId = Guid.NewGuid();
+        loanRepo.Add(new Loan(loanId, "Berta", LoanDirection.Borrowed, new Money(5000, "EUR"), new DateTime(2026, 3, 1)));
+        movementRepo.Add(CreateLoanMovement(loanId, 5000, new DateTime(2026, 3, 1), LoanMovementType.Disbursement, TransactionCategory.LOAN_IN));
+        LoanQuery loanQuery = new(loanRepo, movementRepo);
+        DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery(), loanQuery, movementRepo);
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        Assert.DoesNotContain(dashboard.Alerts, a => a.Code == "LOAN_MANUAL_DUPLICATE");
+    }
+
+    [Fact]
+    public async Task GetAsync_ShouldNotAddLoanDuplicateAlert_WhenCashDirectionsOppose()
+    {
+        FakeTxRepo txRepo = new();
+        txRepo.Add(new Transaction(new DateTime(2026, 3, 1), "Manual transfer out", new Money(5000, "EUR"), TransactionCategory.TRANSFER));
+        FakeLoanRepository loanRepo = new();
+        FakeLoanMovementRepository movementRepo = new();
+        Guid loanId = Guid.NewGuid();
+        loanRepo.Add(new Loan(loanId, "Berta", LoanDirection.Borrowed, new Money(5000, "EUR"), new DateTime(2026, 3, 1)));
+        movementRepo.Add(CreateLoanMovement(loanId, 5000, new DateTime(2026, 3, 1), LoanMovementType.Disbursement, TransactionCategory.LOAN_IN));
+        LoanQuery loanQuery = new(loanRepo, movementRepo);
+        DashboardQuery query = new(txRepo, new FakePfRepo(), new FakeOptionRepo(), new FakeValidationQuery(), loanQuery, movementRepo);
+
+        DashboardDto dashboard = await query.GetAsync(AsOf);
+
+        Assert.DoesNotContain(dashboard.Alerts, a => a.Code == "LOAN_MANUAL_DUPLICATE");
+    }
+
     private sealed class FakeValidationQuery : IValidationQuery
     {
         private readonly int _errorCount;
