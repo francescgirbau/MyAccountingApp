@@ -67,11 +67,26 @@ public class ValidationQuery : IValidationQuery
         this.AddDuplicateFingerprintRules(allErrors);
         this.AddMissingFxRules(allWarnings);
         this.AddSymbolNoPriceRules(allWarnings);
+        this.AddNeedsReviewRules(allWarnings);
 
         return new ValidationResult(
             allErrors.Count == 0,
             allErrors,
             allWarnings);
+    }
+
+    private void AddNeedsReviewRules(List<ValidationError> warnings)
+    {
+        foreach (Transaction tx in this._txRepo.GetAll().Where(t => t.NeedsReview))
+        {
+            warnings.Add(new ValidationError(
+                "REVIEW_NEEDED",
+                $"Imported transaction '{tx.Description}' on {tx.Date:yyyy-MM-dd} was auto-classified as {tx.Category} by its sign alone (no description keyword matched); please review it",
+                "warning",
+                EntityType: "Transaction",
+                EntityIds: new[] { tx.Id },
+                Date: DateOnly.FromDateTime(tx.Date)));
+        }
     }
 
     private void AddFifoShortfallRules(List<ValidationError> warnings)

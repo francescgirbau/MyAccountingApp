@@ -18,6 +18,7 @@ public class TransactionDto
     public string? FxLeg { get; set; }
     public decimal? FxBrokerRate { get; set; }
     public string? FxExternalKey { get; set; }
+    public bool NeedsReview { get; set; }
 }
 
 public class AssetTransactionDto

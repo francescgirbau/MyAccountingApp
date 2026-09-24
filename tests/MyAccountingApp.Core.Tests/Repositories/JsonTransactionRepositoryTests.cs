@@ -120,6 +120,24 @@ public class JsonTransactionRepositoryTests : IDisposable
         Assert.Null(loaded.FxLeg);
         Assert.Null(loaded.FxBrokerRate);
         Assert.Null(loaded.FxExternalKey);
+        Assert.False(loaded.NeedsReview);
+    }
+
+    [Fact]
+    public void RoundTrip_PersistsNeedsReviewFlag()
+    {
+        // Arrange
+        JsonTransactionRepository repo = new JsonTransactionRepository(this._tempFile);
+        Transaction tx = new(new DateTime(2025, 1, 10), "OVERBOEKING unknown party", new Money(120m, "EUR"), TransactionCategory.INCOME);
+        tx.MarkNeedsReview();
+        repo.Initialize(new[] { tx });
+
+        // Act
+        JsonTransactionRepository repoReloaded = new JsonTransactionRepository(this._tempFile);
+        Transaction loaded = Assert.Single(repoReloaded.GetAll());
+
+        // Assert
+        Assert.True(loaded.NeedsReview);
     }
 
     [Fact]

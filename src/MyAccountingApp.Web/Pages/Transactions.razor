@@ -248,6 +248,15 @@ else
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Class="ml-1">FX @(context.FxLeg == "Out" ? "out" : "in")</MudChip>
                 }
+                @if (context.NeedsReview)
+                {
+                    <MudTooltip Placement="Placement.Top">
+                        <ChildContent>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined" Class="ml-1">Revisar</MudChip>
+                        </ChildContent>
+                        <TooltipContent><span>Auto-classificada pel signe sense keyword de confirmació — revisa la categoria</span></TooltipContent>
+                    </MudTooltip>
+                }
             </MudTd>
             <MudTd DataLabel="Source">
                 @if (!string.IsNullOrEmpty(context.Source))

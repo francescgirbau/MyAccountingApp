@@ -77,6 +77,65 @@ public class AbnAmroImportServiceTests
 
         Transaction tx = Assert.Single(transactions);
         Assert.Equal(TransactionCategory.INCOME, tx.Category);
+        Assert.False(tx.NeedsReview);
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_UnknownCodeWithExpenseKeyword_BecomesExpenseEvenWithPositiveAmount()
+    {
+        // Una transferència cap a Berta Galende (despesa) amb un mutation code no reconegut
+        // abans queia al signe (amount positiu -> INCOME). Ara la descripció mana sobre el signe.
+        string csv = Header + "889774927,XYZ,20220110,20220110,0,0,1500,\"/TRTP/SEPA OVERBOEKING/IBAN/ES0000000000000000000000/NAME/BERTA GALENDE\"";
+        string path = CreateFixtureFile(csv);
+        AbnAmroImportService service = new AbnAmroImportService();
+
+        var (transactions, _, _) = await service.ParseAllAsync(path);
+
+        Transaction tx = Assert.Single(transactions);
+        Assert.Equal(TransactionCategory.EXPENSE, tx.Category);
+        Assert.False(tx.NeedsReview);
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_UnknownCodeNoKeyword_PositiveAmount_IncomeWithNeedsReview()
+    {
+        string csv = Header + "889774927,XYZ,20220111,20220111,0,0,300,\"SOME UNKNOWN DESCRIPTION\"";
+        string path = CreateFixtureFile(csv);
+        AbnAmroImportService service = new AbnAmroImportService();
+
+        var (transactions, _, _) = await service.ParseAllAsync(path);
+
+        Transaction tx = Assert.Single(transactions);
+        Assert.Equal(TransactionCategory.INCOME, tx.Category);
+        Assert.True(tx.NeedsReview);
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_UnknownCodeNoKeyword_NegativeAmount_ExpenseWithNeedsReview()
+    {
+        string csv = Header + "889774927,XYZ,20220112,20220112,0,0,-45,\"SOME UNKNOWN PAYMENT\"";
+        string path = CreateFixtureFile(csv);
+        AbnAmroImportService service = new AbnAmroImportService();
+
+        var (transactions, _, _) = await service.ParseAllAsync(path);
+
+        Transaction tx = Assert.Single(transactions);
+        Assert.Equal(TransactionCategory.EXPENSE, tx.Category);
+        Assert.True(tx.NeedsReview);
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_OverboekingWithKnownKeyword_DoesNotNeedReview()
+    {
+        string csv = Header + "889774927,OVERBOEKING,20220113,20220113,0,0,2000,\"/TRTP/SEPA OVERBOEKING/IBAN/NL00ABNA0000000000/BIC/ABNANL2A/NAME/Revolut/EREF/TOPUP\"";
+        string path = CreateFixtureFile(csv);
+        AbnAmroImportService service = new AbnAmroImportService();
+
+        var (transactions, _, _) = await service.ParseAllAsync(path);
+
+        Transaction tx = Assert.Single(transactions);
+        Assert.Equal(TransactionCategory.TRANSFER, tx.Category);
+        Assert.False(tx.NeedsReview);
     }
 
     private static string CreateFixtureFile(string csv)

@@ -10,4 +10,5 @@ public record TransactionDto(
     Guid? FxPairId = null,
     string? FxLeg = null,
     decimal? FxBrokerRate = null,
-    string? FxExternalKey = null);
+    string? FxExternalKey = null,
+    bool NeedsReview = false);
