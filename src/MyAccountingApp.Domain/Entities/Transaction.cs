@@ -52,6 +52,13 @@ public class Transaction
     public FxLeg? FxLeg { get; private set; }
 
     /// <summary>
+    /// Gets a value indicating whether the imported transaction was auto-classified by sign alone
+    /// (no description keyword matched) and may need manual review.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool NeedsReview { get; private set; }
+
+    /// <summary>
     /// Gets the broker rate of the FX pair (quote per base), stored as reported by the CSV, or null.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -97,7 +104,7 @@ public class Transaction
     /// <param name="category">The category of the transaction.</param>
     /// <param name="source">The provenance of the transaction.</param>
     [JsonConstructor]
-    public Transaction(Guid id, DateTime date, string description, Money money, TransactionCategory category, string? source = null, Guid? fxPairId = null, FxLeg? fxLeg = null, decimal? fxBrokerRate = null, string? fxExternalKey = null)
+    public Transaction(Guid id, DateTime date, string description, Money money, TransactionCategory category, string? source = null, Guid? fxPairId = null, FxLeg? fxLeg = null, decimal? fxBrokerRate = null, string? fxExternalKey = null, bool needsReview = false)
     {
         this.Id = id;
         this.Date = date;
@@ -109,6 +116,16 @@ public class Transaction
         this.FxLeg = fxLeg;
         this.FxBrokerRate = fxBrokerRate;
         this.FxExternalKey = fxExternalKey;
+        this.NeedsReview = needsReview;
+    }
+
+    /// <summary>
+    /// Marks this transaction as potentially misclassified: it was auto-classified by sign alone
+    /// during import, with no description keyword to confirm the category, so it needs manual review.
+    /// </summary>
+    public void MarkNeedsReview()
+    {
+        this.NeedsReview = true;
     }
 
     /// <summary>
@@ -148,6 +165,7 @@ public class Transaction
         }
 
         this.Category = category;
+        this.NeedsReview = false;
     }
 
     /// <summary>

@@ -61,10 +61,16 @@ public class AbnAmroImportService : IBrokerImportService
 
                 DateTime date = DateTime.ParseExact(dateStr, "yyyyMMdd", CultureInfo.InvariantCulture);
 
-                TransactionCategory category = Classify(mutationCode, description, amount);
+                (TransactionCategory category, bool needsReview) = Classify(mutationCode, description, amount);
 
                 Money money = new(Math.Abs(amount), "EUR");
-                transactions.Add(new Transaction(date, description, money, category));
+                Transaction transaction = new(date, description, money, category);
+                if (needsReview)
+                {
+                    transaction.MarkNeedsReview();
+                }
+
+                transactions.Add(transaction);
             }
             catch
             {
@@ -81,91 +87,86 @@ public class AbnAmroImportService : IBrokerImportService
         return Task.FromResult(Enumerable.Empty<AssetTransaction>());
     }
 
-    private static TransactionCategory Classify(string mutationCode, string description, decimal amount)
+    private static (TransactionCategory Category, bool NeedsReview) Classify(string mutationCode, string description, decimal amount)
     {
         string descUpper = description.ToUpperInvariant();
         string codeUpper = mutationCode.ToUpperInvariant();
 
+        // Regles de codi de mutació inqüestionables: sempre despesa, mai necessiten revisió.
         if (descUpper.Contains("ABN AMRO BANK N.V.") || descUpper.Contains("ABN AMRO BANK"))
         {
-            return TransactionCategory.EXPENSE;
+            return (TransactionCategory.EXPENSE, false);
         }
 
         if (codeUpper.Contains("BETAALPAS") || codeUpper == "BEA")
         {
-            return TransactionCategory.EXPENSE;
+            return (TransactionCategory.EXPENSE, false);
         }
 
         if (codeUpper.Contains("IDEAL"))
         {
-            return TransactionCategory.EXPENSE;
+            return (TransactionCategory.EXPENSE, false);
         }
 
         if (codeUpper.Contains("INCASSO"))
         {
-            return TransactionCategory.EXPENSE;
+            return (TransactionCategory.EXPENSE, false);
         }
 
         if (codeUpper == "GEA")
         {
-            return TransactionCategory.EXPENSE;
+            return (TransactionCategory.EXPENSE, false);
         }
 
-        if (codeUpper.Contains("OVERBOEKING") || codeUpper.Contains("PERIODIEKE"))
-        {
-            return ClassifyByDescription(descUpper, amount);
-        }
-
-        if (codeUpper == "EUR" || codeUpper == "DIVERSEN" || string.IsNullOrEmpty(codeUpper))
-        {
-            return ClassifyByDescription(descUpper, amount);
-        }
-
-        if (amount < 0)
-        {
-            return TransactionCategory.EXPENSE;
-        }
-
-        return TransactionCategory.INCOME;
+        // Per a qualsevol altre codi de mutació, la descripció mana sobre el signe:
+        // les keywords es valoren primer, i el signe només és l'últim recurs.
+        return ClassifyByDescription(descUpper, amount);
     }
 
-    private static TransactionCategory ClassifyByDescription(string descUpper, decimal amount)
+    private static (TransactionCategory Category, bool NeedsReview) ClassifyByDescription(string descUpper, decimal amount)
     {
         if (TransferKeywords.Any(k => descUpper.Contains(k)))
         {
-            return TransactionCategory.TRANSFER;
+            return (TransactionCategory.TRANSFER, false);
         }
 
         if (IncomeKeywords.Any(k => descUpper.Contains(k)))
         {
-            return TransactionCategory.INCOME;
+            return (TransactionCategory.INCOME, false);
         }
 
         if (ExpenseKeywords.Any(k => descUpper.Contains(k)))
         {
-            return TransactionCategory.EXPENSE;
+            return (TransactionCategory.EXPENSE, false);
         }
 
         if (descUpper.Contains("TIKKIE"))
         {
-            return TransactionCategory.INCOME;
+            return (TransactionCategory.INCOME, false);
         }
 
         if (descUpper.Contains("SEPA OVERBOEKING"))
         {
-            return TransactionCategory.TRANSFER;
+            return (TransactionCategory.TRANSFER, false);
         }
 
         if (descUpper.Contains("FRANCESC GIRBAU LLISTUELLA") || descUpper.Contains("F GIRBAU"))
         {
-            return TransactionCategory.TRANSFER;
+            return (TransactionCategory.TRANSFER, false);
         }
 
+        if (descUpper.Contains("INCASSO"))
+        {
+            return (TransactionCategory.EXPENSE, false);
+        }
+
+        // Cap keyword no ha confirmat la categoria: el signe és l'últim recurs,
+        // però és una classificació sospitosa que necessita supervisió manual.
         if (amount < 0)
         {
-            return TransactionCategory.EXPENSE;
+            return (TransactionCategory.EXPENSE, true);
         }
 
-        return TransactionCategory.INCOME;
+        return (TransactionCategory.INCOME, true);
     }
 }

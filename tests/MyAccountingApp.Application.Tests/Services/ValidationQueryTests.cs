@@ -465,6 +465,48 @@ public class ValidationQueryTests
         Assert.Equal("FxPairId", error.Field);
     }
 
+    [Fact]
+    public void ValidateAll_FlagsNeedsReviewTransaction_AsWarningWithDeepLink()
+    {
+        FakeTxRepo txRepo = new();
+        Transaction tx = new(new DateTime(2025, 2, 1), "OVERBOEKING unknown party", new Money(120m, "EUR"), TransactionCategory.INCOME);
+        tx.MarkNeedsReview();
+        txRepo.AddOrUpdate(tx);
+        ValidationQuery query = new(txRepo, new FakePfRepo(), new TransactionValidator(), new FakeConversionRepo(), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        ValidationError warning = Assert.Single(result.Warnings, w => w.Field == "REVIEW_NEEDED");
+        Assert.Equal("warning", warning.Severity);
+        Assert.Equal(tx.Id, Assert.Single(warning.EntityIds!));
+        Assert.Contains("/transactions?ids=", warning.DeepLink);
+    }
+
+    [Fact]
+    public void ValidateAll_DoesNotFlagReviewedTransaction()
+    {
+        FakeTxRepo txRepo = new();
+        Transaction tx = new(new DateTime(2025, 2, 1), "OVERBOEKING unknown party", new Money(120m, "EUR"), TransactionCategory.INCOME);
+        txRepo.AddOrUpdate(tx);
+        ValidationQuery query = new(txRepo, new FakePfRepo(), new TransactionValidator(), new FakeConversionRepo(), new FakeMarketPriceService());
+
+        ValidationResult result = query.ValidateAll();
+
+        Assert.DoesNotContain(result.Warnings, w => w.Field == "REVIEW_NEEDED");
+    }
+
+    [Fact]
+    public void ValidateAll_CategoryUpdate_ClearsNeedsReviewFlag()
+    {
+        Transaction tx = new(new DateTime(2025, 2, 1), "OVERBOEKING unknown party", new Money(120m, "EUR"), TransactionCategory.INCOME);
+        tx.MarkNeedsReview();
+        Assert.True(tx.NeedsReview);
+
+        tx.UpdateCategory(TransactionCategory.EXPENSE);
+
+        Assert.False(tx.NeedsReview);
+    }
+
     private sealed class FakeTxRepo : ITransactionRepository
     {
         private readonly List<Transaction> _transactions = new();

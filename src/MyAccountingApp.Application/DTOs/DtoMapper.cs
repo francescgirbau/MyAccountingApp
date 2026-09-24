@@ -20,7 +20,8 @@ public static class DtoMapper
             transaction.FxPairId,
             transaction.FxLeg?.ToString(),
             transaction.FxBrokerRate,
-            transaction.FxExternalKey);
+            transaction.FxExternalKey,
+            transaction.NeedsReview);
 
     public static AssetTransactionDto ToDto(this AssetTransaction assetTransaction) =>
         new(

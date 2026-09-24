@@ -57,6 +57,41 @@ public class ImportEndpointsTests
     }
 
     [Fact]
+    public async Task Import_AbnUnknownCodeNoKeyword_FlagsNeedsReview()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        string tempDir = Path.Combine(Path.GetTempPath(), $"abn_e2e_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string csv = "accountNumber,mutationcode,transactiondate,valuedate,startsaldo,endsaldo,amount,description\n"
+            + "889774927,XYZ,20260110,20260110,0,0,300,\"SOME UNKNOWN DESCRIPTION\"";
+        File.WriteAllText(Path.Combine(tempDir, "ABN_test.csv"), csv);
+
+        try
+        {
+            // Act
+            HttpResponseMessage response = await client.PostAsJsonAsync("/api/import", new { folderPaths = new[] { tempDir } });
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            using JsonDocument importDoc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            Assert.Equal(1, importDoc.RootElement.GetProperty("filesProcessed").GetInt32());
+
+            HttpResponseMessage list = await client.GetAsync("/api/transactions");
+            using JsonDocument doc = JsonDocument.Parse(await list.Content.ReadAsStringAsync());
+
+            // Assert
+            JsonElement tx = Assert.Single(doc.RootElement.EnumerateArray());
+            Assert.Equal("SOME UNKNOWN DESCRIPTION", tx.GetProperty("description").GetString());
+            Assert.Equal("INCOME", tx.GetProperty("category").GetString());
+            Assert.True(tx.GetProperty("needsReview").GetBoolean());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task DataReset_ShouldClearStores()
     {
         // Arrange
