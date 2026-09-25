@@ -19,7 +19,7 @@ namespace MyAccountingApp.TestUtilities.Fakes
             _staleSymbols = staleSymbols ?? new HashSet<string>();
         }
 
-        public async Task<Money?> GetPriceAsync(string symbol)
+        public async Task<Money?> GetPriceAsync(string symbol, string? quoteCurrency = null)
         {
             await Task.Delay(1); // simula la crida async
 
@@ -31,7 +31,7 @@ namespace MyAccountingApp.TestUtilities.Fakes
             return null;
         }
 
-        public Task<Money?> RefreshPriceAsync(string symbol) => this.GetPriceAsync(symbol);
+        public Task<Money?> RefreshPriceAsync(string symbol, string? quoteCurrency = null) => this.GetPriceAsync(symbol);
 
         public Task<Money?> GetCachedPriceAsync(string symbol) =>
             Task.FromResult(!_staleSymbols.Contains(symbol) && _prices.TryGetValue(symbol, out Money? price) ? price : null);

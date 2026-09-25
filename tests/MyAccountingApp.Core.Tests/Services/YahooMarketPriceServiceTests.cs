@@ -151,13 +151,72 @@ public class YahooMarketPriceServiceTests
         Assert.Equal(expected, YahooMarketPriceService.ResolveCurrency(yahooCurrency, market));
     }
 
+    [Theory]
+    [InlineData("CEQ", "CAD", "CEQ.TO,CEQ.V")]
+    [InlineData("FEC", "cad", "FEC.TO,FEC.V")]
+    [InlineData("AZJ", "AUD", "AZJ.AX")]
+    [InlineData("YAL", "AUD", "YAL.AX")]
+    [InlineData("VWRA", "GBP", "VWRA.L")]
+    [InlineData("SAN", "EUR", "SAN.MC")]
+    [InlineData("AAPL", "USD", "")]
+    [InlineData("CEQ", null, "")]
+    [InlineData("", "CAD", "")]
+    public void GetSuffixCandidates_ReturnsExpectedTickers(string symbol, string? currency, string expectedCsv)
+    {
+        string[] expected = expectedCsv.Length == 0 ? Array.Empty<string>() : expectedCsv.Split(',');
+
+        Assert.Equal(expected, YahooMarketPriceService.GetSuffixCandidates(symbol, currency));
+    }
+
+    [Fact]
+    public async Task GetPriceAsync_UsesSuffixCandidates_WhenBareSymbolHasNoQuote()
+    {
+        StubYahooMarketPriceService service = new();
+        service.Handler = symbol => symbol == "CEQ.V"
+            ? Task.FromResult<Money?>(new Money(0.145m, "CAD"))
+            : Task.FromResult<Money?>(null);
+
+        Money? price = await service.GetPriceAsync("CEQ", "CAD");
+
+        Assert.Equal(0.145m, price?.Amount);
+        Assert.Equal("CAD", price?.Currency);
+        Assert.Equal(new[] { "CEQ", "CEQ.TO", "CEQ.V" }, service.RequestedSymbols);
+
+        Money? cached = await service.GetCachedPriceAsync("CEQ");
+        Assert.Equal(0.145m, cached?.Amount);
+    }
+
+    [Fact]
+    public async Task GetPriceAsync_DoesNotTrySuffix_WhenBareQuoteSucceeds()
+    {
+        StubYahooMarketPriceService service = new();
+        service.Handler = _ => Task.FromResult<Money?>(new Money(150.25m, "USD"));
+
+        Money? price = await service.GetPriceAsync("AAPL", "CAD");
+
+        Assert.Equal(150.25m, price?.Amount);
+        Assert.Equal(new[] { "AAPL" }, service.RequestedSymbols);
+    }
+
+    [Fact]
+    public async Task GetPriceAsync_DoesNotTrySuffix_WhenCurrencyHintIsNull()
+    {
+        StubYahooMarketPriceService service = new();
+        service.Handler = _ => Task.FromResult<Money?>(null);
+
+        Money? price = await service.GetPriceAsync("CEQ");
+
+        Assert.Null(price);
+        Assert.Equal(new[] { "CEQ" }, service.RequestedSymbols);
+    }
+
     private sealed class StubYahooMarketPriceService : YahooMarketPriceService
     {
         public Func<string, Task<Money?>> Handler { get; set; } = _ => Task.FromResult<Money?>(null);
 
         public List<string> RequestedSymbols { get; } = new();
 
-        protected override Task<Money?> FetchFromYahooAsync(string symbol)
+        protected override Task<Money?> FetchQuoteAsync(string symbol)
         {
             this.RequestedSymbols.Add(symbol);
             return this.Handler(symbol);

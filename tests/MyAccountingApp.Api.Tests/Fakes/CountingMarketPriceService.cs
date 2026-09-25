@@ -12,13 +12,13 @@ public class CountingMarketPriceService : IMarketPriceService
 
     public static void Reset() => Interlocked.Exchange(ref _calls, 0);
 
-    public Task<Money?> GetPriceAsync(string symbol)
+    public Task<Money?> GetPriceAsync(string symbol, string? quoteCurrency = null)
     {
         Interlocked.Increment(ref _calls);
         return Task.FromResult<Money?>(new Money(100m, "USD"));
     }
 
-    public Task<Money?> RefreshPriceAsync(string symbol)
+    public Task<Money?> RefreshPriceAsync(string symbol, string? quoteCurrency = null)
     {
         Interlocked.Increment(ref _calls);
         return Task.FromResult<Money?>(new Money(100m, "USD"));
