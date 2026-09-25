@@ -5,6 +5,29 @@ namespace MyAccountingApp.TestUtilities.Fakes;
 
 public class FakeCurrencyConverter : ICurrencyConverter
 {
+    private readonly Dictionary<string, decimal> _quotes;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FakeCurrencyConverter"/> class with default quotes.
+    /// </summary>
+    public FakeCurrencyConverter()
+        : this(new Dictionary<string, decimal>
+        {
+            { "EURUSD", 1.1m },
+            { "EURCAD", 1.5m },
+        })
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FakeCurrencyConverter"/> class with custom quotes.
+    /// </summary>
+    /// <param name="quotes">The pair-code to rate map returned by every fetch.</param>
+    public FakeCurrencyConverter(Dictionary<string, decimal> quotes)
+    {
+        this._quotes = quotes;
+    }
+
     /// <summary>
     /// Gets the number of times a single-day fetch was called.
     /// </summary>
@@ -19,11 +42,7 @@ public class FakeCurrencyConverter : ICurrencyConverter
     {
         this.FetchAllCalls++;
         await Task.Delay(1); // simulate async
-        return new Dictionary<string, decimal>
-        {
-            { "EURUSD", 1.1m },
-            { "EURCAD", 1.5m },
-        };
+        return new Dictionary<string, decimal>(this._quotes);
     }
 
     public Task<IReadOnlyDictionary<DateOnly, Dictionary<string, decimal>>> FetchRangeAsync(
@@ -38,11 +57,7 @@ public class FakeCurrencyConverter : ICurrencyConverter
 
         for (DateOnly day = start; day <= end; day = day.AddDays(1))
         {
-            result[day] = new Dictionary<string, decimal>
-            {
-                { "EURUSD", 1.1m },
-                { "EURCAD", 1.5m },
-            };
+            result[day] = new Dictionary<string, decimal>(this._quotes);
         }
 
         return Task.FromResult<IReadOnlyDictionary<DateOnly, Dictionary<string, decimal>>>(result);

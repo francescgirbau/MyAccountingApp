@@ -510,6 +510,28 @@ public class CurrencyRateServiceTests
         Assert.Equal(new DateTime(2023, 11, 29), cached.Date);
     }
 
+    [Fact]
+    public async Task GetConversionAsync_BuildsBtcQuote_WhenConverterReturnsEurBtcPair()
+    {
+        // Arrange
+        FakeConversionRepository repo = new();
+        FakeApiQuotaManager quota = new();
+        FakePendingConversionQueue queue = new();
+        CurrencyRateService service = new(
+            repo,
+            new FakeCurrencyConverter(new Dictionary<string, decimal> { { "EURUSD", 1.1m }, { "EURBTC", 0.00001666m } }),
+            Currencies.EUR,
+            quota,
+            queue);
+
+        // Act
+        Conversion result = await service.GetConversionAsync(new DateTime(2023, 12, 1));
+
+        // Assert
+        Assert.Equal(1.1m, result.Quotes[Currencies.USD]);
+        Assert.Equal(0.00001666m, result.Quotes[Currencies.BTC]);
+    }
+
     private static CurrencyRateService CreateService(
         FakeConversionRepository repo,
         FakeApiQuotaManager quota,
