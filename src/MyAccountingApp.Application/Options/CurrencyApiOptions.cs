@@ -49,4 +49,19 @@ public sealed class CurrencyApiOptions
     /// Gets or sets the list of currencies to exclude from API requests (e.g. "BTC").
     /// </summary>
     public List<string> ExcludeCurrencies { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets a value indicating whether crypto assets (e.g. BTC) are covered by a dedicated provider.
+    /// </summary>
+    public bool EnableCrypto { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the base URL of the CoinGecko API used for crypto assets.
+    /// </summary>
+    public string CoinGeckoBaseUrl { get; set; } = "https://api.coingecko.com/api/v3";
+
+    /// <summary>
+    /// Gets or sets the CoinGecko coin identifier used for crypto quotes (e.g. "bitcoin").
+    /// </summary>
+    public string CoinGeckoCoinId { get; set; } = "bitcoin";
 }

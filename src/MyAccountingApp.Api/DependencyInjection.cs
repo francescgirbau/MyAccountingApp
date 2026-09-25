@@ -59,6 +59,11 @@ public static class DependencyInjection
         {
             client.Timeout = TimeSpan.FromSeconds(30);
         }).AddHttpMessageHandler<FxRetryHandler>();
+        builder.Services.AddHttpClient("CoinGecko", client =>
+        {
+            client.BaseAddress = new Uri(currencyOptions.CoinGeckoBaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        }).AddHttpMessageHandler<FxRetryHandler>();
         builder.Services.AddTransient<FxRetryHandler>();
 
         IApiQuotaManager quotaManager;
@@ -89,19 +94,38 @@ public static class DependencyInjection
         {
             IHttpClientFactory httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
 
+            ICurrencyConverter fiatProvider;
+
             if (useFrankfurter)
             {
-                return new FrankfurterCurrencyConverter(httpClientFactory.CreateClient("Frankfurter"), currencyOptions.ExcludeCurrencies, currencyOptions.BaseUrl);
+                fiatProvider = new FrankfurterCurrencyConverter(httpClientFactory.CreateClient("Frankfurter"), currencyOptions.ExcludeCurrencies, currencyOptions.BaseUrl);
+            }
+            else
+            {
+                string currencyApiKey = !string.IsNullOrEmpty(currencyOptions.ApiKey)
+                    ? currencyOptions.ApiKey
+                    : builder.Configuration["CurrencyApi:ApiKey"]
+                        ?? Environment.GetEnvironmentVariable("CURRENCY_API_KEY")
+                        ?? throw new InvalidOperationException(
+                            "CurrencyApi:ApiKey not found. Set it in appsettings.json or the CURRENCY_API_KEY environment variable.");
+
+                fiatProvider = new CurrencyConverter(currencyApiKey, httpClientFactory.CreateClient("ExchangeRateHost"), currencyOptions.ExcludeCurrencies);
             }
 
-            string currencyApiKey = !string.IsNullOrEmpty(currencyOptions.ApiKey)
-                ? currencyOptions.ApiKey
-                : builder.Configuration["CurrencyApi:ApiKey"]
-                    ?? Environment.GetEnvironmentVariable("CURRENCY_API_KEY")
-                    ?? throw new InvalidOperationException(
-                        "CurrencyApi:ApiKey not found. Set it in appsettings.json or the CURRENCY_API_KEY environment variable.");
+            if (currencyOptions.EnableCrypto && !currencyOptions.ExcludeCurrencies.Contains("BTC", StringComparer.OrdinalIgnoreCase))
+            {
+                ICurrencyConverter cryptoProvider = new CoinGeckoCurrencyConverter(
+                    httpClientFactory.CreateClient("CoinGecko"),
+                    currencyOptions.CoinGeckoCoinId,
+                    currencyOptions.CoinGeckoBaseUrl);
 
-            return new CurrencyConverter(currencyApiKey, httpClientFactory.CreateClient("ExchangeRateHost"), currencyOptions.ExcludeCurrencies);
+                return new CompositeCurrencyConverter(
+                    fiatProvider,
+                    new Dictionary<Currencies, ICurrencyConverter> { [Currencies.BTC] = cryptoProvider },
+                    currencyOptions.ExcludeCurrencies);
+            }
+
+            return fiatProvider;
         });
 
         builder.Services.AddSingleton<IConversionRepository>(repo);
