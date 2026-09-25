@@ -24,6 +24,7 @@
 | L1 | feat: préstecs amb interessos — repayment desglossat capital + interès | 🟢 Done |
 | L2 | feat: editar i esborrar moviments de préstec | 🟢 Done |
 | L3 | UI: moviments de préstec en dues taules (Repayments / Interest) amb totals i línia de disbursement | 🟢 Done |
+| L4 | UI: botó de minimitzar deutes (chevron per fila + Expand all / Minimize all) | 🟢 Done |
 
 ## Llegenda
 
