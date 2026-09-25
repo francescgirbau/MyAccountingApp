@@ -4,17 +4,17 @@ using MyAccountingApp.Domain.Interfaces;
 namespace MyAccountingApp.TestUtilities.Fakes;
 
 /// <summary>
-/// In-memory fake of the pending conversion repository for testing.
+/// In-memory fake of the pending work repository for testing.
 /// </summary>
-public class FakePendingConversionRepository : IPendingConversionRepository
+public class FakePendingWorkRepository : IPendingWorkRepository
 {
-    private readonly List<PendingConversionRequest> _requests = new();
+    private readonly List<PendingWorkRequest> _requests = new();
 
     /// <summary>
-    /// Gets all queued conversion requests.
+    /// Gets all queued work requests.
     /// </summary>
-    /// <returns>All queued conversion requests.</returns>
-    public IEnumerable<PendingConversionRequest> GetAll()
+    /// <returns>All queued work requests.</returns>
+    public IEnumerable<PendingWorkRequest> GetAll()
     {
         return this._requests;
     }
@@ -23,9 +23,9 @@ public class FakePendingConversionRepository : IPendingConversionRepository
     /// Adds a new request or updates an existing request.
     /// </summary>
     /// <param name="request">The request to add or update.</param>
-    public void AddOrUpdate(PendingConversionRequest request)
+    public void AddOrUpdate(PendingWorkRequest request)
     {
-        int index = this._requests.FindIndex(r => r.Date == request.Date);
+        int index = this._requests.FindIndex(r => r.Id == request.Id);
         if (index >= 0)
         {
             this._requests[index] = request;
@@ -40,7 +40,7 @@ public class FakePendingConversionRepository : IPendingConversionRepository
     /// Replaces all stored requests with the given collection.
     /// </summary>
     /// <param name="requests">The requests to store.</param>
-    public void Initialize(IEnumerable<PendingConversionRequest> requests)
+    public void Initialize(IEnumerable<PendingWorkRequest> requests)
     {
         this._requests.Clear();
         this._requests.AddRange(requests);

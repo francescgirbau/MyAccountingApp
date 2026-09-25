@@ -28,7 +28,7 @@ public class PositionValuationServiceTests
         FakeOptionRepository options = optionRepo ?? new FakeOptionRepository();
         PositionEngine engine = new(repo, options, priceService);
         FakeConversionRepository conversions = conversionRepo ?? new FakeConversionRepository();
-        FakePendingConversionQueue queue = new();
+        FakePendingWorkQueue queue = new();
         CurrencyRateService rateService = new(conversions, new FakeCurrencyConverter(), Currencies.EUR, quota, queue);
         ToEurConverter converter = new(rateService);
         return new PositionValuationService(repo, options, engine, converter);
@@ -129,7 +129,7 @@ public class PositionValuationServiceTests
         PositionEngine engine = new(repo, optionRepo, priceService);
         FakeConversionRepository conversions = new();
         FakeApiQuotaManager quota = new();
-        FakePendingConversionQueue queue = new();
+        FakePendingWorkQueue queue = new();
         CurrencyRateService rateService = new(conversions, new FakeCurrencyConverter(), Currencies.EUR, quota, queue);
         ToEurConverter converter = new(rateService);
         PositionValuationService service = new(repo, optionRepo, engine, converter);

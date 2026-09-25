@@ -29,7 +29,7 @@ public class ToEurConverterTests
         FakeConversionRepository repo = new();
         repo.Initialize(new[] { new Conversion(new DateTime(2023, 11, 29), Currencies.EUR, new Dictionary<Currencies, decimal> { { Currencies.USD, 1.1m } }) });
         FakeApiQuotaManager quota = new() { CanConsumeResult = false };
-        ToEurConverter converter = new(new CurrencyRateService(repo, new FakeCurrencyConverter(), Currencies.EUR, quota, new FakePendingConversionQueue()));
+        ToEurConverter converter = new(new CurrencyRateService(repo, new FakeCurrencyConverter(), Currencies.EUR, quota, new FakePendingWorkQueue()));
 
         EurConversionDto result = await converter.ToEurAsync(new Money(110m, "USD"), new DateOnly(2023, 12, 1));
 
@@ -45,7 +45,7 @@ public class ToEurConverterTests
         FakeConversionRepository repo = new();
         repo.Initialize(new[] { new Conversion(new DateTime(2023, 11, 20), Currencies.EUR, new Dictionary<Currencies, decimal> { { Currencies.USD, 1.1m } }) });
         FakeApiQuotaManager quota = new() { CanConsumeResult = false };
-        ToEurConverter converter = new(new CurrencyRateService(repo, new FakeCurrencyConverter(), Currencies.EUR, quota, new FakePendingConversionQueue()));
+        ToEurConverter converter = new(new CurrencyRateService(repo, new FakeCurrencyConverter(), Currencies.EUR, quota, new FakePendingWorkQueue()));
 
         await Assert.ThrowsAsync<ConversionNotAvailableException>(() => converter.ToEurAsync(new Money(110m, "USD"), new DateOnly(2023, 12, 1)));
     }
@@ -61,7 +61,7 @@ public class ToEurConverterTests
     private static ToEurConverter CreateService(FakeApiQuotaManager quota)
     {
         FakeConversionRepository repo = new();
-        FakePendingConversionQueue queue = new();
+        FakePendingWorkQueue queue = new();
         CurrencyRateService rateService = new(repo, new FakeCurrencyConverter(), Currencies.EUR, quota, queue);
         return new ToEurConverter(rateService);
     }

@@ -1,7 +1,7 @@
 namespace MyAccountingApp.Domain.Enums;
 
 /// <summary>
-/// Specifies the state of a queued conversion request.
+/// Specifies the state of a queued work request.
 /// </summary>
 public enum PendingStatus
 {
@@ -13,4 +13,7 @@ public enum PendingStatus
 
     /// <summary>Processing failed.</summary>
     Failed = 2,
+
+    /// <summary>Currently being processed.</summary>
+    Processing = 3,
 }

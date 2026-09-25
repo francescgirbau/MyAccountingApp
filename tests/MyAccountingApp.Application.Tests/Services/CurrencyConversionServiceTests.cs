@@ -17,7 +17,7 @@ public class CurrencyConversionServiceTests
         FakeConversionRepository fakeRepo = new(); // repositori in-memory per testing
         FakeCurrencyConverter fakeApi = new();     // fake API que retorna quotes
         FakeApiQuotaManager fakeQuota = new();
-        FakePendingConversionQueue fakeQueue = new();
+        FakePendingWorkQueue fakeQueue = new();
 
         // Act
         Action action = () => { new CurrencyRateService(fakeRepo, fakeApi, invalidSource, fakeQuota, fakeQueue); };
@@ -34,7 +34,7 @@ public class CurrencyConversionServiceTests
         FakeCurrencyConverter fakeApi = new FakeCurrencyConverter();     // fake API que retorna quotes
         Currencies source = Currencies.EUR;
         FakeApiQuotaManager fakeQuota = new();
-        FakePendingConversionQueue fakeQueue = new();
+        FakePendingWorkQueue fakeQueue = new();
 
         CurrencyRateService service = new(fakeRepo, fakeApi, source, fakeQuota, fakeQueue);
 
@@ -59,7 +59,7 @@ public class CurrencyConversionServiceTests
         FakeCurrencyConverter fakeApi = new();     // fake API que retorna quotes
         Currencies source = Currencies.EUR;
         FakeApiQuotaManager fakeQuota = new();
-        FakePendingConversionQueue fakeQueue = new();
+        FakePendingWorkQueue fakeQueue = new();
 
         CurrencyRateService service = new CurrencyRateService(fakeRepo, fakeApi, source, fakeQuota, fakeQueue);
 

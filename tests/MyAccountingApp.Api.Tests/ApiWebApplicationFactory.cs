@@ -37,8 +37,8 @@ public class ApiWebApplicationFactory : WebApplicationFactory<Program>
             services.AddSingleton<ILoanRepository>(new JsonLoanRepository(Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}-loans.json")));
             services.RemoveAll<ILoanMovementRepository>();
             services.AddSingleton<ILoanMovementRepository>(new JsonLoanMovementRepository(Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}-loan-movements.json")));
-            services.RemoveAll<IPendingConversionQueue>();
-            services.AddSingleton<IPendingConversionQueue>(new FakePendingConversionQueue());
+            services.RemoveAll<IPendingWorkQueue>();
+            services.AddSingleton<IPendingWorkQueue>(new FakePendingWorkQueue());
             services.RemoveAll<IMarketPriceService>();
             services.AddSingleton<IMarketPriceService>(new CountingMarketPriceService());
         });

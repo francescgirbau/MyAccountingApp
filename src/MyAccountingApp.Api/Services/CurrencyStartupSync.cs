@@ -23,8 +23,6 @@ public sealed class CurrencyStartupSync : BackgroundService
             {
                 await this._currencyRateService.SyncGapAsync(this._options.MaxTimeseriesDays);
             }
-
-            await this._currencyRateService.ProcessPendingAsync();
         }
         catch (Exception ex)
         {
