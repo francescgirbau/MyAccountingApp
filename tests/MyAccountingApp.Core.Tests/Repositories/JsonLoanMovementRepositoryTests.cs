@@ -56,6 +56,19 @@ public class JsonLoanMovementRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void Add_ThenGetAll_RoundTripsInterestMovement()
+    {
+        JsonLoanMovementRepository repo = new(this._tempFile);
+        Guid loanId = Guid.NewGuid();
+        repo.Add(CreateMovement(loanId, new DateTime(2025, 4, 1), 50m, LoanMovementType.Interest));
+
+        LoanMovement loaded = Assert.Single(repo.GetAll());
+
+        Assert.Equal(LoanMovementType.Interest, loaded.Type);
+        Assert.Equal(50m, loaded.Transaction.Money.Amount);
+    }
+
+    [Fact]
     public void GetByLoan_ReturnsOnlyMovementsForLoan()
     {
         JsonLoanMovementRepository repo = new(this._tempFile);

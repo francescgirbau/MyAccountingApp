@@ -21,6 +21,7 @@
 | R3 | feat: multi-base conversion support | ⬜ Pending |
 | R4 | feat: generic offline queue with background retry | ⬜ Pending |
 | R5 | feat: self-host Frankfurter-compatible endpoint | ⬜ Pending |
+| L1 | feat: préstecs amb interessos — repayment desglossat capital + interès | 🟢 Done |
 
 ## Llegenda
 

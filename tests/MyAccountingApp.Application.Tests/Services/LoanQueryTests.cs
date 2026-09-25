@@ -69,6 +69,26 @@ public class LoanQueryTests
     }
 
     [Fact]
+    public void GetAll_ComputesInterestPaid_WithoutReducingOutstanding()
+    {
+        FakeLoanRepository loanRepo = new();
+        Guid loanId = Guid.NewGuid();
+        loanRepo.Add(CreateLoan(loanId, principal: 1000));
+        FakeLoanMovementRepository movementRepo = new();
+        movementRepo.Add(CreateMovement(loanId, 1000, new DateTime(2025, 3, 1), LoanMovementType.Disbursement));
+        movementRepo.Add(CreateMovement(loanId, 200, new DateTime(2025, 4, 1), LoanMovementType.Repayment));
+        movementRepo.Add(CreateMovement(loanId, 50, new DateTime(2025, 4, 1), LoanMovementType.Interest));
+        LoanQuery query = new(loanRepo, movementRepo);
+
+        LoanSummaryDto summary = Assert.Single(query.GetAll());
+
+        Assert.Equal(200m, summary.Repaid);
+        Assert.Equal(50m, summary.InterestPaid);
+        Assert.Equal(800m, summary.Outstanding);
+        Assert.False(summary.IsOverpaid);
+    }
+
+    [Fact]
     public void GetAll_ReturnsEmpty_WhenNoLoans()
     {
         LoanQuery query = new(new FakeLoanRepository(), new FakeLoanMovementRepository());

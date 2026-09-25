@@ -10,4 +10,5 @@ public sealed record CreateLoanRequest(
 
 public sealed record AddLoanRepaymentRequest(
     DateTime Date,
-    decimal Amount);
+    decimal Amount,
+    decimal InterestAmount = 0);
