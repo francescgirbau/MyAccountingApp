@@ -45,6 +45,8 @@ public static class DependencyInjection
         });
 
         CurrencyApiOptions currencyOptions = builder.Configuration.GetSection("CurrencyApi").Get<CurrencyApiOptions>() ?? new CurrencyApiOptions();
+        PendingWorkOptions pendingWorkOptions = builder.Configuration.GetSection("PendingWork").Get<PendingWorkOptions>() ?? new PendingWorkOptions();
+        builder.Services.AddSingleton(pendingWorkOptions);
 
         bool useFrankfurter = string.Equals(currencyOptions.Provider, "Frankfurter", StringComparison.OrdinalIgnoreCase);
 
@@ -87,8 +89,8 @@ public static class DependencyInjection
         }
 
         Currencies source = Currencies.EUR;
-        JsonPendingConversionRepository pendingRepo = new JsonPendingConversionRepository("data/pending_conversions.json", vaultService);
-        PendingConversionQueue pendingQueue = new PendingConversionQueue(pendingRepo);
+        JsonPendingWorkRepository pendingRepo = new JsonPendingWorkRepository("data/pending_conversions.json", vaultService);
+        PendingWorkQueue pendingQueue = new PendingWorkQueue(pendingRepo);
 
         builder.Services.AddSingleton<ICurrencyConverter>(sp =>
         {
@@ -134,14 +136,29 @@ public static class DependencyInjection
             builder.Services.AddSingleton<IApiQuotaRepository>(quotaRepo);
         }
 
-        builder.Services.AddSingleton<IPendingConversionRepository>(pendingRepo);
+        builder.Services.AddSingleton<IPendingWorkRepository>(pendingRepo);
         builder.Services.AddSingleton<IApiQuotaManager>(quotaManager);
-        builder.Services.AddSingleton<IPendingConversionQueue>(pendingQueue);
+        builder.Services.AddSingleton<IPendingWorkQueue>(pendingQueue);
+        builder.Services.AddSingleton<CurrencyRatePendingWorkProcessor>(sp => new CurrencyRatePendingWorkProcessor(
+            repo,
+            sp.GetRequiredService<ICurrencyConverter>(),
+            quotaManager,
+            source,
+            currencyOptions.ProviderName,
+            currencyOptions.MaxTimeseriesDays,
+            sp.GetRequiredService<ILogger<CurrencyRatePendingWorkProcessor>>()));
+        builder.Services.AddSingleton<IPendingWorkProcessor>(sp => sp.GetRequiredService<CurrencyRatePendingWorkProcessor>());
+        builder.Services.AddSingleton<IPendingWorkDispatcher>(sp => new PendingWorkDispatcher(
+            sp.GetRequiredService<IPendingWorkQueue>(),
+            sp.GetServices<IPendingWorkProcessor>(),
+            pendingWorkOptions,
+            TimeProvider.System,
+            sp.GetRequiredService<ILogger<PendingWorkDispatcher>>()));
         builder.Services.AddSingleton<ICurrencyRateService>(sp =>
         {
             ICurrencyConverter api = sp.GetRequiredService<ICurrencyConverter>();
             IApiQuotaManager quota = sp.GetRequiredService<IApiQuotaManager>();
-            IPendingConversionQueue queue = sp.GetRequiredService<IPendingConversionQueue>();
+            IPendingWorkQueue queue = sp.GetRequiredService<IPendingWorkQueue>();
             return new CurrencyRateService(
                 repo,
                 api,
@@ -150,7 +167,8 @@ public static class DependencyInjection
                 queue,
                 currencyOptions.MaxTimeseriesDays,
                 currencyOptions.ProviderName,
-                sp.GetRequiredService<ILogger<CurrencyRateService>>());
+                sp.GetRequiredService<ILogger<CurrencyRateService>>(),
+                sp.GetRequiredService<IPendingWorkDispatcher>());
         });
         CompositeTransactionRepository transactionRepo = new CompositeTransactionRepository("data/transactions.json", vaultService);
         CompositePortfolioRepository portfolioRepo = new CompositePortfolioRepository("data/portfolio.json", vaultService);
@@ -216,6 +234,7 @@ public static class DependencyInjection
         builder.Services.AddSingleton<IDashboardQuery, DashboardQuery>();
         builder.Services.AddSingleton(currencyOptions);
         builder.Services.AddHostedService<CurrencyStartupSync>();
+        builder.Services.AddHostedService<PendingWorkBackgroundService>();
 
         builder.Host.UseSerilog();
     }

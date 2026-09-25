@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using MyAccountingApp.Application.DTOs;
 using MyAccountingApp.Application.Interfaces;
+using MyAccountingApp.Domain.Constants;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Exceptions;
@@ -80,10 +81,10 @@ public static class ConversionEndpoints
             }
         });
 
-        app.MapGet($"{prefix}/conversions/quota", async (ICurrencyRateService currencyRateService, IPendingConversionQueue pendingQueue) =>
+        app.MapGet($"{prefix}/conversions/quota", async (ICurrencyRateService currencyRateService, IPendingWorkQueue pendingQueue) =>
         {
             ApiUsageQuota quota = await currencyRateService.GetQuotaAsync();
-            IReadOnlyList<PendingConversionRequest> pending = await pendingQueue.GetPendingAsync();
+            IReadOnlyList<PendingWorkRequest> pending = await pendingQueue.GetPendingAsync(PendingWorkOperations.CurrencyRate);
             return Results.Ok(new
             {
                 provider = quota.Provider,

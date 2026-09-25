@@ -51,6 +51,11 @@ public class CoinGeckoCurrencyConverter : ICurrencyConverter
     public CoinGeckoCurrencyConverter(HttpClient? httpClient = null, string coinId = DefaultCoinId, string baseUrl = DefaultBaseUrl)
     {
         this._httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        if (this._httpClient.DefaultRequestHeaders.UserAgent.Count == 0)
+        {
+            this._httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("MyAccountingApp/1.0 (https://github.com/francescgirbau/MyAccountingApp)");
+        }
+
         this._coinId = coinId;
         this._baseUrl = baseUrl;
     }
