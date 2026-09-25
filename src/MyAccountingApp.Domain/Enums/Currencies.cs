@@ -64,4 +64,40 @@ public enum Currencies
 
     /// <summary>Bitcoin (cryptocurrency).</summary>
     BTC = 19,
+
+    /// <summary>Polish Złoty.</summary>
+    PLN = 20,
+
+    /// <summary>Danish Krone.</summary>
+    DKK = 21,
+
+    /// <summary>Czech Koruna.</summary>
+    CZK = 22,
+
+    /// <summary>Hungarian Forint.</summary>
+    HUF = 23,
+
+    /// <summary>New Zealand Dollar.</summary>
+    NZD = 24,
+
+    /// <summary>South Korean Won.</summary>
+    KRW = 25,
+
+    /// <summary>Thai Baht.</summary>
+    THB = 26,
+
+    /// <summary>Indonesian Rupiah.</summary>
+    IDR = 27,
+
+    /// <summary>Malaysian Ringgit.</summary>
+    MYR = 28,
+
+    /// <summary>Philippine Peso.</summary>
+    PHP = 29,
+
+    /// <summary>Romanian Leu.</summary>
+    RON = 30,
+
+    /// <summary>Icelandic Króna.</summary>
+    ISK = 31,
 }
