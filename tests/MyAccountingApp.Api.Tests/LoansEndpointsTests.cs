@@ -222,4 +222,157 @@ public class LoansEndpointsTests
         Assert.Equal("Lent", document.RootElement.GetProperty("direction").GetString());
         Assert.Equal(500m, document.RootElement.GetProperty("principal").GetDecimal());
     }
+
+    [Fact]
+    public async Task Loans_UpdateMovement_ChangesAmountDateAndType()
+    {
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        HttpResponseMessage created = await client.PostAsJsonAsync("/api/loans", CreateLoanBody());
+        using JsonDocument createdDocument = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        Guid loanId = createdDocument.RootElement.GetProperty("loanId").GetGuid();
+        await client.PostAsJsonAsync($"/api/loans/{loanId}/repayments", CreateRepaymentBody(amount: 250m));
+        Guid repaymentId = await GetMovementIdAsync(client, loanId, "Repayment");
+
+        var payload = new { date = new DateTime(2025, 5, 1), amount = 300m, type = "Interest" };
+        HttpResponseMessage response = await client.PatchAsJsonAsync($"/api/loans/{loanId}/movements/{repaymentId}", payload);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(0m, document.RootElement.GetProperty("repaid").GetDecimal());
+        Assert.Equal(300m, document.RootElement.GetProperty("interestPaid").GetDecimal());
+        Assert.Equal(1000m, document.RootElement.GetProperty("outstanding").GetDecimal());
+        JsonElement movement = Assert.Single(document.RootElement.GetProperty("movements").EnumerateArray(), m => m.GetProperty("id").GetGuid() == repaymentId);
+        Assert.Equal("Interest", movement.GetProperty("type").GetString());
+        Assert.Equal(300m, movement.GetProperty("amount").GetDecimal());
+    }
+
+    [Fact]
+    public async Task Loans_UpdateMovement_ReturnsNotFound_WhenLoanMissing()
+    {
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        var payload = new { date = new DateTime(2025, 4, 1), amount = 100m, type = "Repayment" };
+        HttpResponseMessage response = await client.PatchAsJsonAsync($"/api/loans/{Guid.NewGuid()}/movements/{Guid.NewGuid()}", payload);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Loans_UpdateMovement_ReturnsNotFound_WhenMovementMissing()
+    {
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        HttpResponseMessage created = await client.PostAsJsonAsync("/api/loans", CreateLoanBody());
+        using JsonDocument createdDocument = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        Guid loanId = createdDocument.RootElement.GetProperty("loanId").GetGuid();
+
+        var payload = new { date = new DateTime(2025, 4, 1), amount = 100m, type = "Repayment" };
+        HttpResponseMessage response = await client.PatchAsJsonAsync($"/api/loans/{loanId}/movements/{Guid.NewGuid()}", payload);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Loans_UpdateMovement_ReturnsBadRequest_WhenTypeInvalid()
+    {
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        HttpResponseMessage created = await client.PostAsJsonAsync("/api/loans", CreateLoanBody());
+        using JsonDocument createdDocument = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        Guid loanId = createdDocument.RootElement.GetProperty("loanId").GetGuid();
+        await client.PostAsJsonAsync($"/api/loans/{loanId}/repayments", CreateRepaymentBody());
+        Guid repaymentId = await GetMovementIdAsync(client, loanId, "Repayment");
+
+        var payload = new { date = new DateTime(2025, 4, 1), amount = 100m, type = "Refund" };
+        HttpResponseMessage response = await client.PatchAsJsonAsync($"/api/loans/{loanId}/movements/{repaymentId}", payload);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Loans_UpdateMovement_ReturnsBadRequest_WhenEditingDisbursement()
+    {
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        HttpResponseMessage created = await client.PostAsJsonAsync("/api/loans", CreateLoanBody());
+        using JsonDocument createdDocument = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        Guid loanId = createdDocument.RootElement.GetProperty("loanId").GetGuid();
+        Guid disbursementId = await GetMovementIdAsync(client, loanId, "Disbursement");
+
+        var payload = new { date = new DateTime(2025, 3, 1), amount = 900m, type = "Disbursement" };
+        HttpResponseMessage response = await client.PatchAsJsonAsync($"/api/loans/{loanId}/movements/{disbursementId}", payload);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Loans_DeleteMovement_RemovesOnlyThatMovement()
+    {
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        HttpResponseMessage created = await client.PostAsJsonAsync("/api/loans", CreateLoanBody());
+        using JsonDocument createdDocument = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        Guid loanId = createdDocument.RootElement.GetProperty("loanId").GetGuid();
+        await client.PostAsJsonAsync($"/api/loans/{loanId}/repayments", CreateRepaymentBody());
+        Guid repaymentId = await GetMovementIdAsync(client, loanId, "Repayment");
+
+        HttpResponseMessage deleted = await client.DeleteAsync($"/api/loans/{loanId}/movements/{repaymentId}");
+
+        Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
+
+        HttpResponseMessage byId = await client.GetAsync($"/api/loans/{loanId}");
+        Assert.Equal(HttpStatusCode.OK, byId.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await byId.Content.ReadAsStringAsync());
+        Assert.Equal(0m, document.RootElement.GetProperty("repaid").GetDecimal());
+        Assert.Equal(1000m, document.RootElement.GetProperty("outstanding").GetDecimal());
+        List<JsonElement> movements = document.RootElement.GetProperty("movements").EnumerateArray().ToList();
+        Assert.Single(movements);
+        Assert.Equal("Disbursement", movements[0].GetProperty("type").GetString());
+    }
+
+    [Fact]
+    public async Task Loans_DeleteMovement_ReturnsNotFound_WhenMovementMissing()
+    {
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        HttpResponseMessage created = await client.PostAsJsonAsync("/api/loans", CreateLoanBody());
+        using JsonDocument createdDocument = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        Guid loanId = createdDocument.RootElement.GetProperty("loanId").GetGuid();
+
+        HttpResponseMessage deleted = await client.DeleteAsync($"/api/loans/{loanId}/movements/{Guid.NewGuid()}");
+
+        Assert.Equal(HttpStatusCode.NotFound, deleted.StatusCode);
+    }
+
+    [Fact]
+    public async Task Loans_DeleteMovement_ReturnsBadRequest_WhenDisbursement()
+    {
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        HttpResponseMessage created = await client.PostAsJsonAsync("/api/loans", CreateLoanBody());
+        using JsonDocument createdDocument = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        Guid loanId = createdDocument.RootElement.GetProperty("loanId").GetGuid();
+        Guid disbursementId = await GetMovementIdAsync(client, loanId, "Disbursement");
+
+        HttpResponseMessage deleted = await client.DeleteAsync($"/api/loans/{loanId}/movements/{disbursementId}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, deleted.StatusCode);
+    }
+
+    private static async Task<Guid> GetMovementIdAsync(HttpClient client, Guid loanId, string type)
+    {
+        HttpResponseMessage byId = await client.GetAsync($"/api/loans/{loanId}");
+        using JsonDocument document = JsonDocument.Parse(await byId.Content.ReadAsStringAsync());
+        JsonElement movement = Assert.Single(document.RootElement.GetProperty("movements").EnumerateArray(), m => m.GetProperty("type").GetString() == type);
+        return movement.GetProperty("id").GetGuid();
+    }
 }

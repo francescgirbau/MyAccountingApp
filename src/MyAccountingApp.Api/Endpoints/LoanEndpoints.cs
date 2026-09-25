@@ -66,6 +66,40 @@ public static class LoanEndpoints
             return Results.Ok(loanQuery.GetById(id));
         });
 
+        app.MapPatch($"{prefix}/loans/{{loanId:guid}}/movements/{{movementId:guid}}", (Guid loanId, Guid movementId, UpdateLoanMovementRequest request, ILoanCommandService loanCommandService) =>
+        {
+            LoanSummaryDto loan;
+            try
+            {
+                loan = loanCommandService.UpdateMovement(loanId, movementId, request);
+            }
+            catch (InvalidOperationException)
+            {
+                return Results.NotFound(new { loanId, movementId, message = "Loan or movement not found" });
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { message = ex.Message });
+            }
+
+            return Results.Ok(loan);
+        });
+
+        app.MapDelete($"{prefix}/loans/{{loanId:guid}}/movements/{{movementId:guid}}", (Guid loanId, Guid movementId, ILoanCommandService loanCommandService) =>
+        {
+            bool deleted;
+            try
+            {
+                deleted = loanCommandService.DeleteMovement(loanId, movementId);
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { message = ex.Message });
+            }
+
+            return deleted ? Results.NoContent() : Results.NotFound(new { loanId, movementId, message = "Loan movement not found" });
+        });
+
         app.MapDelete($"{prefix}/loans/{{id:guid}}", (Guid id, ILoanCommandService loanCommandService) =>
         {
             bool deleted = loanCommandService.DeleteLoan(id);

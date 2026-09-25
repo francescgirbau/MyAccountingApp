@@ -87,6 +87,7 @@ else
                         <MudTh>Type</MudTh>
                         <MudTh>Description</MudTh>
                         <MudTh>Amount</MudTh>
+                        <MudTh>Actions</MudTh>
                     </HeaderContent>
                     <RowTemplate Context="m">
                         <MudTd DataLabel="Date">@m.Date.ToString("yyyy-MM-dd")</MudTd>
@@ -95,6 +96,12 @@ else
                         </MudTd>
                         <MudTd DataLabel="Description">@m.Description</MudTd>
                         <MudTd DataLabel="Amount" Class="@(IsCashIn(loan, m) ? "green--text" : "red--text")">@m.Amount.ToString("N2") @m.Currency</MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" aria-label="Edit movement"
+                                           OnClick="@(() => OpenEditMovementDialog(loan, m))" Disabled="@(m.Type == "Disbursement")" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" aria-label="Delete movement"
+                                           OnClick="@(() => OpenDeleteMovementDialog(loan, m))" Disabled="@(m.Type == "Disbursement")" />
+                        </MudTd>
                     </RowTemplate>
                 </MudTable>
             }
@@ -187,6 +194,59 @@ else
     </DialogActions>
 </MudDialog>
 
+<MudDialog @bind-Visible="_showEditMovementDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Edit movement</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_editMovementLoan is not null && _editMovementTarget is not null)
+        {
+            <MudText Typo="Typo.body2" Class="mb-4">
+                Movement for <strong>@_editMovementLoan.Counterparty</strong> (@_editMovementTarget.Id.ToString().Substring(0, 8)…).
+            </MudText>
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudDatePicker @bind-Date="_editMovementDate" Label="Date" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal" @bind-Value="_editMovementAmount" Label="Amount" Variant="Variant.Outlined" Min="@(0.01m)" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" @bind-Value="_editMovementType" Label="Type" Variant="Variant.Outlined" FullWidth="true">
+                        <MudSelectItem T="string" Value="@("Repayment")">Repayment</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Interest")">Interest</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Error" OnClick="@(() => _showEditMovementDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@(!_editMovementDate.HasValue || _editMovementAmount <= 0)" OnClick="@SaveEditMovementAsync">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_showDeleteMovementDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete movement</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_deleteMovementLoan is not null && _deleteMovementTarget is not null)
+        {
+            <MudText Typo="Typo.body2" Class="mt-2">
+                Delete the <strong>@_deleteMovementTarget.Type</strong> movement of
+                <strong>@_deleteMovementLoan.Counterparty</strong> (@_deleteMovementTarget.Amount.ToString("N2") @_deleteMovementTarget.Currency,
+                @_deleteMovementTarget.Date.ToString("yyyy-MM-dd"))?
+            </MudText>
+            <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">The summary (repaid, interest, outstanding) is recalculated. This action cannot be undone.</MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Error" OnClick="@(() => _showDeleteMovementDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="@DeleteMovementAsync">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
     private List<LoanSummaryDto> _loans = new();
     private bool _loading = true;
@@ -207,6 +267,17 @@ else
 
     private bool _showDeleteDialog;
     private LoanSummaryDto? _deleteTarget;
+
+    private bool _showEditMovementDialog;
+    private LoanSummaryDto? _editMovementLoan;
+    private LoanMovementDto? _editMovementTarget;
+    private DateTime? _editMovementDate;
+    private decimal _editMovementAmount;
+    private string _editMovementType = "Repayment";
+
+    private bool _showDeleteMovementDialog;
+    private LoanSummaryDto? _deleteMovementLoan;
+    private LoanMovementDto? _deleteMovementTarget;
 
     protected override async Task OnInitializedAsync()
     {
@@ -369,6 +440,84 @@ else
         catch (Exception ex)
         {
             Snackbar.Add($"Error deleting loan: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void OpenEditMovementDialog(LoanSummaryDto loan, LoanMovementDto movement)
+    {
+        _editMovementLoan = loan;
+        _editMovementTarget = movement;
+        _editMovementDate = movement.Date;
+        _editMovementAmount = movement.Amount;
+        _editMovementType = movement.Type == "Interest" ? "Interest" : "Repayment";
+        _showEditMovementDialog = true;
+    }
+
+    private async Task SaveEditMovementAsync()
+    {
+        if (_editMovementLoan is null || _editMovementTarget is null || !_editMovementDate.HasValue)
+        {
+            return;
+        }
+
+        var payload = new
+        {
+            date = _editMovementDate.Value,
+            amount = _editMovementAmount,
+            type = _editMovementType,
+        };
+
+        try
+        {
+            HttpResponseMessage response = await Http.PatchAsJsonAsync($"/api/loans/{_editMovementLoan.LoanId}/movements/{_editMovementTarget.Id}", payload);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Movement updated", Severity.Success);
+                _showEditMovementDialog = false;
+                await LoadDataAsync();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to update movement: {await response.Content.ReadAsStringAsync()}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error updating movement: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void OpenDeleteMovementDialog(LoanSummaryDto loan, LoanMovementDto movement)
+    {
+        _deleteMovementLoan = loan;
+        _deleteMovementTarget = movement;
+        _showDeleteMovementDialog = true;
+    }
+
+    private async Task DeleteMovementAsync()
+    {
+        if (_deleteMovementLoan is null || _deleteMovementTarget is null)
+        {
+            return;
+        }
+
+        try
+        {
+            HttpResponseMessage response = await Http.DeleteAsync($"/api/loans/{_deleteMovementLoan.LoanId}/movements/{_deleteMovementTarget.Id}");
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Movement deleted", Severity.Success);
+                _showDeleteMovementDialog = false;
+                await LoadDataAsync();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to delete movement: {await response.Content.ReadAsStringAsync()}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error deleting movement: {ex.Message}", Severity.Error);
         }
     }
 
