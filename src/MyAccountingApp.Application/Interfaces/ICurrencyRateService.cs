@@ -37,6 +37,25 @@ public interface ICurrencyRateService
     Task<IReadOnlyList<FxQuoteDto>> GetFxQuotesAsync(DateTime date, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Asynchronously retrieves the conversion for the specified date and base currency, deriving
+    /// cross-rates from the EUR-based cache when the base differs from EUR.
+    /// </summary>
+    /// <param name="date">The date for which to retrieve the conversion.</param>
+    /// <param name="source">The base currency of the requested conversion.</param>
+    /// <returns>The conversion for the requested date and base, which may be marked as stale.</returns>
+    Task<Conversion> GetConversionAsync(DateTime date, Currencies source);
+
+    /// <summary>
+    /// Asynchronously retrieves one quote per currency for the specified date and base currency,
+    /// deriving cross-rates from the EUR-based cache when the base differs from EUR.
+    /// </summary>
+    /// <param name="date">The date for which to retrieve the quotes.</param>
+    /// <param name="source">The base currency of the requested quotes.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The quotes for the requested date and base, each marked stale when a fallback was used.</returns>
+    Task<IReadOnlyList<FxQuoteDto>> GetFxQuotesAsync(DateTime date, Currencies source, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Fetches and persists conversions for a range of dates using a single timeseries request.
     /// </summary>
     /// <param name="start">The first date of the range (inclusive).</param>
