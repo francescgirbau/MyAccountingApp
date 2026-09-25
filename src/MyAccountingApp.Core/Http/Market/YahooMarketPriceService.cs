@@ -7,9 +7,9 @@ public class YahooMarketPriceService : IMarketPriceService
 {
     private readonly MarketPriceCache _cache = new();
 
-    public Task<Money?> GetPriceAsync(string symbol) => this.FetchAsync(symbol, useCache: true);
+    public Task<Money?> GetPriceAsync(string symbol, string? quoteCurrency = null) => this.FetchAsync(symbol, useCache: true, quoteCurrency);
 
-    public Task<Money?> RefreshPriceAsync(string symbol) => this.FetchAsync(symbol, useCache: false);
+    public Task<Money?> RefreshPriceAsync(string symbol, string? quoteCurrency = null) => this.FetchAsync(symbol, useCache: false, quoteCurrency);
 
     public Task<Money?> GetCachedPriceAsync(string symbol)
     {
@@ -37,7 +37,7 @@ public class YahooMarketPriceService : IMarketPriceService
         return Task.FromResult(this._cache.TryGetLast(normalized, out CachedQuote? quote) ? quote : null);
     }
 
-    private async Task<Money?> FetchAsync(string symbol, bool useCache)
+    private async Task<Money?> FetchAsync(string symbol, bool useCache, string? quoteCurrency = null)
     {
         string normalized = NormalizeSymbol(symbol);
 
@@ -53,7 +53,7 @@ public class YahooMarketPriceService : IMarketPriceService
             return cachedPrice;
         }
 
-        Money? price = await this.FetchFromYahooAsync(normalized);
+        Money? price = await this.FetchFromYahooAsync(normalized, quoteCurrency);
 
         if (price is not null)
         {
@@ -87,18 +87,26 @@ public class YahooMarketPriceService : IMarketPriceService
     public static bool LooksLikeListedEquity(string? symbol) =>
         !string.IsNullOrWhiteSpace(symbol) && !symbol.Contains('_');
 
-    protected virtual async Task<Money?> FetchFromYahooAsync(string symbol)
+    protected virtual async Task<Money?> FetchFromYahooAsync(string symbol, string? quoteCurrency = null)
     {
         try
         {
-            IReadOnlyDictionary<string, Security> securities = await Yahoo.Symbols(symbol).Fields(Field.Symbol, Field.RegularMarketPrice, Field.Currency).QueryAsync();
-
-            if (securities.TryGetValue(symbol, out Security? security))
+            Money? quote = await this.FetchQuoteAsync(symbol);
+            if (quote is not null)
             {
-                string currency = ResolveCurrency(security.Currency, security.Market);
-                decimal amount = (decimal)security.RegularMarketPrice;
+                return quote;
+            }
 
-                return new Money(amount, currency);
+            // Some bare tickers have no quote on Yahoo while the exchange-suffixed ticker does
+            // (e.g. CEQ -> CEQ.V, YAL -> YAL.AX). Retry with the suffix that matches the
+            // position's known quote currency before giving up.
+            foreach (string candidate in GetSuffixCandidates(symbol, quoteCurrency))
+            {
+                quote = await this.FetchQuoteAsync(candidate);
+                if (quote is not null)
+                {
+                    return quote;
+                }
             }
 
             return null;
@@ -110,18 +118,73 @@ public class YahooMarketPriceService : IMarketPriceService
         }
     }
 
+    protected virtual async Task<Money?> FetchQuoteAsync(string symbol)
+    {
+        IReadOnlyDictionary<string, Security> securities = await Yahoo.Symbols(symbol).Fields(Field.Symbol, Field.RegularMarketPrice, Field.Currency).QueryAsync();
+
+        if (!securities.TryGetValue(symbol, out Security? security))
+        {
+            return null;
+        }
+
+        // Yahoo sometimes returns ticker metadata without a live quote (no price and no
+        // currency field). Treat those as "no quote" instead of throwing KeyNotFoundException.
+        if (!security.Fields.ContainsKey("RegularMarketPrice"))
+        {
+            return null;
+        }
+
+        bool hasCurrency = security.Fields.ContainsKey("Currency");
+        bool hasMarket = security.Fields.ContainsKey("Market");
+        if (!hasCurrency && !hasMarket)
+        {
+            return null;
+        }
+
+        decimal amount = (decimal)security.RegularMarketPrice;
+        string currency = ResolveCurrency(hasCurrency ? security.Currency : null, hasMarket ? security.Market : null);
+        return new Money(amount, currency);
+    }
+
+    /// <summary>
+    /// Returns the Yahoo exchange-suffixed tickers to try for a symbol that has no bare quote,
+    /// derived from the position's known quote currency (e.g. CEQ + CAD -&gt; CEQ.TO, CEQ.V).
+    /// </summary>
+    public static IReadOnlyList<string> GetSuffixCandidates(string symbol, string? quoteCurrency)
+    {
+        if (string.IsNullOrWhiteSpace(symbol) || string.IsNullOrWhiteSpace(quoteCurrency))
+        {
+            return Array.Empty<string>();
+        }
+
+        return quoteCurrency.Trim().ToUpperInvariant() switch
+        {
+            "CAD" => new[] { symbol + ".TO", symbol + ".V" },
+            "AUD" => new[] { symbol + ".AX" },
+            "GBP" => new[] { symbol + ".L" },
+            "EUR" => new[] { symbol + ".MC" },
+            "CHF" => new[] { symbol + ".SW" },
+            "SEK" => new[] { symbol + ".ST" },
+            "NOK" => new[] { symbol + ".OL" },
+            "HKD" => new[] { symbol + ".HK" },
+            "JPY" => new[] { symbol + ".T" },
+            "DKK" => new[] { symbol + ".CO" },
+            _ => Array.Empty<string>(),
+        };
+    }
+
     /// <summary>
     /// Resolves the quote currency: prefers Yahoo's explicit currency field (crypto pairs like
     /// ADA-USD report it), falling back to the market-based mapping for listed equities.
     /// </summary>
-    public static string ResolveCurrency(string? yahooCurrency, string market)
+    public static string ResolveCurrency(string? yahooCurrency, string? market)
     {
         if (!string.IsNullOrWhiteSpace(yahooCurrency))
         {
             return yahooCurrency.Trim().ToUpperInvariant();
         }
 
-        return MapYahooMarketIntoCurrency(market);
+        return MapYahooMarketIntoCurrency(market ?? string.Empty);
     }
 
     private static string MapYahooMarketIntoCurrency(string market)

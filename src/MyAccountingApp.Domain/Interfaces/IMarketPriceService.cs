@@ -7,15 +7,19 @@ public interface IMarketPriceService
     /// Return el price of asset based on its ticker
     /// </summary>
     /// <param name="symbol">Ticker</param>
+    /// <param name="quoteCurrency">Optional known quote currency of the position. Providers may use it
+    /// to retry with an exchange-suffixed ticker (e.g. CEQ -&gt; CEQ.V) when the bare ticker has no quote.</param>
     /// <returns>Price</returns>
-    Task<Money?> GetPriceAsync(string symbol);
+    Task<Money?> GetPriceAsync(string symbol, string? quoteCurrency = null);
 
     /// <summary>
     /// Return el price of asset based on its ticker, bypassing the in-memory cache
     /// </summary>
     /// <param name="symbol">Ticker</param>
+    /// <param name="quoteCurrency">Optional known quote currency of the position. Providers may use it
+    /// to retry with an exchange-suffixed ticker (e.g. CEQ -&gt; CEQ.V) when the bare ticker has no quote.</param>
     /// <returns>Price</returns>
-    Task<Money?> RefreshPriceAsync(string symbol);
+    Task<Money?> RefreshPriceAsync(string symbol, string? quoteCurrency = null);
 
     /// <summary>
     /// Return el price of asset from the in-memory cache only, without fetching

@@ -45,7 +45,7 @@ public class PositionEngine : IPositionEngine
         decimal avgCost = position.NetQuantity != 0 ? Math.Round(position.TotalCostBasis / position.NetQuantity, 4) : 0;
 
         bool priceEnabled = includePrice && position.NetQuantity != 0;
-        Money? marketPrice = priceEnabled ? await this._marketPriceService.GetPriceAsync(symbol) : null;
+        Money? marketPrice = priceEnabled ? await this._marketPriceService.GetPriceAsync(symbol, currency) : null;
 
         decimal? unrealizedGainLoss = marketPrice is not null && position.NetQuantity != 0
             ? Math.Round((marketPrice.Amount - avgCost) * position.NetQuantity, 2)
