@@ -6,17 +6,18 @@ namespace MyAccountingApp.Domain.Tests.Entities;
 public class ConversionTests
 {
     [Fact]
-    public void Constructor_WithNonEURSource_ThrowsArgumentException()
+    public void Constructor_AllowsNonEurSource()
     {
         // Arrange
-        Currencies invalidSource = Currencies.USD;
+        Currencies source = Currencies.USD;
         DateTime date = new DateTime(2023, 12, 1);
 
         // Act
-        Action action = () => { new Conversion(date, invalidSource); };
+        Conversion conversion = new Conversion(date, source);
 
         // Assert
-        Assert.Throws<ArgumentException>(() => action());
+        Assert.Equal(source, conversion.Source);
+        Assert.Empty(conversion.Quotes);
     }
 
     [Fact]

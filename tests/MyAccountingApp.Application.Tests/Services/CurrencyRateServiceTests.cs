@@ -532,6 +532,133 @@ public class CurrencyRateServiceTests
         Assert.Equal(0.00001666m, result.Quotes[Currencies.BTC]);
     }
 
+    [Fact]
+    public async Task GetConversionAsync_WithNonEurBase_DerivesQuotesWithoutFetching()
+    {
+        // Arrange
+        FakeConversionRepository repo = new();
+        repo.Initialize(new[]
+        {
+            new Conversion(
+                new DateTime(2005, 12, 1),
+                Currencies.EUR,
+                new Dictionary<Currencies, decimal>
+                {
+                    { Currencies.USD, 1.07m },
+                    { Currencies.GBP, 0.85m },
+                    { Currencies.BTC, 0.00001666m },
+                }),
+        });
+        FakeApiQuotaManager quota = new();
+        FakePendingConversionQueue queue = new();
+        CurrencyRateService service = CreateService(repo, quota, queue);
+
+        // Act
+        Conversion result = await service.GetConversionAsync(new DateTime(2005, 12, 1), Currencies.USD);
+
+        // Assert
+        Assert.Equal(Currencies.USD, result.Source);
+        Assert.Equal(0.85m / 1.07m, result.Quotes[Currencies.GBP]);
+        Assert.Equal(0.00001666m / 1.07m, result.Quotes[Currencies.BTC]);
+        Assert.False(result.Quotes.ContainsKey(Currencies.USD));
+        Assert.Equal(0, quota.Consumed);
+        Assert.Single(repo.GetAll());
+    }
+
+    [Fact]
+    public async Task GetConversionAsync_WithEurBase_ReturnsStoredConversion()
+    {
+        // Arrange
+        FakeConversionRepository repo = new();
+        FakeApiQuotaManager quota = new();
+        FakePendingConversionQueue queue = new();
+        CurrencyRateService service = CreateService(repo, quota, queue);
+
+        // Act
+        Conversion result = await service.GetConversionAsync(new DateTime(2005, 12, 1), Currencies.EUR);
+
+        // Assert
+        Assert.Equal(Currencies.EUR, result.Source);
+        Assert.Equal(1.1m, result.Quotes[Currencies.USD]);
+        Assert.Equal(0, quota.Consumed);
+    }
+
+    [Fact]
+    public async Task GetConversionAsync_WithNonEurBase_PropagatesStalenessAndProvider()
+    {
+        // Arrange
+        FakeConversionRepository repo = new();
+        repo.Initialize(new[]
+        {
+            new Conversion(
+                new DateTime(2005, 12, 1),
+                Currencies.EUR,
+                new Dictionary<Currencies, decimal> { { Currencies.USD, 1.07m }, { Currencies.GBP, 0.85m } },
+                new DateTime(2005, 12, 1),
+                isStale: true,
+                sourceProvider: "frankfurter"),
+        });
+        FakeApiQuotaManager quota = new();
+        FakePendingConversionQueue queue = new();
+        CurrencyRateService service = CreateService(repo, quota, queue);
+
+        // Act
+        Conversion result = await service.GetConversionAsync(new DateTime(2005, 12, 1), Currencies.USD);
+
+        // Assert
+        Assert.True(result.IsStale);
+        Assert.Equal("frankfurter", result.SourceProvider);
+        Assert.Equal(0.85m / 1.07m, result.Quotes[Currencies.GBP]);
+    }
+
+    [Fact]
+    public async Task GetConversionAsync_WithBaseMissingFromEurQuotes_ThrowsConversionNotAvailable()
+    {
+        // Arrange
+        FakeConversionRepository repo = new();
+        FakeApiQuotaManager quota = new();
+        FakePendingConversionQueue queue = new();
+        CurrencyRateService service = CreateService(repo, quota, queue);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ConversionNotAvailableException>(
+            () => service.GetConversionAsync(new DateTime(2005, 12, 1), Currencies.JPY));
+    }
+
+    [Fact]
+    public async Task GetFxQuotesAsync_WithNonEurBase_ReturnsDerivedQuotesWithBase()
+    {
+        // Arrange
+        FakeConversionRepository repo = new();
+        repo.Initialize(new[]
+        {
+            new Conversion(
+                new DateTime(2005, 12, 1),
+                Currencies.EUR,
+                new Dictionary<Currencies, decimal>
+                {
+                    { Currencies.USD, 1.07m },
+                    { Currencies.GBP, 0.85m },
+                    { Currencies.BTC, 0.00001666m },
+                },
+                sourceProvider: "frankfurter"),
+        });
+        FakeApiQuotaManager quota = new();
+        FakePendingConversionQueue queue = new();
+        CurrencyRateService service = CreateService(repo, quota, queue);
+
+        // Act
+        IReadOnlyList<FxQuoteDto> quotes = await service.GetFxQuotesAsync(new DateTime(2005, 12, 1), Currencies.USD);
+
+        // Assert
+        FxQuoteDto gbp = Assert.Single(quotes, q => q.Quote == "GBP");
+        Assert.Equal("USD", gbp.Base);
+        Assert.Equal(0.85m / 1.07m, gbp.Rate);
+        Assert.False(gbp.IsStale);
+        Assert.Equal("frankfurter", gbp.Provider);
+        Assert.Equal(0.00001666m / 1.07m, Assert.Single(quotes, q => q.Quote == "BTC").Rate);
+    }
+
     private static CurrencyRateService CreateService(
         FakeConversionRepository repo,
         FakeApiQuotaManager quota,

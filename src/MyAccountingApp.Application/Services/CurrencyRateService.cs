@@ -208,6 +208,42 @@ public class CurrencyRateService : ICurrencyRateService
     }
 
     /// <inheritdoc/>
+    public async Task<Conversion> GetConversionAsync(DateTime date, Currencies source)
+    {
+        if (source == this._source)
+        {
+            return await this.GetConversionAsync(date);
+        }
+
+        return this.DeriveConversion(await this.GetConversionAsync(date), source);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<FxQuoteDto>> GetFxQuotesAsync(DateTime date, Currencies source, CancellationToken cancellationToken = default)
+    {
+        if (source == this._source)
+        {
+            return await this.GetFxQuotesAsync(date, cancellationToken);
+        }
+
+        Conversion derived = this.DeriveConversion(await this.GetConversionAsync(date), source);
+        DateOnly requestedDate = DateOnly.FromDateTime(date.Date);
+        DateOnly rateDate = DateOnly.FromDateTime(derived.Date);
+
+        return derived.Quotes
+            .OrderBy(kv => kv.Key)
+            .Select(kv => new FxQuoteDto(
+                requestedDate,
+                rateDate,
+                source.ToString(),
+                kv.Key.ToString(),
+                kv.Value,
+                derived.IsStale,
+                derived.SourceProvider))
+            .ToList();
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> SyncRangeAsync(DateOnly start, DateOnly end, CancellationToken cancellationToken = default)
     {
         await this._quotaManager.EnsurePeriodAsync(cancellationToken);
@@ -405,6 +441,18 @@ public class CurrencyRateService : ICurrencyRateService
     {
         ApiUsageQuota quota = await this._quotaManager.GetQuotaAsync(cancellationToken);
         return quota.CanConsume(1);
+    }
+
+    private Conversion DeriveConversion(Conversion eur, Currencies source)
+    {
+        IReadOnlyDictionary<Currencies, decimal> derivedQuotes = FxRateDeriver.DeriveAll(source, eur.Quotes);
+        return new Conversion(
+            eur.Date,
+            source,
+            new Dictionary<Currencies, decimal>(derivedQuotes),
+            eur.RetrievedAtUtc,
+            eur.IsStale,
+            eur.SourceProvider);
     }
 
     private Conversion BuildConversion(DateOnly day, Dictionary<string, decimal> rates)

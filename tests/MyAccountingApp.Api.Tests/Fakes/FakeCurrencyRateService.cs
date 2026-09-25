@@ -19,11 +19,28 @@ public sealed class FakeCurrencyRateService : ICurrencyRateService
         return Task.FromResult(conversion);
     }
 
+    public Task<Conversion> GetConversionAsync(DateTime date, Currencies source)
+    {
+        Conversion conversion = new(date, source);
+        Currencies quote = source == Currencies.USD ? Currencies.CAD : Currencies.USD;
+        conversion.AddOrUpdateQuote(quote, 1.1m);
+        return Task.FromResult(conversion);
+    }
+
     public Task<IReadOnlyList<FxQuoteDto>> GetFxQuotesAsync(DateTime date, CancellationToken cancellationToken = default)
     {
         return Task.FromResult<IReadOnlyList<FxQuoteDto>>(new List<FxQuoteDto>
         {
             new(DateOnly.FromDateTime(date.Date), DateOnly.FromDateTime(date.Date), "EUR", "USD", 1.1m, false, "frankfurter"),
+        });
+    }
+
+    public Task<IReadOnlyList<FxQuoteDto>> GetFxQuotesAsync(DateTime date, Currencies source, CancellationToken cancellationToken = default)
+    {
+        Currencies quote = source == Currencies.USD ? Currencies.CAD : Currencies.USD;
+        return Task.FromResult<IReadOnlyList<FxQuoteDto>>(new List<FxQuoteDto>
+        {
+            new(DateOnly.FromDateTime(date.Date), DateOnly.FromDateTime(date.Date), source.ToString(), quote.ToString(), 1.1m, false, "frankfurter"),
         });
     }
 
