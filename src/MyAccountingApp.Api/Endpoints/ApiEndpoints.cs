@@ -15,6 +15,7 @@ public static class ApiEndpoints
         app.MapImportEndpoints();
         app.MapPortfolioEndpoints();
         app.MapConversionEndpoints();
+        app.MapFrankfurterEndpoints();
         app.MapBackupEndpoints();
         app.MapDashboardEndpoints();
         app.MapDataQualityEndpoints();
