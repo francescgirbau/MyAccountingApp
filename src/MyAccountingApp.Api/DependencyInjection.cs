@@ -49,6 +49,7 @@ public static class DependencyInjection
         builder.Services.AddSingleton(pendingWorkOptions);
 
         bool useFrankfurter = string.Equals(currencyOptions.Provider, "Frankfurter", StringComparison.OrdinalIgnoreCase);
+        bool useSelfHosted = string.Equals(currencyOptions.Provider, "SelfHosted", StringComparison.OrdinalIgnoreCase);
 
         CompositeConversionRepository repo = new CompositeConversionRepository("data/conversions.json", vaultService);
 
@@ -71,7 +72,7 @@ public static class DependencyInjection
         IApiQuotaManager quotaManager;
         JsonApiQuotaRepository? quotaRepo = null;
 
-        if (useFrankfurter)
+        if (useFrankfurter || useSelfHosted)
         {
             quotaManager = new UnlimitedApiQuotaManager(currencyOptions.ProviderName);
         }
@@ -102,6 +103,14 @@ public static class DependencyInjection
             {
                 fiatProvider = new FrankfurterCurrencyConverter(httpClientFactory.CreateClient("Frankfurter"), currencyOptions.ExcludeCurrencies, currencyOptions.BaseUrl);
             }
+            else if (useSelfHosted)
+            {
+                ICurrencyConverter seedProvider = new FrankfurterCurrencyConverter(
+                    httpClientFactory.CreateClient("Frankfurter"),
+                    currencyOptions.ExcludeCurrencies,
+                    currencyOptions.BaseUrl);
+                fiatProvider = new CachedCurrencyConverter(repo, seedProvider, currencyOptions.ExcludeCurrencies);
+            }
             else
             {
                 string currencyApiKey = !string.IsNullOrEmpty(currencyOptions.ApiKey)
@@ -131,6 +140,7 @@ public static class DependencyInjection
         });
 
         builder.Services.AddSingleton<IConversionRepository>(repo);
+        builder.Services.AddSingleton<FrankfurterSelfHostService>();
         if (quotaRepo != null)
         {
             builder.Services.AddSingleton<IApiQuotaRepository>(quotaRepo);
