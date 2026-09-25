@@ -75,35 +75,79 @@ else
         <ChildRowContent>
             @{ LoanSummaryDto loan = context; }
             <MudText Typo="Typo.subtitle2" Class="py-2">Movements</MudText>
+            @{
+                LoanMovementDto? disbursement = loan.Movements.FirstOrDefault(m => m.Type == "Disbursement");
+                List<LoanMovementDto> repayments = loan.Movements.Where(m => m.Type == "Repayment").ToList();
+                List<LoanMovementDto> interest = loan.Movements.Where(m => m.Type == "Interest").ToList();
+            }
             @if (loan.Movements.Count == 0)
             {
                 <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">No movements yet.</MudText>
             }
             else
             {
-                <MudTable Items="@loan.Movements" Dense="true" Elevation="0" Outlined="false" Hover="true">
-                    <HeaderContent>
-                        <MudTh>Date</MudTh>
-                        <MudTh>Type</MudTh>
-                        <MudTh>Description</MudTh>
-                        <MudTh>Amount</MudTh>
-                        <MudTh>Actions</MudTh>
-                    </HeaderContent>
-                    <RowTemplate Context="m">
-                        <MudTd DataLabel="Date">@m.Date.ToString("yyyy-MM-dd")</MudTd>
-                        <MudTd DataLabel="Type">
-                            <MudChip T="string" Size="Size.Small" Color="@_MovementChipColor(m.Type)">@m.Type</MudChip>
-                        </MudTd>
-                        <MudTd DataLabel="Description">@m.Description</MudTd>
-                        <MudTd DataLabel="Amount" Class="@(IsCashIn(loan, m) ? "green--text" : "red--text")">@m.Amount.ToString("N2") @m.Currency</MudTd>
-                        <MudTd DataLabel="Actions">
-                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" aria-label="Edit movement"
-                                           OnClick="@(() => OpenEditMovementDialog(loan, m))" Disabled="@(m.Type == "Disbursement")" />
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" aria-label="Delete movement"
-                                           OnClick="@(() => OpenDeleteMovementDialog(loan, m))" Disabled="@(m.Type == "Disbursement")" />
-                        </MudTd>
-                    </RowTemplate>
-                </MudTable>
+                @if (disbursement is not null)
+                {
+                    <MudText Typo="Typo.body2" Class="mb-3 mud-text-secondary">
+                        Initial disbursement · @disbursement.Amount.ToString("N2") @disbursement.Currency · @disbursement.Date.ToString("yyyy-MM-dd")
+                    </MudText>
+                }
+
+                <MudText Typo="Typo.body2" Class="mb-1">Repayments (@repayments.Count) · @loan.Repaid.ToString("N2") @loan.Currency</MudText>
+                @if (repayments.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">No repayments yet.</MudText>
+                }
+                else
+                {
+                    <MudTable Items="@repayments" Dense="true" Elevation="0" Outlined="false" Hover="true" Class="mb-3">
+                        <HeaderContent>
+                            <MudTh>Date</MudTh>
+                            <MudTh>Description</MudTh>
+                            <MudTh>Amount</MudTh>
+                            <MudTh>Actions</MudTh>
+                        </HeaderContent>
+                        <RowTemplate Context="m">
+                            <MudTd DataLabel="Date">@m.Date.ToString("yyyy-MM-dd")</MudTd>
+                            <MudTd DataLabel="Description">@m.Description</MudTd>
+                            <MudTd DataLabel="Amount" Class="@(IsCashIn(loan, m) ? "green--text" : "red--text")">@m.Amount.ToString("N2") @m.Currency</MudTd>
+                            <MudTd DataLabel="Actions">
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" aria-label="Edit movement"
+                                               OnClick="@(() => OpenEditMovementDialog(loan, m))" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" aria-label="Delete movement"
+                                               OnClick="@(() => OpenDeleteMovementDialog(loan, m))" />
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+
+                <MudText Typo="Typo.body2" Class="mb-1">Interest (@interest.Count) · @loan.InterestPaid.ToString("N2") @loan.Currency</MudText>
+                @if (interest.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">No interest yet.</MudText>
+                }
+                else
+                {
+                    <MudTable Items="@interest" Dense="true" Elevation="0" Outlined="false" Hover="true">
+                        <HeaderContent>
+                            <MudTh>Date</MudTh>
+                            <MudTh>Description</MudTh>
+                            <MudTh>Amount</MudTh>
+                            <MudTh>Actions</MudTh>
+                        </HeaderContent>
+                        <RowTemplate Context="m">
+                            <MudTd DataLabel="Date">@m.Date.ToString("yyyy-MM-dd")</MudTd>
+                            <MudTd DataLabel="Description">@m.Description</MudTd>
+                            <MudTd DataLabel="Amount" Class="@(IsCashIn(loan, m) ? "green--text" : "red--text")">@m.Amount.ToString("N2") @m.Currency</MudTd>
+                            <MudTd DataLabel="Actions">
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" aria-label="Edit movement"
+                                               OnClick="@(() => OpenEditMovementDialog(loan, m))" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" aria-label="Delete movement"
+                                               OnClick="@(() => OpenDeleteMovementDialog(loan, m))" />
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
             }
         </ChildRowContent>
     </MudTable>
@@ -529,9 +573,4 @@ else
     private static bool IsCashIn(LoanSummaryDto loan, LoanMovementDto movement) =>
         (loan.Direction == "Borrowed" && movement.Type == "Disbursement") ||
         (loan.Direction == "Lent" && movement.Type is "Repayment" or "Interest");
-
-    private static Color _MovementChipColor(string type) =>
-        type == "Repayment" ? Color.Secondary
-        : type == "Interest" ? Color.Warning
-        : Color.Info;
 }
