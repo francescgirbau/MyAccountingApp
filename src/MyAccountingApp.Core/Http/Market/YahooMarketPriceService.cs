@@ -5,6 +5,15 @@ using YahooFinanceApi;
 namespace MyAccountingApp.Core.Http.Market;
 public class YahooMarketPriceService : IMarketPriceService
 {
+    // Yahoo's quote API rejects request bursts (HTTP 401). Outgoing requests are throttled
+    // process-wide: at most 2 concurrent, with at least 600 ms between request starts, so a
+    // 40-symbol refresh becomes a paced queue instead of a parallel burst. This protects
+    // every caller (refresh-prices, /api/portfolio, validation) without changing their code.
+    private static readonly SemaphoreSlim ThrottleConcurrency = new(2, 2);
+    private static readonly SemaphoreSlim ThrottlePacer = new(1, 1);
+    private const long MinRequestIntervalMs = 600;
+    private static long _lastRequestStartMs;
+
     private readonly MarketPriceCache _cache = new();
 
     public Task<Money?> GetPriceAsync(string symbol, string? quoteCurrency = null) => this.FetchAsync(symbol, useCache: true, quoteCurrency);
@@ -120,7 +129,8 @@ public class YahooMarketPriceService : IMarketPriceService
 
     protected virtual async Task<Money?> FetchQuoteAsync(string symbol)
     {
-        IReadOnlyDictionary<string, Security> securities = await Yahoo.Symbols(symbol).Fields(Field.Symbol, Field.RegularMarketPrice, Field.Currency).QueryAsync();
+        IReadOnlyDictionary<string, Security> securities = await ThrottledYahooCallAsync(
+            () => Yahoo.Symbols(symbol).Fields(Field.Symbol, Field.RegularMarketPrice, Field.Currency).QueryAsync());
 
         if (!securities.TryGetValue(symbol, out Security? security))
         {
@@ -144,6 +154,41 @@ public class YahooMarketPriceService : IMarketPriceService
         decimal amount = (decimal)security.RegularMarketPrice;
         string currency = ResolveCurrency(hasCurrency ? security.Currency : null, hasMarket ? security.Market : null);
         return new Money(amount, currency);
+    }
+
+    /// <summary>
+    /// Runs a Yahoo HTTP call under the process-wide throttle: at most 2 requests in flight at
+    /// once, and each request start is spaced at least <see cref="MinRequestIntervalMs"/> ms
+    /// apart. Keeps bursts short enough for Yahoo to accept them (it answers bursts with 401).
+    /// </summary>
+    private static async Task<T> ThrottledYahooCallAsync<T>(Func<Task<T>> action)
+    {
+        await ThrottleConcurrency.WaitAsync();
+        try
+        {
+            await ThrottlePacer.WaitAsync();
+            try
+            {
+                long now = Environment.TickCount64;
+                long remaining = (Interlocked.Read(ref _lastRequestStartMs) + MinRequestIntervalMs) - now;
+                if (remaining > 0)
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(remaining));
+                }
+
+                Interlocked.Exchange(ref _lastRequestStartMs, Environment.TickCount64);
+            }
+            finally
+            {
+                ThrottlePacer.Release();
+            }
+
+            return await action();
+        }
+        finally
+        {
+            ThrottleConcurrency.Release();
+        }
     }
 
     /// <summary>
