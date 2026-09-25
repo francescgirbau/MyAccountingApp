@@ -7,6 +7,7 @@ public sealed record LoanSummaryDto(
     decimal Principal,
     string Currency,
     decimal Repaid,
+    decimal InterestPaid,
     decimal Outstanding,
     bool IsOverpaid,
     bool IsClosed,

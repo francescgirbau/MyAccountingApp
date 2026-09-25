@@ -31,8 +31,10 @@ public sealed class LoanCommandService : ILoanCommandService
     {
         (LoanDirection.Borrowed, LoanMovementType.Disbursement) => TransactionCategory.LOAN_IN,
         (LoanDirection.Borrowed, LoanMovementType.Repayment) => TransactionCategory.LOAN_OUT,
+        (LoanDirection.Borrowed, LoanMovementType.Interest) => TransactionCategory.LOAN_OUT,
         (LoanDirection.Lent, LoanMovementType.Disbursement) => TransactionCategory.LOAN_OUT,
         (LoanDirection.Lent, LoanMovementType.Repayment) => TransactionCategory.LOAN_IN,
+        (LoanDirection.Lent, LoanMovementType.Interest) => TransactionCategory.LOAN_IN,
         _ => throw new ArgumentOutOfRangeException(),
     };
 
@@ -44,6 +46,9 @@ public sealed class LoanCommandService : ILoanCommandService
         LoanMovementType.Repayment => loan.Direction == LoanDirection.Borrowed
             ? $"Repayment to {loan.Counterparty}"
             : $"Repayment from {loan.Counterparty}",
+        LoanMovementType.Interest => loan.Direction == LoanDirection.Borrowed
+            ? $"Interest paid to {loan.Counterparty}"
+            : $"Interest received from {loan.Counterparty}",
         _ => throw new ArgumentOutOfRangeException(),
     };
 
@@ -79,13 +84,32 @@ public sealed class LoanCommandService : ILoanCommandService
             throw new InvalidOperationException("Loan not found.");
         }
 
-        if (request.Amount <= 0)
+        if (request.Amount < 0)
         {
-            throw new ArgumentException("Repayment amount must be greater than zero.", nameof(request.Amount));
+            throw new ArgumentException("Capital amount must not be negative.", nameof(request.Amount));
         }
 
-        LoanMovement repayment = this.CreateMovement(loan, request.Amount, request.Date, LoanMovementType.Repayment);
-        this._movementRepo.Add(repayment);
+        if (request.InterestAmount < 0)
+        {
+            throw new ArgumentException("Interest amount must not be negative.", nameof(request.InterestAmount));
+        }
+
+        if (request.Amount == 0 && request.InterestAmount == 0)
+        {
+            throw new ArgumentException("Repayment must include capital, interest, or both.", nameof(request.Amount));
+        }
+
+        if (request.Amount > 0)
+        {
+            LoanMovement repayment = this.CreateMovement(loan, request.Amount, request.Date, LoanMovementType.Repayment);
+            this._movementRepo.Add(repayment);
+        }
+
+        if (request.InterestAmount > 0)
+        {
+            LoanMovement interest = this.CreateMovement(loan, request.InterestAmount, request.Date, LoanMovementType.Interest);
+            this._movementRepo.Add(interest);
+        }
 
         return this._loanQuery.GetById(loanId) ?? throw new InvalidOperationException("Loan could not be loaded after repayment.");
     }

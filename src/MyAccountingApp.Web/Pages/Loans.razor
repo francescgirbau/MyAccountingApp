@@ -41,6 +41,7 @@ else
             <MudTh>Direction</MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<LoanSummaryDto, object>(l => l.Principal)">Principal</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<LoanSummaryDto, object>(l => l.Repaid)">Repaid</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<LoanSummaryDto, object>(l => l.InterestPaid)">Interest</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<LoanSummaryDto, object>(l => l.Outstanding)">Outstanding</MudTableSortLabel></MudTh>
             <MudTh>Status</MudTh>
             <MudTh>Last movement</MudTh>
@@ -53,6 +54,7 @@ else
             </MudTd>
             <MudTd DataLabel="Principal">@context.Principal.ToString("N2") @context.Currency</MudTd>
             <MudTd DataLabel="Repaid">@context.Repaid.ToString("N2")</MudTd>
+            <MudTd DataLabel="Interest">@context.InterestPaid.ToString("N2")</MudTd>
             <MudTd DataLabel="Outstanding" Class="@(context.IsOverpaid ? "red--text" : "")">@context.Outstanding.ToString("N2")</MudTd>
             <MudTd DataLabel="Status">
                 <MudChip T="string" Size="Size.Small" Color="@(context.IsClosed ? Color.Secondary : Color.Primary)"
@@ -150,15 +152,18 @@ else
                 <MudItem xs="12">
                     <MudDatePicker @bind-Date="_repaymentDate" Label="Date" Variant="Variant.Outlined" />
                 </MudItem>
-                <MudItem xs="12">
-                    <MudNumericField T="decimal" @bind-Value="_repaymentAmount" Label="Amount" Variant="Variant.Outlined" Min="@(0.01m)" />
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal" @bind-Value="_repaymentAmount" Label="Capital" Variant="Variant.Outlined" Min="@(0m)" HelperText="Amount applied to the principal" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal" @bind-Value="_repaymentInterest" Label="Interest" Variant="Variant.Outlined" Min="@(0m)" HelperText="Interest portion of this payment" />
                 </MudItem>
             </MudGrid>
         }
     </DialogContent>
     <DialogActions>
         <MudButton Color="Color.Error" OnClick="@(() => _showRepaymentDialog = false)">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@(_repaymentAmount <= 0)" OnClick="@AddRepaymentAsync">Save</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@(_repaymentAmount <= 0 && _repaymentInterest <= 0)" OnClick="@AddRepaymentAsync">Save</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -198,6 +203,7 @@ else
     private LoanSummaryDto? _repaymentTarget;
     private DateTime? _repaymentDate;
     private decimal _repaymentAmount;
+    private decimal _repaymentInterest;
 
     private bool _showDeleteDialog;
     private LoanSummaryDto? _deleteTarget;
@@ -274,6 +280,7 @@ else
         _repaymentTarget = loan;
         _repaymentDate = DateTime.Today;
         _repaymentAmount = 0;
+        _repaymentInterest = 0;
         _showRepaymentDialog = true;
     }
 
@@ -288,6 +295,7 @@ else
         {
             date = _repaymentDate.Value,
             amount = _repaymentAmount,
+            interestAmount = _repaymentInterest,
         };
 
         try
@@ -368,11 +376,13 @@ else
         direction == "Lent" ? Color.Success : Color.Warning;
 
     // A movement is cash in when money flows towards us: borrowed disbursements and
-    // repayments of loans we lent out. Everything else is cash out.
+    // repayments or interest received on loans we lent out. Everything else is cash out.
     private static bool IsCashIn(LoanSummaryDto loan, LoanMovementDto movement) =>
         (loan.Direction == "Borrowed" && movement.Type == "Disbursement") ||
-        (loan.Direction == "Lent" && movement.Type == "Repayment");
+        (loan.Direction == "Lent" && movement.Type is "Repayment" or "Interest");
 
     private static Color _MovementChipColor(string type) =>
-        type == "Repayment" ? Color.Secondary : Color.Info;
+        type == "Repayment" ? Color.Secondary
+        : type == "Interest" ? Color.Warning
+        : Color.Info;
 }

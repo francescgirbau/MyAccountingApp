@@ -36,6 +36,9 @@ public sealed class LoanQuery : ILoanQuery
         decimal repaid = loanMovements
             .Where(m => m.Type == LoanMovementType.Repayment)
             .Sum(m => m.Transaction.Money.Amount);
+        decimal interestPaid = loanMovements
+            .Where(m => m.Type == LoanMovementType.Interest)
+            .Sum(m => m.Transaction.Money.Amount);
         decimal outstanding = loan.Principal.Amount - repaid;
         DateTime? lastMovementDate = loanMovements.Count > 0
             ? loanMovements.Max(m => m.Transaction.Date)
@@ -48,6 +51,7 @@ public sealed class LoanQuery : ILoanQuery
             Math.Round(loan.Principal.Amount, 2),
             loan.Principal.Currency,
             Math.Round(repaid, 2),
+            Math.Round(interestPaid, 2),
             Math.Round(outstanding, 2),
             outstanding < 0,
             loan.IsClosed,

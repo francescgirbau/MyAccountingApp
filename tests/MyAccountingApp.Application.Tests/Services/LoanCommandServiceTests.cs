@@ -125,6 +125,94 @@ public class LoanCommandServiceTests
     }
 
     [Fact]
+    public void AddRepayment_WithInterest_CreatesCapitalAndInterestMovements_WhenBorrowed()
+    {
+        FakeLoanRepository loanRepo = new();
+        FakeLoanMovementRepository movementRepo = new();
+        Guid loanId = Guid.NewGuid();
+        loanRepo.Add(new Loan(loanId, "Berta", LoanDirection.Borrowed, new Money(1000, "EUR"), new DateTime(2025, 3, 1)));
+        movementRepo.Add(CreateMovement(loanId, 1000, new DateTime(2025, 3, 1), LoanMovementType.Disbursement));
+        LoanCommandService service = new(loanRepo, movementRepo, new LoanQuery(loanRepo, movementRepo));
+
+        LoanSummaryDto updated = service.AddRepayment(loanId, new AddLoanRepaymentRequest(new DateTime(2025, 4, 1), 200m, 50m));
+
+        LoanMovement repayment = movementRepo.GetByLoan(loanId).Single(m => m.Type == LoanMovementType.Repayment);
+        Assert.Equal(200m, repayment.Transaction.Money.Amount);
+        Assert.Equal(TransactionCategory.LOAN_OUT, repayment.Transaction.Category);
+        Assert.Equal("Repayment to Berta", repayment.Transaction.Description);
+
+        LoanMovement interest = movementRepo.GetByLoan(loanId).Single(m => m.Type == LoanMovementType.Interest);
+        Assert.Equal(50m, interest.Transaction.Money.Amount);
+        Assert.Equal(TransactionCategory.LOAN_OUT, interest.Transaction.Category);
+        Assert.Equal("Interest paid to Berta", interest.Transaction.Description);
+
+        Assert.Equal(200m, updated.Repaid);
+        Assert.Equal(50m, updated.InterestPaid);
+        Assert.Equal(800m, updated.Outstanding);
+    }
+
+    [Fact]
+    public void AddRepayment_WithInterest_WhenLent_InterestIsCashIn()
+    {
+        FakeLoanRepository loanRepo = new();
+        FakeLoanMovementRepository movementRepo = new();
+        Guid loanId = Guid.NewGuid();
+        loanRepo.Add(new Loan(loanId, "Pere", LoanDirection.Lent, new Money(500, "EUR"), new DateTime(2025, 3, 1)));
+        movementRepo.Add(CreateMovement(loanId, 500, new DateTime(2025, 3, 1), LoanMovementType.Disbursement));
+        LoanCommandService service = new(loanRepo, movementRepo, new LoanQuery(loanRepo, movementRepo));
+
+        LoanSummaryDto updated = service.AddRepayment(loanId, new AddLoanRepaymentRequest(new DateTime(2025, 5, 1), 100m, 25m));
+
+        LoanMovement interest = movementRepo.GetByLoan(loanId).Single(m => m.Type == LoanMovementType.Interest);
+        Assert.Equal(TransactionCategory.LOAN_IN, interest.Transaction.Category);
+        Assert.Equal("Interest received from Pere", interest.Transaction.Description);
+        Assert.Equal(100m, updated.Repaid);
+        Assert.Equal(25m, updated.InterestPaid);
+        Assert.Equal(400m, updated.Outstanding);
+    }
+
+    [Fact]
+    public void AddRepayment_InterestOnly_CreatesOnlyInterestMovement()
+    {
+        FakeLoanRepository loanRepo = new();
+        FakeLoanMovementRepository movementRepo = new();
+        Guid loanId = Guid.NewGuid();
+        loanRepo.Add(new Loan(loanId, "Berta", LoanDirection.Borrowed, new Money(1000, "EUR"), new DateTime(2025, 3, 1)));
+        movementRepo.Add(CreateMovement(loanId, 1000, new DateTime(2025, 3, 1), LoanMovementType.Disbursement));
+        LoanCommandService service = new(loanRepo, movementRepo, new LoanQuery(loanRepo, movementRepo));
+
+        LoanSummaryDto updated = service.AddRepayment(loanId, new AddLoanRepaymentRequest(new DateTime(2025, 4, 1), 0m, 50m));
+
+        LoanMovement interest = Assert.Single(movementRepo.GetByLoan(loanId), m => m.Type != LoanMovementType.Disbursement);
+        Assert.Equal(LoanMovementType.Interest, interest.Type);
+        Assert.Equal(0m, updated.Repaid);
+        Assert.Equal(50m, updated.InterestPaid);
+        Assert.Equal(1000m, updated.Outstanding);
+    }
+
+    [Fact]
+    public void AddRepayment_Throws_WhenCapitalAndInterestBothZero()
+    {
+        FakeLoanRepository loanRepo = new();
+        Guid loanId = Guid.NewGuid();
+        loanRepo.Add(new Loan(loanId, "Berta", LoanDirection.Borrowed, new Money(1000, "EUR"), new DateTime(2025, 3, 1)));
+        LoanCommandService service = new(loanRepo, new FakeLoanMovementRepository(), new LoanQuery(loanRepo, new FakeLoanMovementRepository()));
+
+        Assert.Throws<ArgumentException>(() => service.AddRepayment(loanId, new AddLoanRepaymentRequest(new DateTime(2025, 4, 1), 0m, 0m)));
+    }
+
+    [Fact]
+    public void AddRepayment_Throws_WhenInterestNegative()
+    {
+        FakeLoanRepository loanRepo = new();
+        Guid loanId = Guid.NewGuid();
+        loanRepo.Add(new Loan(loanId, "Berta", LoanDirection.Borrowed, new Money(1000, "EUR"), new DateTime(2025, 3, 1)));
+        LoanCommandService service = new(loanRepo, new FakeLoanMovementRepository(), new LoanQuery(loanRepo, new FakeLoanMovementRepository()));
+
+        Assert.Throws<ArgumentException>(() => service.AddRepayment(loanId, new AddLoanRepaymentRequest(new DateTime(2025, 4, 1), 100m, -5m)));
+    }
+
+    [Fact]
     public void AddRepayment_Throws_WhenLoanMissing()
     {
         LoanCommandService service = new(new FakeLoanRepository(), new FakeLoanMovementRepository(), new LoanQuery(new FakeLoanRepository(), new FakeLoanMovementRepository()));

@@ -4,4 +4,5 @@ public enum LoanMovementType
 {
     Disbursement = 0,
     Repayment = 1,
+    Interest = 2,
 }

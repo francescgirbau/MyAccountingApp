@@ -48,6 +48,7 @@ public class LoanSummaryDto
     public decimal Principal { get; set; }
     public string Currency { get; set; } = string.Empty;
     public decimal Repaid { get; set; }
+    public decimal InterestPaid { get; set; }
     public decimal Outstanding { get; set; }
     public bool IsOverpaid { get; set; }
     public bool IsClosed { get; set; }

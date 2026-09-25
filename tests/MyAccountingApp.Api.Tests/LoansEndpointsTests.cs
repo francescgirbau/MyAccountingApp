@@ -21,12 +21,13 @@ public class LoansEndpointsTests
         };
     }
 
-    private static object CreateRepaymentBody(decimal amount = 250m)
+    private static object CreateRepaymentBody(decimal amount = 250m, decimal interestAmount = 0m)
     {
         return new
         {
             date = new DateTime(2025, 4, 1),
             amount,
+            interestAmount,
         };
     }
 
@@ -157,6 +158,36 @@ public class LoansEndpointsTests
         Assert.Equal(1000m, movementList[0].GetProperty("amount").GetDecimal());
         Assert.Equal("Repayment", movementList[1].GetProperty("type").GetString());
         Assert.Equal(250m, movementList[1].GetProperty("amount").GetDecimal());
+    }
+
+    [Fact]
+    public async Task Loans_AddRepayment_WithInterest_ReturnsSummaryWithInterestPaid()
+    {
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        HttpResponseMessage created = await client.PostAsJsonAsync("/api/loans", CreateLoanBody());
+        using JsonDocument createdDocument = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        Guid loanId = createdDocument.RootElement.GetProperty("loanId").GetGuid();
+
+        HttpResponseMessage repayment = await client.PostAsJsonAsync($"/api/loans/{loanId}/repayments", CreateRepaymentBody(amount: 200m, interestAmount: 100m));
+        Assert.Equal(HttpStatusCode.OK, repayment.StatusCode);
+
+        HttpResponseMessage byId = await client.GetAsync($"/api/loans/{loanId}");
+        Assert.Equal(HttpStatusCode.OK, byId.StatusCode);
+        using JsonDocument byIdDocument = JsonDocument.Parse(await byId.Content.ReadAsStringAsync());
+        JsonElement root = byIdDocument.RootElement;
+        Assert.Equal(200m, root.GetProperty("repaid").GetDecimal());
+        Assert.Equal(100m, root.GetProperty("interestPaid").GetDecimal());
+        Assert.Equal(800m, root.GetProperty("outstanding").GetDecimal());
+
+        JsonElement.ArrayEnumerator movements = root.GetProperty("movements").EnumerateArray();
+        List<JsonElement> movementList = movements.ToList();
+        Assert.Equal(3, movementList.Count);
+        Assert.Equal("Disbursement", movementList[0].GetProperty("type").GetString());
+        Assert.Equal("Repayment", movementList[1].GetProperty("type").GetString());
+        Assert.Equal("Interest", movementList[2].GetProperty("type").GetString());
+        Assert.Equal(100m, movementList[2].GetProperty("amount").GetDecimal());
     }
 
     [Fact]
