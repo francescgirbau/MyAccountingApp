@@ -19,7 +19,7 @@
 | R1 | feat: add CoinGecko provider for BTC (and other crypto) | 🟢 Done |
 | R2 | feat: add remaining fiat currencies (PLN, DKK, CZK, HUF, NZD, KRW, THB, IDR, MYR, PHP, RON, ISK) | 🟢 Done |
 | R3 | feat: multi-base conversion support | ⬜ Pending |
-| R4 | feat: generic offline queue with background retry | ⬜ Pending |
+| R4 | feat: generic offline queue with background retry | 🟢 Done |
 | R5 | feat: self-host Frankfurter-compatible endpoint | ⬜ Pending |
 
 ## Llegenda

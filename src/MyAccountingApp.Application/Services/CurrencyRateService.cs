@@ -2,6 +2,8 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using MyAccountingApp.Application.DTOs;
 using MyAccountingApp.Application.Interfaces;
+using MyAccountingApp.Application.Options;
+using MyAccountingApp.Domain.Constants;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Exceptions;
@@ -20,7 +22,8 @@ public class CurrencyRateService : ICurrencyRateService
     private readonly ICurrencyConverter _api;
     private readonly Currencies _source;
     private readonly IApiQuotaManager _quotaManager;
-    private readonly IPendingConversionQueue _pendingQueue;
+    private readonly IPendingWorkQueue _pendingQueue;
+    private readonly IPendingWorkDispatcher _dispatcher;
     private readonly int _maxTimeseriesDays;
     private readonly string _sourceProvider;
     private readonly ILogger<CurrencyRateService> _logger;
@@ -38,40 +41,6 @@ public class CurrencyRateService : ICurrencyRateService
         return clone;
     }
 
-    private static List<(DateOnly Start, DateOnly End)> GroupIntoRanges(List<DateOnly> dates, int maxDays)
-    {
-        List<(DateOnly, DateOnly)> ranges = new();
-
-        if (dates.Count == 0)
-        {
-            return ranges;
-        }
-
-        DateOnly rangeStart = dates[0];
-        DateOnly rangeEnd = dates[0];
-
-        for (int i = 1; i < dates.Count; i++)
-        {
-            DateOnly day = dates[i];
-            bool consecutive = day.AddDays(-1) <= rangeEnd;
-            bool fits = day.DayNumber - rangeStart.DayNumber < maxDays;
-
-            if (consecutive && fits)
-            {
-                rangeEnd = day;
-            }
-            else
-            {
-                ranges.Add((rangeStart, rangeEnd));
-                rangeStart = day;
-                rangeEnd = day;
-            }
-        }
-
-        ranges.Add((rangeStart, rangeEnd));
-        return ranges;
-    }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="CurrencyRateService"/> class.
     /// </summary>
@@ -83,16 +52,18 @@ public class CurrencyRateService : ICurrencyRateService
     /// <param name="maxTimeseriesDays">Maximum number of days a single timeseries request may cover.</param>
     /// <param name="sourceProvider">Name of the provider that supplies the rates.</param>
     /// <param name="logger">Logger for structured observability of the currency cache and fetch paths.</param>
+    /// <param name="dispatcher">Optional dispatcher used to process pending work; a default one is created when omitted.</param>
     /// <exception cref="ArgumentException">Thrown if the source currency is not EUR.</exception>
     public CurrencyRateService(
         IConversionRepository repository,
         ICurrencyConverter api,
         Currencies source,
         IApiQuotaManager quotaManager,
-        IPendingConversionQueue pendingQueue,
+        IPendingWorkQueue pendingQueue,
         int maxTimeseriesDays = 365,
         string sourceProvider = "frankfurter",
-        ILogger<CurrencyRateService>? logger = null)
+        ILogger<CurrencyRateService>? logger = null,
+        IPendingWorkDispatcher? dispatcher = null)
     {
         this._repository = repository;
         this._api = api;
@@ -102,6 +73,22 @@ public class CurrencyRateService : ICurrencyRateService
         this._maxTimeseriesDays = maxTimeseriesDays;
         this._sourceProvider = sourceProvider;
         this._logger = logger ?? NullLogger<CurrencyRateService>.Instance;
+
+        CurrencyRatePendingWorkProcessor currencyProcessor = new(
+            repository,
+            api,
+            quotaManager,
+            source,
+            sourceProvider,
+            maxTimeseriesDays,
+            NullLogger<CurrencyRatePendingWorkProcessor>.Instance);
+
+        this._dispatcher = dispatcher ?? new PendingWorkDispatcher(
+            pendingQueue,
+            new[] { currencyProcessor },
+            new PendingWorkOptions(),
+            TimeProvider.System,
+            NullLogger<PendingWorkDispatcher>.Instance);
         this.Validate();
     }
 
@@ -170,7 +157,7 @@ public class CurrencyRateService : ICurrencyRateService
             }
         }
 
-        await this._pendingQueue.EnqueueAsync(day);
+        await this._pendingQueue.EnqueueAsync(PendingWorkOperations.CurrencyRate, CurrencyRatePendingWorkPayload.Create(day));
         this._logger.LogInformation("Enqueued {RequestedDate} for pending conversion ({Provider})", day.ToString("yyyy-MM-dd"), this._sourceProvider);
 
         Conversion? fallback = this.FindFallback(day);
@@ -256,7 +243,7 @@ public class CurrencyRateService : ICurrencyRateService
         List<DateOnly> ordered = dates.Distinct().OrderBy(d => d).ToList();
         int syncedDays = 0;
 
-        foreach ((DateOnly start, DateOnly end) in GroupIntoRanges(ordered, this._maxTimeseriesDays))
+        foreach ((DateOnly start, DateOnly end) in DateRangeGrouper.GroupIntoRanges(ordered, this._maxTimeseriesDays))
         {
             if (!await this.SyncRangeAsync(start, end, cancellationToken))
             {
@@ -272,60 +259,15 @@ public class CurrencyRateService : ICurrencyRateService
     /// <inheritdoc/>
     public async Task<PendingProcessingResult> ProcessPendingAsync(CancellationToken cancellationToken = default)
     {
-        await this._quotaManager.EnsurePeriodAsync(cancellationToken);
-
-        IReadOnlyList<PendingConversionRequest> pending = await this._pendingQueue.GetPendingAsync(cancellationToken);
-        List<DateOnly> pendingDays = pending.Select(p => p.Date).Distinct().OrderBy(d => d).ToList();
-
-        int processedDays = 0;
-        int requestsSpent = 0;
-        int failures = 0;
-
-        foreach ((DateOnly start, DateOnly end) in GroupIntoRanges(pendingDays, this._maxTimeseriesDays))
-        {
-            if (!await this.CanConsumeAsync(cancellationToken))
-            {
-                break;
-            }
-
-            try
-            {
-                IReadOnlyDictionary<DateOnly, Dictionary<string, decimal>> rates = await this._api.FetchRangeAsync(this._source, start, end, null, cancellationToken);
-                await this._quotaManager.TryConsumeAsync(1, cancellationToken);
-                requestsSpent++;
-
-                foreach (KeyValuePair<DateOnly, Dictionary<string, decimal>> kv in rates)
-                {
-                    this._repository.AddOrUpdate(this.BuildConversion(kv.Key, kv.Value));
-                    await this._pendingQueue.MarkProcessedAsync(kv.Key, cancellationToken);
-                    processedDays++;
-                }
-            }
-            catch (CurrencyApiQuotaExceededException)
-            {
-                this._logger.LogWarning("Currency API quota exhausted for {Provider}", this._sourceProvider);
-                await this._quotaManager.MarkExhaustedAsync(cancellationToken);
-                break;
-            }
-            catch (Exception ex)
-            {
-                this._logger.LogError(ex, "Failed to fetch pending range {Start}..{End}", start.ToString("yyyy-MM-dd"), end.ToString("yyyy-MM-dd"));
-
-                foreach (DateOnly day in pendingDays.Where(d => d >= start && d <= end))
-                {
-                    await this._pendingQueue.MarkFailedAsync(day, "Range fetch failed.", cancellationToken);
-                }
-
-                failures++;
-            }
-        }
+        PendingWorkRunResult result = await this._dispatcher.RunOperationAsync(PendingWorkOperations.CurrencyRate, cancellationToken);
 
         this._logger.LogInformation(
-            "Processed pending conversions: {ProcessedDays} days, {RequestsSpent} requests, {Failures} failures",
-            processedDays,
-            requestsSpent,
-            failures);
-        return new PendingProcessingResult(processedDays, requestsSpent, failures);
+            "Processed pending conversions: {Processed} items processed, {RequestsSpent} requests, {Failed} failures",
+            result.ProcessedItems,
+            result.RequestsSpent,
+            result.FailedItems);
+
+        return new PendingProcessingResult(result.DaysSynced, result.RequestsSpent, result.FailedItems);
     }
 
     /// <inheritdoc/>
@@ -381,7 +323,7 @@ public class CurrencyRateService : ICurrencyRateService
     public async Task<ConversionStatus> GetStatusAsync(CancellationToken cancellationToken = default)
     {
         IReadOnlyList<Conversion> all = this._repository.GetAll().ToList();
-        int pendingCount = (await this._pendingQueue.GetPendingAsync(cancellationToken)).Count;
+        int pendingCount = (await this._pendingQueue.GetPendingAsync(PendingWorkOperations.CurrencyRate, cancellationToken)).Count;
 
         return new ConversionStatus(
             this._sourceProvider,

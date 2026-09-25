@@ -49,8 +49,8 @@ else
 }
 
 Currencies source = Currencies.EUR;
-JsonPendingConversionRepository pendingRepo = new JsonPendingConversionRepository("pending_conversions.json");
-PendingConversionQueue pendingQueue = new PendingConversionQueue(pendingRepo);
+JsonPendingWorkRepository pendingRepo = new JsonPendingWorkRepository("pending_conversions.json");
+PendingWorkQueue pendingQueue = new PendingWorkQueue(pendingRepo);
 
 ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
 CurrencyRateService service = new CurrencyRateService(
