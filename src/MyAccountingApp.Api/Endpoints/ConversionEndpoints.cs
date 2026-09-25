@@ -15,18 +15,25 @@ public static class ConversionEndpoints
     {
         const string prefix = ApiEndpoints.ApiPrefix;
 
-        app.MapGet($"{prefix}/conversions", async (IConversionRepository repo, ICurrencyRateService currencyRateService, DateTime? date) =>
+        app.MapGet($"{prefix}/conversions", async (IConversionRepository repo, ICurrencyRateService currencyRateService, DateTime? date, string? @base) =>
         {
             if (date.HasValue)
             {
+                Currencies source = Currencies.EUR;
+
+                if (@base is not null && !Enum.TryParse<Currencies>(@base, true, out source))
+                {
+                    return Results.BadRequest(new { message = $"Unknown base currency '{@base}'" });
+                }
+
                 try
                 {
-                    Conversion conversion = await currencyRateService.GetConversionAsync(date.Value);
+                    Conversion conversion = await currencyRateService.GetConversionAsync(date.Value, source);
                     return Results.Ok(conversion.ToDto());
                 }
                 catch (ConversionNotAvailableException)
                 {
-                    return Results.NotFound(new { date = date.Value, message = "No conversion available for this date" });
+                    return Results.NotFound(new { date = date.Value, @base = source.ToString(), message = "No conversion available for this date and base" });
                 }
             }
 
@@ -34,30 +41,43 @@ public static class ConversionEndpoints
             return Results.Ok(conversions);
         });
 
-        app.MapGet($"{prefix}/conversions/quote", async (ICurrencyRateService currencyRateService, DateTime? date, string? to) =>
+        app.MapGet($"{prefix}/conversions/quote", async (ICurrencyRateService currencyRateService, DateTime? date, string? to, string? @base) =>
         {
             DateOnly requested = DateOnly.FromDateTime((date ?? DateTime.UtcNow).Date);
+            Currencies source = Currencies.EUR;
+
+            if (@base is not null && !Enum.TryParse<Currencies>(@base, true, out source))
+            {
+                return Results.BadRequest(new { message = $"Unknown base currency '{@base}'" });
+            }
 
             if (to is not null && !Enum.TryParse<Currencies>(to, true, out _))
             {
                 return Results.BadRequest(new { message = $"Unknown target currency '{to}'" });
             }
 
+            if (to is not null && string.Equals(to, source.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.BadRequest(new { message = "The base and target currencies must differ" });
+            }
+
             try
             {
-                IReadOnlyList<FxQuoteDto> quotes = await currencyRateService.GetFxQuotesAsync(requested.ToDateTime(TimeOnly.MinValue));
+                IReadOnlyList<FxQuoteDto> quotes = await currencyRateService.GetFxQuotesAsync(requested.ToDateTime(TimeOnly.MinValue), source);
 
                 if (to is not null)
                 {
                     FxQuoteDto? match = quotes.FirstOrDefault(q => string.Equals(q.Quote, to, StringComparison.OrdinalIgnoreCase));
-                    return match is not null ? Results.Ok(match) : Results.NotFound(new { date = requested, to, message = "No quote available for this currency" });
+                    return match is not null
+                        ? Results.Ok(match)
+                        : Results.NotFound(new { date = requested, @base = source.ToString(), to, message = "No quote available for this currency and base" });
                 }
 
                 return Results.Ok(quotes);
             }
             catch (ConversionNotAvailableException)
             {
-                return Results.NotFound(new { date = requested, message = "No conversion available for this date" });
+                return Results.NotFound(new { date = requested, @base = source.ToString(), message = "No conversion available for this date" });
             }
         });
 

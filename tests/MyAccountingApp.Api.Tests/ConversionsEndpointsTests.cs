@@ -40,6 +40,37 @@ public class ConversionsEndpointsTests
     }
 
     [Fact]
+    public async Task Conversions_ShouldReturnConversion_ForDateAndBase()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        // Act
+        HttpResponseMessage response = await client.GetAsync("/api/conversions?date=2026-08-01&base=USD");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("USD", document.RootElement.GetProperty("source").GetString());
+        Assert.True(document.RootElement.GetProperty("quotes").TryGetProperty("CAD", out _));
+    }
+
+    [Fact]
+    public async Task Conversions_ShouldReturnBadRequest_ForUnknownBase()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        // Act
+        HttpResponseMessage response = await client.GetAsync("/api/conversions?date=2026-08-01&base=XXXX");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Quota_ShouldReturnQuota()
     {
         // Arrange
@@ -98,6 +129,43 @@ public class ConversionsEndpointsTests
         HttpClient client = factory.CreateClient();
 
         HttpResponseMessage response = await client.GetAsync("/api/conversions/quote?date=2026-08-01&to=XXXX");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Quote_ShouldReturnQuote_ForNonEurBase()
+    {
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        HttpResponseMessage response = await client.GetAsync("/api/conversions/quote?date=2026-08-01&base=USD&to=CAD");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("USD", document.RootElement.GetProperty("base").GetString());
+        Assert.Equal("CAD", document.RootElement.GetProperty("quote").GetString());
+        Assert.Equal(1.1m, document.RootElement.GetProperty("rate").GetDecimal());
+    }
+
+    [Fact]
+    public async Task Quote_ShouldReturnBadRequest_ForUnknownBase()
+    {
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        HttpResponseMessage response = await client.GetAsync("/api/conversions/quote?date=2026-08-01&base=XXXX&to=USD");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Quote_ShouldReturnBadRequest_WhenBaseEqualsTo()
+    {
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        HttpResponseMessage response = await client.GetAsync("/api/conversions/quote?date=2026-08-01&base=USD&to=USD");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }

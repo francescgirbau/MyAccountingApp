@@ -46,7 +46,6 @@ public class Conversion
     /// <param name="retrievedAtUtc">Optional UTC timestamp of retrieval; defaults to the conversion date.</param>
     /// <param name="isStale">Indicates whether the conversion is stale (served without refresh).</param>
     /// <param name="sourceProvider">The name of the provider that supplied the rates.</param>
-    /// <exception cref="ArgumentException">Thrown if the source currency is not EUR.</exception>
     public Conversion(
         DateTime date,
         Currencies source,
@@ -61,22 +60,6 @@ public class Conversion
         this.RetrievedAtUtc = retrievedAtUtc == default ? date.Date : retrievedAtUtc;
         this.IsStale = isStale;
         this.SourceProvider = sourceProvider ?? throw new ArgumentNullException(nameof(sourceProvider));
-
-        this.Validate();
-    }
-
-    /// <summary>
-    /// Validates the base currency. Only EUR is supported.
-    /// </summary>
-    /// <exception cref="ArgumentException">Thrown if the base currency is not EUR.</exception>
-    private void Validate()
-    {
-        if (this.Source != Currencies.EUR)
-        {
-            throw new ArgumentException(
-                $"The source currency must be EUR. Provided: {this.Source}",
-                nameof(this.Source));
-        }
     }
 
     /// <summary>
