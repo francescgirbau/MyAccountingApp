@@ -551,7 +551,7 @@ public class CurrencyRateServiceTests
                 }),
         });
         FakeApiQuotaManager quota = new();
-        FakePendingConversionQueue queue = new();
+        FakePendingWorkQueue queue = new();
         CurrencyRateService service = CreateService(repo, quota, queue);
 
         // Act
@@ -572,7 +572,7 @@ public class CurrencyRateServiceTests
         // Arrange
         FakeConversionRepository repo = new();
         FakeApiQuotaManager quota = new();
-        FakePendingConversionQueue queue = new();
+        FakePendingWorkQueue queue = new();
         CurrencyRateService service = CreateService(repo, quota, queue);
 
         // Act
@@ -600,7 +600,7 @@ public class CurrencyRateServiceTests
                 sourceProvider: "frankfurter"),
         });
         FakeApiQuotaManager quota = new();
-        FakePendingConversionQueue queue = new();
+        FakePendingWorkQueue queue = new();
         CurrencyRateService service = CreateService(repo, quota, queue);
 
         // Act
@@ -618,7 +618,7 @@ public class CurrencyRateServiceTests
         // Arrange
         FakeConversionRepository repo = new();
         FakeApiQuotaManager quota = new();
-        FakePendingConversionQueue queue = new();
+        FakePendingWorkQueue queue = new();
         CurrencyRateService service = CreateService(repo, quota, queue);
 
         // Act & Assert
@@ -645,7 +645,7 @@ public class CurrencyRateServiceTests
                 sourceProvider: "frankfurter"),
         });
         FakeApiQuotaManager quota = new();
-        FakePendingConversionQueue queue = new();
+        FakePendingWorkQueue queue = new();
         CurrencyRateService service = CreateService(repo, quota, queue);
 
         // Act

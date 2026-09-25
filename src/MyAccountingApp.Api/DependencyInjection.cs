@@ -46,6 +46,7 @@ public static class DependencyInjection
 
         CurrencyApiOptions currencyOptions = builder.Configuration.GetSection("CurrencyApi").Get<CurrencyApiOptions>() ?? new CurrencyApiOptions();
         PendingWorkOptions pendingWorkOptions = builder.Configuration.GetSection("PendingWork").Get<PendingWorkOptions>() ?? new PendingWorkOptions();
+        builder.Services.AddSingleton(pendingWorkOptions);
 
         bool useFrankfurter = string.Equals(currencyOptions.Provider, "Frankfurter", StringComparison.OrdinalIgnoreCase);
 
