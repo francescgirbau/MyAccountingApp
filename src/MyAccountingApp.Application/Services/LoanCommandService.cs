@@ -114,6 +114,59 @@ public sealed class LoanCommandService : ILoanCommandService
         return this._loanQuery.GetById(loanId) ?? throw new InvalidOperationException("Loan could not be loaded after repayment.");
     }
 
+    public LoanSummaryDto UpdateMovement(Guid loanId, Guid movementId, UpdateLoanMovementRequest request)
+    {
+        Loan? loan = this._loanRepo.GetById(loanId);
+        if (loan is null)
+        {
+            throw new InvalidOperationException("Loan not found.");
+        }
+
+        LoanMovement? existing = this._movementRepo.GetByLoan(loanId).FirstOrDefault(m => m.Id == movementId);
+        if (existing is null)
+        {
+            throw new InvalidOperationException("Loan movement not found.");
+        }
+
+        if (existing.Type == LoanMovementType.Disbursement)
+        {
+            throw new ArgumentException("The disbursement movement is bound to the loan principal and cannot be edited.", nameof(request));
+        }
+
+        if (request.Amount <= 0)
+        {
+            throw new ArgumentException("Movement amount must be greater than zero.", nameof(request.Amount));
+        }
+
+        if (!Enum.TryParse<LoanMovementType>(request.Type, ignoreCase: true, out LoanMovementType type) || type == LoanMovementType.Disbursement)
+        {
+            throw new ArgumentException($"Invalid loan movement type: {request.Type}", nameof(request.Type));
+        }
+
+        Money money = new(request.Amount, loan.Principal.Currency);
+        Transaction transaction = new(request.Date, BuildDescription(loan, type), money, MapCategory(loan.Direction, type), "Loan");
+        LoanMovement updated = new(movementId, loanId, transaction, type);
+        this._movementRepo.Update(updated);
+
+        return this._loanQuery.GetById(loanId) ?? throw new InvalidOperationException("Loan could not be loaded after movement update.");
+    }
+
+    public bool DeleteMovement(Guid loanId, Guid movementId)
+    {
+        LoanMovement? movement = this._movementRepo.GetByLoan(loanId).FirstOrDefault(m => m.Id == movementId);
+        if (movement is null)
+        {
+            return false;
+        }
+
+        if (movement.Type == LoanMovementType.Disbursement)
+        {
+            throw new ArgumentException("The disbursement movement is bound to the loan principal and cannot be deleted.", nameof(movementId));
+        }
+
+        return this._movementRepo.Delete(movementId);
+    }
+
     public bool CloseLoan(Guid loanId)
     {
         Loan? loan = this._loanRepo.GetById(loanId);

@@ -22,6 +22,7 @@
 | R4 | feat: generic offline queue with background retry | 🟢 Done |
 | R5 | feat: self-host Frankfurter-compatible endpoint | 🟢 Done |
 | L1 | feat: préstecs amb interessos — repayment desglossat capital + interès | 🟢 Done |
+| L2 | feat: editar i esborrar moviments de préstec | 🟢 Done |
 
 ## Llegenda
 
