@@ -43,7 +43,7 @@ else
 {
     <MudPaper Class="pa-4 mb-4" Outlined="true">
         <MudGrid>
-            <MudItem xs="12" sm="4">
+            <MudItem xs="12" sm="6" md="3">
                 <MudSelect T="int?" @bind-Value="_selectedYear" @bind-Value:after="ApplyFilters" Label="Year" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
                     @foreach (var year in _availableYears)
                     {
@@ -51,7 +51,7 @@ else
                     }
                 </MudSelect>
             </MudItem>
-            <MudItem xs="12" sm="4">
+            <MudItem xs="12" sm="6" md="3">
                 <MudSelect @bind-Value="_selectedSymbol" @bind-Value:after="ApplyFilters" Label="Symbol" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
                     @foreach (var symbol in _availableSymbols)
                     {
@@ -59,13 +59,27 @@ else
                     }
                 </MudSelect>
             </MudItem>
-            <MudItem xs="12" sm="4">
+            <MudItem xs="12" sm="6" md="3">
                 <MudSelect @bind-Value="_selectedType" @bind-Value:after="ApplyFilters" Label="Type" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
                     @foreach (var type in _types)
                     {
                         <MudSelectItem Value="type">@type</MudSelectItem>
                     }
                 </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect @bind-Value="_selectedCurrency" @bind-Value:after="ApplyFilters" Label="Currency" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+                    @foreach (var currency in _availableCurrencies)
+                    {
+                        <MudSelectItem Value="currency">@currency</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_searchText" @bind-Value:after="ApplyFilters" Immediate="true"
+                              DebounceInterval="300" Label="Search description" Placeholder="e.g. 'dividend', 'Criterium'…"
+                              Variant="Variant.Outlined" FullWidth="true" Clearable="true" Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search" />
             </MudItem>
         </MudGrid>
         <MudText Typo="Typo.subtitle2" Class="mt-3 mb-1">Quick filters</MudText>
@@ -429,16 +443,19 @@ else
     private List<AssetSummary> _summaries = new();
     private List<int> _availableYears = new();
     private List<string> _availableSymbols = new();
+    private List<string> _availableCurrencies = new();
     private bool _loading = true;
 
     private int? _selectedYear { get; set; }
     private string? _selectedSymbol { get; set; }
     private string? _selectedType { get; set; }
+    private string? _selectedCurrency { get; set; }
+    private string? _searchText { get; set; }
 
     private bool IsFormInvalid() => string.IsNullOrWhiteSpace(_formDescription) || string.IsNullOrWhiteSpace(_formSymbol) || _formAmount <= 0 || _formQuantity <= 0;
 
     private static readonly string[] _categories = { "INCOME", "EXPENSE", "TRANSFER", "DEPOSIT", "DIVIDEND", "FEE", "WITHHOLDING_TAX", "INTEREST", "INVESTMENT", "DIVESTMENT" };
-    private static readonly string[] _types = { "Buy", "Sell", "CorporateAction" };
+    private static readonly string[] _types = { "Buy", "Sell" };
 
     private bool _showFormDialog;
     private bool _showDeleteDialog;
@@ -562,6 +579,12 @@ else
                 .Distinct()
                 .OrderBy(s => s)
                 .ToList();
+            _availableCurrencies = _allTransactions
+                .Select(t => t.Transaction.Money.Currency)
+                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .Distinct()
+                .OrderBy(c => c)
+                .ToList();
             _selected.Clear();
             ApplyFilters();
         }
@@ -583,6 +606,12 @@ else
 
         if (!string.IsNullOrWhiteSpace(_selectedType))
             query = query.Where(t => t.Type == _selectedType);
+
+        if (!string.IsNullOrWhiteSpace(_selectedCurrency))
+            query = query.Where(t => t.Transaction.Money.Currency == _selectedCurrency);
+
+        if (!string.IsNullOrWhiteSpace(_searchText))
+            query = query.Where(t => t.Transaction.Description.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
 
         if (_impactedIds.Count > 0)
             query = query.Where(t => _impactedIds.Contains(t.Transaction.Id));
