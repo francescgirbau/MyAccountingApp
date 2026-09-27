@@ -1,4 +1,4 @@
-# MyAccountingApp – First Phase Vision & Guidelines
+# MyAccountingApp – Vision & Guidelines
 
 ## General Goal
 
@@ -10,7 +10,9 @@ The project should evolve into a lightweight personal finance backend focused on
 * exposing the information through a simple API
 * allowing future frontend/web integrations
 
-At this stage, the priority is NOT building a polished UI, but rather building a solid and extensible backend/data engine.
+In the first phase, the priority was NOT building a polished UI, but rather building a solid and extensible backend/data engine.
+
+> **Status (2026-09):** the first phase is delivered. The project now ships a Blazor WASM frontend, options and loans support, portfolio analytics, split/reverse-split adjustments and import deduplication, while the data model has stayed **additive** and persistence remains simple encrypted JSON. The principles below still hold; today the focus is on data correctness, import robustness and incremental architecture work (see `docs/ARCHITECTURE.md` and `docs/MIGRATION.md`).
 
 ---
 
@@ -43,7 +45,7 @@ Prioritize:
 * portfolio positions
 * broker data normalization
 
-The frontend is secondary for now.
+The frontend was secondary during the first phase; today (Blazor WASM) it is a first-class surface and the features ship through it.
 
 ---
 
@@ -101,7 +103,9 @@ The domain layer should remain as independent as possible from infrastructure co
 
 ---
 
-# First Phase Priorities
+# Priorities
+
+> The original first-phase priorities below are delivered (see `docs/ROADMAP.md`). They remain the backbone every subsequent phase builds on.
 
 ## Priority 1 — Solid domain model
 
@@ -173,18 +177,16 @@ The goal is iteration speed and maintainability.
 
 # Long-Term Direction (Future)
 
-Potential future additions:
+Already delivered (see `docs/ROADMAP.md`): web frontend (Blazor WASM), options support, dividend tracking, FX legs with pair identity, portfolio analytics (valuation, allocation, realized gains, cash-flow breakdowns), loans, data-quality tooling, split adjustments and import deduplication.
 
-* AI-assisted broker normalization
-* persistent memory/mappings
-* portfolio analytics
-* TWR calculations
-* dividend tracking
-* FX PnL separation
-* options support
-* web frontend
+Still future:
 
-But these are future evolutions, not immediate priorities.
+* AI-assisted broker normalization and classification with confidence thresholds — the deterministic core never delegates financial calculations
+* performance reporting: time-weighted / money-weighted returns, FX contribution
+* derived-state consolidation: every derived report must be recalculable from persisted facts
+* richer persistence (e.g. SQLite) behind the persistence abstraction — only if JSON stops being enough
+
+These remain evolutions on top of a stable core, not immediate priorities.
 
 ---
 

@@ -24,6 +24,12 @@
 | L1 | feat: préstecs amb interessos — repayment desglossat capital + interès | 🟢 Done |
 | L2 | feat: editar i esborrar moviments de préstec | 🟢 Done |
 | L3 | UI: moviments de préstec en dues taules (Repayments / Interest) amb totals i línia de disbursement | 🟢 Done |
+| A1 | docs: reflect current state in VISION.md | 🟢 Done |
+| A2 | docs: add ARCHITECTURE.md (target structure + constitution) | 🟢 Done |
+| A3 | docs: add MIGRATION.md (data playbook + storage inventory) | 🟢 Done |
+| A4 | feat: Contracts project — shared DTOs API ↔ Web (end duplication) | ⬜ Pending |
+| A5 | test: golden datasets + persistence compatibility tests | ⬜ Pending (before next persistence change) |
+| A6 | refactor: move Json\* repositories Core → Infrastructure | ⬜ Pending (only with a driver) |
 
 ## Llegenda
 
