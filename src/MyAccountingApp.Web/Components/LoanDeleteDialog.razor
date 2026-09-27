@@ -1,0 +1,38 @@
+<MudDialog Visible="@Visible" VisibleChanged="@SetVisibleAsync">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete loan</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>Are you sure you want to delete this loan?</MudText>
+        @if (Target is not null)
+        {
+            <MudText Typo="Typo.body2" Class="mt-2">
+                <strong>@Target.Counterparty</strong> — @Target.Principal.ToString("N2") @Target.Currency (@Target.Direction).
+            </MudText>
+        }
+        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">All its movements will be removed as well. This action cannot be undone.</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Error" OnClick="@(() => SetVisibleAsync(false))">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="@ConfirmAsync">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public LoanSummaryDto? Target { get; set; }
+    [Parameter] public EventCallback<LoanSummaryDto> OnConfirm { get; set; }
+
+    private async Task ConfirmAsync()
+    {
+        if (Target is null) return;
+        await OnConfirm.InvokeAsync(Target);
+    }
+
+    private async Task SetVisibleAsync(bool value)
+    {
+        Visible = value;
+        await VisibleChanged.InvokeAsync(value);
+    }
+}
