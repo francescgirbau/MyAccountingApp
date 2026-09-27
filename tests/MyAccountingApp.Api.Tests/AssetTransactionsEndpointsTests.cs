@@ -227,4 +227,96 @@ public class AssetTransactionsEndpointsTests
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Split_ShouldApplyFactor_ToLotsBeforeAsOfDate()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        await client.PostAsJsonAsync("/api/asset-transactions", CreateAssetTransactionBody(new DateTime(2023, 2, 13), quantity: 1000, symbol: "CEQ"));
+        await client.PostAsJsonAsync("/api/asset-transactions", CreateAssetTransactionBody(new DateTime(2023, 8, 10), quantity: 800, symbol: "CEQ"));
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/asset-transactions/split",
+            new { symbol = "CEQ", factor = 0.2m, asOfDate = new DateTime(2023, 6, 30) });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(1, document.RootElement.GetProperty("requested").GetInt32());
+        Assert.Equal(1, document.RootElement.GetProperty("updated").GetInt32());
+        Assert.Empty(document.RootElement.GetProperty("failures").EnumerateArray());
+
+        HttpResponseMessage all = await client.GetAsync("/api/asset-transactions");
+        using JsonDocument allDocument = JsonDocument.Parse(await all.Content.ReadAsStringAsync());
+        JsonElement early = allDocument.RootElement.EnumerateArray().Single(t => TransactionDateStartsWith(t, "2023-02"));
+        Assert.Equal(200, early.GetProperty("quantity").GetDecimal());
+        Assert.Equal(100, early.GetProperty("transaction").GetProperty("money").GetProperty("amount").GetDecimal());
+        JsonElement later = allDocument.RootElement.EnumerateArray().Single(t => TransactionDateStartsWith(t, "2023-08"));
+        Assert.Equal(800, later.GetProperty("quantity").GetDecimal());
+    }
+
+    [Fact]
+    public async Task SplitPreview_ShouldReturnAffectedLots()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        await client.PostAsJsonAsync("/api/asset-transactions", CreateAssetTransactionBody(new DateTime(2023, 2, 13), quantity: 1000, amount: 90, symbol: "CEQ"));
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/asset-transactions/split/preview",
+            new { symbol = "CEQ", factor = 0.2m, asOfDate = new DateTime(2023, 6, 30) });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("CEQ", document.RootElement.GetProperty("symbol").GetString());
+        Assert.Equal(0.2, document.RootElement.GetProperty("factor").GetDouble());
+        JsonElement item = Assert.Single(document.RootElement.GetProperty("items").EnumerateArray());
+        Assert.Equal(1000, item.GetProperty("quantityBefore").GetDecimal());
+        Assert.Equal(200, item.GetProperty("quantityAfter").GetDecimal());
+        Assert.Equal(90, item.GetProperty("amount").GetDecimal());
+    }
+
+    [Fact]
+    public async Task Split_InvalidFactor_ShouldReturnBadRequest()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/asset-transactions/split",
+            new { symbol = "CEQ", factor = 0 });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Split_EmptySymbol_ShouldReturnBadRequest()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/asset-transactions/split",
+            new { symbol = " ", factor = 1 });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    private static bool TransactionDateStartsWith(JsonElement assetTransaction, string prefix)
+    {
+        string? raw = assetTransaction.GetProperty("transaction").GetProperty("date").GetString();
+        return raw is not null && raw.StartsWith(prefix, StringComparison.Ordinal);
+    }
 }
