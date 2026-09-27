@@ -1,8 +1,4 @@
 @page "/data-quality"
-@using MyAccountingApp.Application.Services
-@using MyAccountingApp.Domain.Entities
-@using MyAccountingApp.Domain.Enums
-@using MyAccountingApp.Domain.ValueObjects
 @inject HttpClient Http
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
@@ -481,23 +477,7 @@ else
             return Guid.Empty;
         }
 
-        Transaction keeper = DuplicateResolutionService.PickDefaultKeeper(rows.Select(ToDomainTransaction).ToList());
-        return keeper.Id;
-    }
-
-    private static Transaction ToDomainTransaction(TransactionDto dto)
-    {
-        TransactionCategory category = Enum.TryParse<TransactionCategory>(dto.Category, ignoreCase: true, out TransactionCategory parsed)
-            ? parsed
-            : TransactionCategory.EXPENSE;
-
-        return new Transaction(
-            dto.Id,
-            dto.Date,
-            dto.Description,
-            new Money(dto.Money.Amount, dto.Money.Currency),
-            category,
-            dto.Source);
+        return DuplicateResolutionService.PickDefaultKeeper(rows).Id;
     }
 
     private async Task RecalculateTransferMatchesAsync()
