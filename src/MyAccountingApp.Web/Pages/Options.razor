@@ -26,32 +26,14 @@ else if (_allTransactions.Count == 0)
 }
 else
 {
-    <MudPaper Class="pa-4 mb-4" Outlined="true">
-        <MudGrid>
-            <MudItem xs="12" sm="4">
-                <MudSelect T="int?" @bind-Value="_selectedYear" @bind-Value:after="ApplyFilters" Label="Year" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
-                    @foreach (var year in _availableYears)
-                    {
-                        <MudSelectItem T="int?" Value="@((int?)year)">@year</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="4">
-                <MudSelect @bind-Value="_selectedSymbol" @bind-Value:after="ApplyFilters" Label="Symbol" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
-                    @foreach (var symbol in _availableSymbols)
-                    {
-                        <MudSelectItem Value="symbol">@symbol</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="4">
-                <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteSweep"
-                           OnClick="@OpenDeleteYearDialog" Disabled="@(!_selectedYear.HasValue)">
-                    Delete Year
-                </MudButton>
-            </MudItem>
-        </MudGrid>
-    </MudPaper>
+    <OptionTransactionFilters
+        AvailableYears="@_availableYears"
+        SelectedYear="@_selectedYear"
+        SelectedYearChanged="@OnYearChanged"
+        AvailableSymbols="@_availableSymbols"
+        SelectedSymbol="@_selectedSymbol"
+        SelectedSymbolChanged="@OnSymbolChanged"
+        OnDeleteYear="@OpenDeleteYearDialog" />
 
     @if (_selected.Count > 0)
     {
@@ -67,165 +49,32 @@ else
         </MudPaper>
     }
 
-    <MudTable Items="@_filteredTransactions" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true" SortLabel="Sort by"
-              MultiSelection="true" @bind-SelectedItems="_selected">
-        <ToolBarContent>
-            <MudText Typo="Typo.subtitle1">@_filteredTransactions.Count option transactions</MudText>
-            <MudSpacer />
-            <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@LoadDataAsync" Size="Size.Small" />
-        </ToolBarContent>
-        <ColGroup>
-            <col style="width: 120px" />
-            <col style="width: 80px" />
-            <col />
-            <col style="width: 80px" />
-            <col style="width: 100px" />
-            <col style="width: 80px" />
-            <col style="width: 80px" />
-            <col style="width: 100px" />
-        </ColGroup>
-        <HeaderContent>
-            <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Transaction.Date)">Date</MudTableSortLabel></MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Symbol)">Symbol</MudTableSortLabel></MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Transaction.Description)">Description</MudTableSortLabel></MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Quantity)">Qty</MudTableSortLabel></MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Transaction.Money.Amount)">Amount</MudTableSortLabel></MudTh>
-            <MudTh>Curr.</MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Type)">Type</MudTableSortLabel></MudTh>
-            <MudTh>Actions</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="Date">@context.Transaction.Date.ToString("yyyy-MM-dd")</MudTd>
-            <MudTd DataLabel="Symbol">
-                <MudChip T="string" Size="Size.Small" Color="Color.Primary">@context.Symbol</MudChip>
-            </MudTd>
-            <MudTd DataLabel="Description">@context.Transaction.Description</MudTd>
-            <MudTd DataLabel="Qty">@context.Quantity.ToString("G")</MudTd>
-            <MudTd DataLabel="Amount">@context.Transaction.Money.Amount.ToString("N2")</MudTd>
-            <MudTd DataLabel="Curr.">@context.Transaction.Money.Currency</MudTd>
-            <MudTd DataLabel="Type">@context.Type</MudTd>
-            <MudTd DataLabel="Actions">
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => OpenEditDialog(context))" />
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => OpenDeleteDialog(context))" />
-            </MudTd>
-        </RowTemplate>
-        <PagerContent>
-            <MudTablePager PageSizeOptions="@(new int[]{25, 50, 100})" />
-        </PagerContent>
-    </MudTable>
+    <OptionTransactionList Transactions="@_filteredTransactions"
+                            Selected="@_selected"
+                            SelectedChanged="@OnSelectedChanged"
+                            OnRefresh="@LoadDataAsync"
+                            OnEdit="@OpenEditDialog"
+                            OnDelete="@OpenDeleteDialog" />
 }
 
-<MudDialog @bind-Visible="_showFormDialog">
-    <TitleContent>
-        <MudText Typo="Typo.h6">Edit Option Transaction</MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudGrid>
-            <MudItem xs="12">
-                <MudDatePicker @bind-Date="_formDate" Label="Date" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12">
-                <MudTextField @bind-Value="_formDescription" Label="Description" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_formSymbol" Label="Symbol" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_formIsin" Label="ISIN" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudNumericField T="decimal" @bind-Value="_formQuantity" Label="Quantity" Variant="Variant.Outlined" Min="@(0.01m)" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudNumericField T="decimal" @bind-Value="_formAmount" Label="Amount" Variant="Variant.Outlined" Min="@(0.01m)" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudSelect @bind-Value="_formCurrency" Label="Currency" Variant="Variant.Outlined">
-                    <MudSelectItem Value="@("EUR")">EUR</MudSelectItem>
-                    <MudSelectItem Value="@("USD")">USD</MudSelectItem>
-                    <MudSelectItem Value="@("GBP")">GBP</MudSelectItem>
-                    <MudSelectItem Value="@("CHF")">CHF</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudSelect @bind-Value="_formType" Label="Type" Variant="Variant.Outlined">
-                    <MudSelectItem Value="@("Buy")">Buy</MudSelectItem>
-                    <MudSelectItem Value="@("Sell")">Sell</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-        </MudGrid>
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@CloseFormDialog">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@SaveAsync"
-                   Disabled="@IsFormInvalid()">
-            Save
-        </MudButton>
-    </DialogActions>
-</MudDialog>
+<OptionTransactionFormDialog @bind-Visible="_showFormDialog"
+                             Transaction="@_editingTx"
+                             SaveRequested="@SaveAsync" />
 
-<MudDialog @bind-Visible="_showBulkSymbolDialog">
-    <TitleContent>
-        <MudText Typo="Typo.h6">Change symbol</MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudText Typo="Typo.body2" Class="mb-4">
-            The new symbol will be applied to <strong>@_selected.Count</strong> selected option transaction(s).
-        </MudText>
-        <MudTextField @bind-Value="_bulkSymbol" Label="New symbol" Variant="Variant.Outlined" FullWidth="true" />
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@CloseBulkSymbolDialog">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@ConfirmBulkSymbolAsync"
-                   Disabled="@(string.IsNullOrWhiteSpace(_bulkSymbol))">
-            Update @_selected.Count
-        </MudButton>
-    </DialogActions>
-</MudDialog>
+<DeleteOptionTransactionDialog Visible="@_showDeleteDialog"
+                              VisibleChanged="@OnDeleteDialogVisibleChanged"
+                              Transaction="@_deletingTx"
+                              ConfirmRequested="@ConfirmDeleteAsync" />
 
-<MudDialog @bind-Visible="_showDeleteDialog">
-    <TitleContent>
-        <MudText Typo="Typo.h6">Delete Option Transaction</MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudText>Are you sure you want to delete this option transaction?</MudText>
-        @if (_deletingTx is not null)
-        {
-            <MudText Typo="Typo.body2" Class="mt-2">
-                @_deletingTx.Transaction.Date.ToString("yyyy-MM-dd") — @_deletingTx.Symbol @_deletingTx.Type
-                (amount @_deletingTx.Transaction.Money.Amount.ToString("N2") @_deletingTx.Transaction.Money.Currency)
-            </MudText>
-        }
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@CloseDeleteDialog">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@ConfirmDeleteAsync">Delete</MudButton>
-    </DialogActions>
-</MudDialog>
+<BulkOptionSymbolDialog @bind-Visible="_showBulkSymbolDialog"
+                        SelectedCount="@_selected.Count"
+                        ConfirmRequested="@ConfirmBulkSymbolAsync" />
 
-<MudDialog @bind-Visible="_showDeleteYearDialog">
-    <TitleContent>
-        <MudText Typo="Typo.h6">Delete Option Transactions by Year</MudText>
-    </TitleContent>
-    <DialogContent>
-        @if (_deleteYearCount.HasValue)
-        {
-            <MudText>This will delete <strong>@_deleteYearCount option transactions</strong> from @_selectedYear.</MudText>
-            <MudText Class="mt-2" Color="Color.Error">This action cannot be undone.</MudText>
-        }
-        else
-        {
-            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
-        }
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@CloseDeleteYearDialog">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@ConfirmDeleteYearAsync"
-                   Disabled="@(!_deleteYearCount.HasValue)">
-            Delete @_selectedYear
-        </MudButton>
-    </DialogActions>
-</MudDialog>
+<DeleteOptionYearDialog Visible="@_showDeleteYearDialog"
+                        VisibleChanged="@OnDeleteYearDialogVisibleChanged"
+                        Year="@_selectedYear"
+                        Count="@_deleteYearCount"
+                        ConfirmRequested="@ConfirmDeleteYearAsync" />
 
 @code {
     private List<OptionTransactionDto> _allTransactions = new();
@@ -239,27 +88,16 @@ else
 
     private bool _showFormDialog;
     private Guid? _editingId;
-
-    private DateTime? _formDate;
-    private string _formDescription = "";
-    private string _formSymbol = "";
-    private string _formIsin = "";
-    private decimal _formQuantity;
-    private decimal _formAmount;
-    private string _formCurrency = "EUR";
-    private string _formType = "Buy";
+    private OptionTransactionDto? _editingTx;
 
     private bool _showDeleteDialog;
     private OptionTransactionDto? _deletingTx;
 
     private bool _showBulkSymbolDialog;
     private HashSet<OptionTransactionDto> _selected = new();
-    private string _bulkSymbol = "";
 
     private bool _showDeleteYearDialog;
     private int? _deleteYearCount;
-
-    private bool IsFormInvalid() => string.IsNullOrWhiteSpace(_formDescription) || string.IsNullOrWhiteSpace(_formSymbol) || _formAmount <= 0 || _formQuantity <= 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -291,6 +129,18 @@ else
         }
     }
 
+    private void OnYearChanged(int? year)
+    {
+        _selectedYear = year;
+        ApplyFilters();
+    }
+
+    private void OnSymbolChanged(string? symbol)
+    {
+        _selectedSymbol = symbol;
+        ApplyFilters();
+    }
+
     private void ApplyFilters()
     {
         var query = _allTransactions.AsEnumerable();
@@ -309,37 +159,25 @@ else
     private void OpenEditDialog(OptionTransactionDto tx)
     {
         _editingId = tx.Transaction.Id;
-        _formDate = tx.Transaction.Date;
-        _formDescription = tx.Transaction.Description;
-        _formSymbol = tx.Symbol;
-        _formIsin = tx.Isin;
-        _formQuantity = tx.Quantity;
-        _formAmount = tx.Transaction.Money.Amount;
-        _formCurrency = tx.Transaction.Money.Currency;
-        _formType = tx.Type;
+        _editingTx = tx;
         _showFormDialog = true;
     }
 
-    private void CloseFormDialog()
-    {
-        _showFormDialog = false;
-    }
-
-    private async Task SaveAsync()
+    private async Task SaveAsync(OptionTransactionFormValue value)
     {
         try
         {
             var payload = new
             {
-                Date = _formDate ?? DateTime.Today,
-                Description = _formDescription,
-                Amount = _formAmount,
-                Currency = _formCurrency,
+                Date = value.Date,
+                Description = value.Description,
+                Amount = value.Amount,
+                Currency = value.Currency,
                 Category = "EXPENSE",
-                Symbol = _formSymbol,
-                Isin = _formIsin,
-                Quantity = _formQuantity,
-                Type = _formType,
+                Symbol = value.Symbol,
+                Isin = value.Isin,
+                Quantity = value.Quantity,
+                Type = value.Type,
             };
 
             HttpResponseMessage response = await Http.PutAsJsonAsync($"/api/option-transactions/{_editingId}", payload);
@@ -378,18 +216,12 @@ else
 
     private void OpenBulkSymbolDialog()
     {
-        _bulkSymbol = "";
         _showBulkSymbolDialog = true;
     }
 
-    private void CloseBulkSymbolDialog()
+    private async Task ConfirmBulkSymbolAsync(string symbol)
     {
-        _showBulkSymbolDialog = false;
-    }
-
-    private async Task ConfirmBulkSymbolAsync()
-    {
-        if (_selected.Count == 0 || string.IsNullOrWhiteSpace(_bulkSymbol))
+        if (_selected.Count == 0 || string.IsNullOrWhiteSpace(symbol))
         {
             return;
         }
@@ -404,7 +236,7 @@ else
         var payload = new
         {
             ids = targets.Select(t => t.Transaction.Id).ToList(),
-            patch = new { symbol = _bulkSymbol.Trim() },
+            patch = new { symbol = symbol.Trim() },
         };
 
         try
@@ -449,10 +281,13 @@ else
         _showDeleteDialog = true;
     }
 
-    private void CloseDeleteDialog()
+    private void OnDeleteDialogVisibleChanged(bool value)
     {
-        _showDeleteDialog = false;
-        _deletingTx = null;
+        _showDeleteDialog = value;
+        if (!value)
+        {
+            _deletingTx = null;
+        }
     }
 
     private async Task ConfirmDeleteAsync()
@@ -500,10 +335,13 @@ else
         }
     }
 
-    private void CloseDeleteYearDialog()
+    private void OnDeleteYearDialogVisibleChanged(bool value)
     {
-        _showDeleteYearDialog = false;
-        _deleteYearCount = null;
+        _showDeleteYearDialog = value;
+        if (!value)
+        {
+            _deleteYearCount = null;
+        }
     }
 
     private async Task ConfirmDeleteYearAsync()
@@ -531,5 +369,10 @@ else
         {
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
         }
+    }
+
+    private void OnSelectedChanged(HashSet<OptionTransactionDto> value)
+    {
+        _selected = value;
     }
 }
