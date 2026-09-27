@@ -80,6 +80,7 @@ Two rules specific to this project:
 - `OptionTransaction`
 - `Loan` + `LoanMovement`
 - `Conversion` quotes (a cache, rebuildable from the provider)
+- `MarketQuote` daily prices (a lazy cache: what was used on each day, rebuildable from the provider)
 
 **Derived (computed, never stored):**
 
