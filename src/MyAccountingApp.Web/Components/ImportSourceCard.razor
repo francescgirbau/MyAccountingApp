@@ -1,0 +1,37 @@
+<MudPaper Class="pa-6 mb-4" Outlined="true">
+    <MudText Typo="Typo.h6" GutterBottom="true">@Title</MudText>
+    <MudText Typo="Typo.body2" Class="mb-4">@Description</MudText>
+    @if (AlertContent is not null)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">@AlertContent</MudAlert>
+    }
+    <MudGrid>
+        <MudItem xs="12" sm="8">
+            <InputFile OnChange="@OnFileSelected" accept=".csv" class="mud-input-outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="4" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="@ButtonColor" Size="Size.Large"
+                       OnClick="@(() => OnUpload.InvokeAsync())" Disabled="@Disabled"
+                       StartIcon="@Icons.Material.Filled.FileUpload"
+                       FullWidth="true">
+                @ButtonLabel
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+    @if (FileName is not null)
+    {
+        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">Selected: @FileName</MudText>
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Description { get; set; } = "";
+    [Parameter] public RenderFragment? AlertContent { get; set; }
+    [Parameter] public Color ButtonColor { get; set; } = Color.Default;
+    [Parameter] public string ButtonLabel { get; set; } = "";
+    [Parameter] public string? FileName { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<InputFileChangeEventArgs> OnFileSelected { get; set; }
+    [Parameter] public EventCallback OnUpload { get; set; }
+}
