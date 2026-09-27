@@ -1,0 +1,165 @@
+<MudTable Items="@Positions" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true" SortLabel="Sort by">
+    <ToolBarContent>
+        <MudText Typo="Typo.subtitle1">@Positions.Count positions</MudText>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                   OnClick="@(() => OnRefresh.InvokeAsync())" Disabled="@Disabled">
+            @(Refreshing ? "Refreshing..." : "Refresh prices")
+        </MudButton>
+        <MudText Typo="Typo.body2" Class="ml-2">
+            Total invested: <strong>@TotalCostBasis.ToString("N2")</strong>
+            &nbsp;|&nbsp; Total realized P&amp;L:
+            <strong class="@(TotalRealized >= 0 ? "green--text" : "red--text")">@(TotalRealized >= 0 ? "+" : "")@TotalRealized.ToString("N2")</strong>
+            &nbsp;|&nbsp; Total unrealized P&amp;L:
+            @if (HasPrices)
+            {
+                <strong class="@(TotalUnrealized >= 0 ? "green--text" : "red--text")">@(TotalUnrealized >= 0 ? "+" : "")@TotalUnrealized.ToString("N2")</strong>
+            }
+            else
+            {
+                <strong>—</strong>
+            }
+            @if (HasValuations)
+            {
+                <text>&nbsp;|&nbsp; Value in EUR: <strong>@TotalValueEur.ToString("N2")</strong></text>
+                <text>&nbsp;|&nbsp; Unrealized P&amp;L EUR:
+                    <strong class="@(TotalUnrealizedEur >= 0 ? "green--text" : "red--text")">@(TotalUnrealizedEur >= 0 ? "+" : "")@TotalUnrealizedEur.ToString("N2")</strong>
+                </text>
+            }
+        </MudText>
+    </ToolBarContent>
+    <ColGroup>
+        <col style="width: 90px" />
+        <col style="width: 90px" />
+        <col style="width: 100px" />
+        <col style="width: 110px" />
+        <col style="width: 60px" />
+        <col style="width: 100px" />
+        <col style="width: 120px" />
+        <col style="width: 120px" />
+        <col style="width: 30px" />
+    </ColGroup>
+    <HeaderContent>
+        <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.Symbol)">Symbol</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.NetQuantity)">Net Qty</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.AverageUnitaryCost)">Avg Cost</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.TotalCostBasis)">Total Cost</MudTableSortLabel></MudTh>
+        <MudTh>Curr.</MudTh>
+        <MudTh>Mkt Price</MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.UnrealizedGainLoss ?? 0)">Unrealized P&amp;L</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.RealizedGainLoss)">Realized P&amp;L</MudTableSortLabel></MudTh>
+        @if (HasValuations)
+        {
+            <MudTh>
+                <MudTooltip Placement="Placement.Top">
+                    <ChildContent><span>Value in EUR (FX rate date in tooltip)</span></ChildContent>
+                    <TooltipContent><span>Market value converted to EUR using the rate for the selected date</span></TooltipContent>
+                </MudTooltip>
+            </MudTh>
+        }
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Symbol" Style="@PortfolioDisplay.HighlightStyle(HighlightedSymbol, context.Symbol)">
+            <MudChip T="string" Size="Size.Small" Color="Color.Primary">@context.Symbol</MudChip>
+            @if (context.HasShortfall)
+            {
+                <MudTooltip Placement="Placement.Top">
+                    <ChildContent>
+                        <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Error" Size="Size.Small" Class="ml-1" />
+                    </ChildContent>
+                    <TooltipContent>
+                        <span>Sell shortfall: @context.UnmatchedSellQuantity.ToString("G") units sold without position</span>
+                    </TooltipContent>
+                </MudTooltip>
+            }
+            <MudIconButton Icon="@Icons.Material.Filled.ListAlt" Size="Size.Small" aria-label="View movements"
+                           OnClick="@(() => OnViewMovements.InvokeAsync(context.Symbol))" />
+        </MudTd>
+        <MudTd DataLabel="Net Qty">@context.NetQuantity.ToString("G")</MudTd>
+        <MudTd DataLabel="Avg Cost">@context.AverageUnitaryCost.ToString("N4")</MudTd>
+        <MudTd DataLabel="Total Cost">@context.TotalCostBasis.ToString("N2")</MudTd>
+        <MudTd DataLabel="Curr.">@context.Currency</MudTd>
+        <MudTd DataLabel="Mkt Price">@(context.MarketPrice?.ToString("N4") ?? "—")</MudTd>
+        <MudTd DataLabel="Unrealized P&amp;L">
+            @if (context.UnrealizedGainLoss is not null)
+            {
+                <span class="@(context.UnrealizedGainLoss >= 0 ? "green--text" : "red--text")">
+                    @(context.UnrealizedGainLoss >= 0 ? "+" : "")@context.UnrealizedGainLoss?.ToString("N2")
+                </span>
+            }
+            else
+            {
+                <span>—</span>
+            }
+        </MudTd>
+        <MudTd DataLabel="Realized P&amp;L">
+            <span class="@(context.RealizedGainLoss >= 0 ? "green--text" : "red--text")">
+                @(context.RealizedGainLoss >= 0 ? "+" : "")@context.RealizedGainLoss.ToString("N2")
+            </span>
+        </MudTd>
+        @if (HasValuations)
+        {
+            <MudTd DataLabel="Value EUR">
+                @{ PositionValuationDto? val = ValuationLookup(context.Symbol); }
+                @if (val?.ValueEur is not null)
+                {
+                    <MudTooltip Placement="Placement.Top">
+                        <ChildContent>
+                            <span class="px-1">@val.ValueEur.Value.ToString("N2") EUR</span>
+                        </ChildContent>
+                        <TooltipContent>
+                            <span>@context.NetQuantity.ToString("G") × @(context.MarketPrice?.ToString("N4")) @context.Currency
+                                × @(val.Rate?.ToString("N4")) (@(val.RateDate?.ToString("yyyy-MM-dd"))) = @val.ValueEur.Value.ToString("N2") EUR</span>
+                        </TooltipContent>
+                    </MudTooltip>
+                    @if (val.IsStale)
+                    {
+                        <MudTooltip Placement="Placement.Top">
+                            <ChildContent>
+                                <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Warning" Size="Size.Small" Class="ml-1" />
+                            </ChildContent>
+                            <TooltipContent><span>Stale rate applied from @(val.RateDate?.ToString("yyyy-MM-dd"))</span></TooltipContent>
+                        </MudTooltip>
+                    }
+                }
+                else
+                {
+                    <span>—</span>
+                }
+            </MudTd>
+        }
+        <MudTd>
+            <MudIconButton Icon="@(ExpandedSymbols.Contains(context.Symbol) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                           OnClick="@(() => OnToggleExpanded.InvokeAsync(context))"
+                           Size="Size.Small" />
+        </MudTd>
+    </RowTemplate>
+    <ChildRowContent>
+        @if (ExpandedSymbols.Contains(context.Symbol))
+        {
+            <MudTd colspan="9">
+                <PortfolioOpenLots Lots="@context.OpenLots" />
+            </MudTd>
+        }
+    </ChildRowContent>
+</MudTable>
+
+@code {
+    [Parameter] public IReadOnlyList<PortfolioPositionDto> Positions { get; set; } = new List<PortfolioPositionDto>();
+    [Parameter] public bool HasPrices { get; set; }
+    [Parameter] public bool HasValuations { get; set; }
+    [Parameter] public decimal TotalCostBasis { get; set; }
+    [Parameter] public decimal TotalRealized { get; set; }
+    [Parameter] public decimal TotalUnrealized { get; set; }
+    [Parameter] public decimal TotalValueEur { get; set; }
+    [Parameter] public decimal TotalUnrealizedEur { get; set; }
+    [Parameter] public Func<string, PositionValuationDto?> ValuationLookup { get; set; } = static _ => null;
+    [Parameter] public IReadOnlySet<string> ExpandedSymbols { get; set; } = new HashSet<string>();
+    [Parameter] public string? HighlightedSymbol { get; set; }
+    [Parameter] public bool Refreshing { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter] public EventCallback<string> OnViewMovements { get; set; }
+    [Parameter] public EventCallback<PortfolioPositionDto> OnToggleExpanded { get; set; }
+}

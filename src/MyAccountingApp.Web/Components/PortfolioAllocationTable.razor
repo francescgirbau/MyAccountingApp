@@ -1,0 +1,98 @@
+<MudTable Items="@Rows" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Class="mb-4" SortLabel="Sort by">
+    <ToolBarContent>
+        <MudText Typo="Typo.subtitle1">Allocation by position</MudText>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                   OnClick="@(() => OnRefresh.InvokeAsync())" Disabled="@Disabled">
+            @(Refreshing ? "Refreshing..." : "Refresh prices")
+        </MudButton>
+    </ToolBarContent>
+    <Columns>
+        <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => OnSort.InvokeAsync("Symbol"))">Symbol</MudButton></MudTh>
+        <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => OnSort.InvokeAsync("Quantity"))">Qty</MudButton></MudTh>
+        <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => OnSort.InvokeAsync("Cost"))">Cost</MudButton></MudTh>
+        <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => OnSort.InvokeAsync("MarketValue"))">Mkt value</MudButton></MudTh>
+        <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => OnSort.InvokeAsync("PnL"))">P&amp;L</MudButton></MudTh>
+        <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => OnSort.InvokeAsync("PnLPct"))">P&amp;L %</MudButton></MudTh>
+        <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => OnSort.InvokeAsync("PurchaseWeight"))">Purchase wt</MudButton></MudTh>
+        <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => OnSort.InvokeAsync("CurrentWeight"))">Current wt</MudButton></MudTh>
+        <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => OnSort.InvokeAsync("WeightDelta"))">Δ wt</MudButton></MudTh>
+        <MudTh>Last price</MudTh>
+    </Columns>
+    <RowTemplate>
+        <MudTd DataLabel="Symbol" Style="@PortfolioDisplay.HighlightStyle(HighlightedSymbol, context.Symbol)">
+            <span class="cursor-pointer" @onclick="() => OnSelect.InvokeAsync(context.Symbol)">@context.Symbol</span>
+        </MudTd>
+        <MudTd DataLabel="Qty">@context.Quantity.ToString("G")</MudTd>
+        <MudTd DataLabel="Cost">@context.Cost.ToString("N2") @context.Currency</MudTd>
+        <MudTd DataLabel="Mkt value">
+            @if (context.MarketValue is not null)
+            {
+                <MudTooltip Placement="Placement.Top">
+                    <ChildContent><span class="px-1">@context.MarketValue.Value.ToString("N2") @context.Currency</span></ChildContent>
+                    <TooltipContent>
+                        <span>@context.MarketValueEur?.ToString("N2") EUR
+                            @(context.IsStale ? "(last close)" : string.Empty)</span>
+                    </TooltipContent>
+                </MudTooltip>
+            }
+            else
+            {
+                <span>—</span>
+            }
+        </MudTd>
+        <MudTd DataLabel="P&amp;L">
+            <span class="@(context.UnrealizedPnL >= 0 ? "green--text" : "red--text")">
+                @(context.UnrealizedPnL >= 0 ? "+" : "")@context.UnrealizedPnL?.ToString("N2")
+            </span>
+        </MudTd>
+        <MudTd DataLabel="P&amp;L %">
+            @if (context.UnrealizedPnLPct is not null)
+            {
+                <span class="@(context.UnrealizedPnLPct >= 0 ? "green--text" : "red--text")">
+                    @(context.UnrealizedPnLPct >= 0 ? "+" : "")@context.UnrealizedPnLPct.Value.ToString("P2")
+                </span>
+            }
+            else
+            {
+                <span>—</span>
+            }
+        </MudTd>
+        <MudTd DataLabel="Purchase wt">@(context.PurchaseWeight?.ToString("P1") ?? "—")</MudTd>
+        <MudTd DataLabel="Current wt">@(context.CurrentWeight?.ToString("P1") ?? "—")</MudTd>
+        <MudTd DataLabel="Δ wt">
+            @if (context.WeightDelta is not null)
+            {
+                <span class="@(context.WeightDelta >= 0 ? "green--text" : "red--text")">
+                    @(context.WeightDelta >= 0 ? "+" : "")@context.WeightDelta.Value.ToString("P1")
+                </span>
+            }
+            else
+            {
+                <span>—</span>
+            }
+        </MudTd>
+        <MudTd DataLabel="Last price">
+            @(context.LastPrice?.ToString("N4") ?? "—")
+            @if (context.IsStale)
+            {
+                <MudTooltip Placement="Placement.Top">
+                    <ChildContent>
+                        <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Warning" Size="Size.Small" Class="ml-1" />
+                    </ChildContent>
+                    <TooltipContent><span>Market closed — last close price</span></TooltipContent>
+                </MudTooltip>
+            }
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Parameter] public IEnumerable<PortfolioPositionRowDto> Rows { get; set; } = Enumerable.Empty<PortfolioPositionRowDto>();
+    [Parameter] public string? HighlightedSymbol { get; set; }
+    [Parameter] public bool Refreshing { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<string> OnSort { get; set; }
+    [Parameter] public EventCallback<string> OnSelect { get; set; }
+    [Parameter] public EventCallback OnRefresh { get; set; }
+}

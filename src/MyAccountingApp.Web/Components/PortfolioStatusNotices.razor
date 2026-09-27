@@ -1,0 +1,42 @@
+<div class="d-flex flex-wrap align-center gap-4 mb-4">
+    <MudChip T="string" Color="Color.Primary" Size="Size.Small">Open positions only</MudChip>
+    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+        @if (Overview.PricesAsOfUtc is not null)
+        {
+            <text>Last price as of @PortfolioDisplay.FormatAsOf(Overview.PricesAsOfUtc.Value)</text>
+        }
+        else
+        {
+            <text>No market prices available</text>
+        }
+        @if (Overview.IsMarketClosed)
+        {
+            <text> · last close (market closed)</text>
+        }
+    </MudText>
+    <MudSpacer />
+    @if (Overview.UnpricedPositionCount > 0)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">
+            @Overview.UnpricedPositionCount unpriced position(s) excluded from valuation
+            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary"
+                       OnClick="@(() => OnDataQuality.InvokeAsync())" StartIcon="@Icons.Material.Filled.OpenInNew">
+                Data Quality
+            </MudButton>
+        </MudText>
+    }
+</div>
+
+@if (Overview.IsMarketClosed && Overview.PricesAsOfUtc is not null)
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4">Market closed — using last close prices as of @PortfolioDisplay.FormatAsOf(Overview.PricesAsOfUtc.Value).</MudAlert>
+}
+@if (Overview.OptionSymbolCount > 0)
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4">@Overview.OptionSymbolCount option symbol(s) not included in allocation.</MudAlert>
+}
+
+@code {
+    [Parameter] public PortfolioOverviewDto Overview { get; set; } = default!;
+    [Parameter] public EventCallback OnDataQuality { get; set; }
+}

@@ -1,0 +1,35 @@
+<MudPaper Class="pa-4 mb-2 mt-2" Outlined="true">
+    <MudText Typo="Typo.subtitle2" GutterBottom="true">Open Lots (@Lots.Count)</MudText>
+    @if (Lots.Count == 0)
+    {
+        <MudText Typo="Typo.body2">No open lots.</MudText>
+    }
+    else
+    {
+        <MudSimpleTable>
+            <thead>
+                <tr>
+                    <th>Purchase Date</th>
+                    <th>Quantity</th>
+                    <th>Unitary Cost</th>
+                    <th>Total Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (TaxLotDto lot in Lots)
+                {
+                    <tr>
+                        <td>@lot.PurchaseDate.ToString("yyyy-MM-dd")</td>
+                        <td>@lot.Quantity.ToString("G")</td>
+                        <td>@lot.UnitaryCost.ToString("N4")</td>
+                        <td>@lot.TotalCost.ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public IReadOnlyList<TaxLotDto> Lots { get; set; } = new List<TaxLotDto>();
+}
