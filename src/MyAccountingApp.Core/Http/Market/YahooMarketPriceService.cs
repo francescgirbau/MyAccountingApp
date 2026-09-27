@@ -9,9 +9,9 @@ public class YahooMarketPriceService : IMarketPriceService
     // process-wide: at most 2 concurrent, with at least 600 ms between request starts, so a
     // 40-symbol refresh becomes a paced queue instead of a parallel burst. This protects
     // every caller (refresh-prices, /api/portfolio, validation) without changing their code.
+    private const long MinRequestIntervalMs = 600;
     private static readonly SemaphoreSlim ThrottleConcurrency = new(2, 2);
     private static readonly SemaphoreSlim ThrottlePacer = new(1, 1);
-    private const long MinRequestIntervalMs = 600;
     private static long _lastRequestStartMs;
 
     private readonly MarketPriceCache _cache = new();
