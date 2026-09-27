@@ -224,6 +224,7 @@ public static class DependencyInjection
         builder.Services.AddSingleton<IBrokerImportService, BrokerImportDispatcher>();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
+        builder.Services.AddSingleton<IMarketQuoteRepository>(new JsonMarketQuoteRepository("data/market_quotes.json", vaultService));
         builder.Services.AddSingleton<IMarketPriceService, YahooMarketPriceService>();
         builder.Services.AddSingleton<IImportService, ImportService>();
         builder.Services.AddSingleton<ITransactionValidator, TransactionValidator>();

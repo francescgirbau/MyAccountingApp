@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using MyAccountingApp.Core.Http.Market;
+using MyAccountingApp.Domain.Entities;
+using MyAccountingApp.Domain.Interfaces;
 using MyAccountingApp.Domain.ValueObjects;
 using Xunit;
 
@@ -227,8 +230,111 @@ public class YahooMarketPriceServiceTests
         Assert.Equal(new[] { "CEQ" }, service.RequestedSymbols);
     }
 
+    [Fact]
+    public async Task GetPriceAsync_UsesStoredQuote_FromSameDay_WithoutNetwork()
+    {
+        FakeMarketQuoteRepository repo = new();
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        repo.Upsert(new MarketQuote("AAPL", DateOnly.FromDateTime(now.UtcDateTime), new Money(10m, "USD"), "Yahoo", now));
+        StubYahooMarketPriceService service = new(repo);
+
+        Money? price = await service.GetPriceAsync("AAPL");
+
+        Assert.Equal(10m, price?.Amount);
+        Assert.Empty(service.RequestedSymbols);
+    }
+
+    [Fact]
+    public async Task GetPriceAsync_IgnoresStoredQuote_WhenFromPreviousDay()
+    {
+        FakeMarketQuoteRepository repo = new();
+        repo.Upsert(new MarketQuote("AAPL", DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1)), new Money(9m, "USD"), "Yahoo", DateTimeOffset.UtcNow.AddDays(-1)));
+        StubYahooMarketPriceService service = new(repo) { Handler = _ => Task.FromResult<Money?>(new Money(12.5m, "USD")) };
+
+        Money? price = await service.GetPriceAsync("AAPL");
+
+        Assert.Equal(12.5m, price?.Amount);
+        Assert.Equal(new[] { "AAPL" }, service.RequestedSymbols);
+    }
+
+    [Fact]
+    public async Task GetPriceAsync_WritesThroughToStore_AfterNetworkFetch()
+    {
+        FakeMarketQuoteRepository repo = new();
+        StubYahooMarketPriceService service = new(repo) { Handler = _ => Task.FromResult<Money?>(new Money(12.5m, "USD")) };
+
+        Money? price = await service.GetPriceAsync("AAPL");
+
+        MarketQuote? stored = repo.GetLatest("AAPL");
+        Assert.Equal(12.5m, price?.Amount);
+        Assert.NotNull(stored);
+        Assert.Equal(12.5m, stored!.Price.Amount);
+        Assert.Equal(DateOnly.FromDateTime(DateTime.UtcNow), stored.Date);
+        Assert.Equal("Yahoo", stored.Provider);
+    }
+
+    [Fact]
+    public async Task RefreshPriceAsync_BypassesStoredTodayQuote()
+    {
+        FakeMarketQuoteRepository repo = new();
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        repo.Upsert(new MarketQuote("AAPL", DateOnly.FromDateTime(now.UtcDateTime), new Money(10m, "USD"), "Yahoo", now));
+        StubYahooMarketPriceService service = new(repo) { Handler = _ => Task.FromResult<Money?>(new Money(12.5m, "USD")) };
+
+        Money? price = await service.RefreshPriceAsync("AAPL");
+
+        Assert.Equal(12.5m, price?.Amount);
+        Assert.Equal(new[] { "AAPL" }, service.RequestedSymbols);
+        Assert.Equal(12.5m, repo.GetLatest("AAPL")?.Price.Amount);
+    }
+
+    [Fact]
+    public async Task GetPriceAsync_FallsBackToLatestStoredQuote_WhenFetchFails()
+    {
+        FakeMarketQuoteRepository repo = new();
+        repo.Upsert(new MarketQuote("AAPL", DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1)), new Money(9.5m, "USD"), "Yahoo", DateTimeOffset.UtcNow.AddDays(-1)));
+        StubYahooMarketPriceService service = new(repo);
+
+        Money? price = await service.GetPriceAsync("AAPL");
+
+        Assert.Equal(9.5m, price?.Amount);
+    }
+
+    [Fact]
+    public async Task GetLastQuoteAsync_ReturnsStoredQuote_WhenMemoryEmpty()
+    {
+        FakeMarketQuoteRepository repo = new();
+        DateTimeOffset storedAt = DateTimeOffset.UtcNow.AddDays(-2);
+        repo.Upsert(new MarketQuote("AAPL", DateOnly.FromDateTime(storedAt.UtcDateTime), new Money(9.5m, "USD"), "Yahoo", storedAt));
+        StubYahooMarketPriceService service = new(repo);
+
+        CachedQuote? last = await service.GetLastQuoteAsync("AAPL");
+
+        Assert.NotNull(last);
+        Assert.Equal(9.5m, last!.Price.Amount);
+        Assert.Equal(storedAt, last.AsOfUtc);
+    }
+
+    [Fact]
+    public async Task GetCachedPriceAsync_ReturnsStoredToday_WhenMemoryEmpty()
+    {
+        FakeMarketQuoteRepository repo = new();
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        repo.Upsert(new MarketQuote("AAPL", DateOnly.FromDateTime(now.UtcDateTime), new Money(10m, "USD"), "Yahoo", now));
+        StubYahooMarketPriceService service = new(repo);
+
+        Money? price = await service.GetCachedPriceAsync("AAPL");
+
+        Assert.Equal(10m, price?.Amount);
+    }
+
     private sealed class StubYahooMarketPriceService : YahooMarketPriceService
     {
+        public StubYahooMarketPriceService(IMarketQuoteRepository? quoteRepository = null)
+            : base(quoteRepository)
+        {
+        }
+
         public Func<string, Task<Money?>> Handler { get; set; } = _ => Task.FromResult<Money?>(null);
 
         public List<string> RequestedSymbols { get; } = new();
@@ -238,5 +344,27 @@ public class YahooMarketPriceServiceTests
             this.RequestedSymbols.Add(symbol);
             return this.Handler(symbol);
         }
+    }
+
+    private sealed class FakeMarketQuoteRepository : IMarketQuoteRepository
+    {
+        private readonly List<MarketQuote> _quotes = new();
+
+        public MarketQuote? GetLatest(string symbol)
+        {
+            return this._quotes
+                .Where(q => q.Symbol == symbol)
+                .OrderByDescending(q => q.Date)
+                .ThenByDescending(q => q.RetrievedAtUtc)
+                .FirstOrDefault();
+        }
+
+        public void Upsert(MarketQuote quote)
+        {
+            this._quotes.RemoveAll(q => q.Symbol == quote.Symbol && q.Date == quote.Date);
+            this._quotes.Add(quote);
+        }
+
+        public IReadOnlyList<MarketQuote> GetAll() => this._quotes;
     }
 }

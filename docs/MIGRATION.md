@@ -33,6 +33,7 @@ Everything below serves that rule.
 | `conversions.json` | `CompositeConversionRepository` | FX quote cache, rebuildable |
 | `pending_conversions.json` | `JsonPendingWorkRepository` | Offline/retry queue |
 | `api_quota.json` | `JsonApiQuotaRepository` | Provider quota counter |
+| `market_quotes.json` | `JsonMarketQuoteRepository` | Daily market prices (lazy cache: one per symbol+day, auditable, rebuilt on fetch) |
 
 **Composite repositories** keep an in-memory copy as the read path and the JSON as the write path.
 When the vault is locked at startup the memory cache stays empty until unlock â†’ `Reload()`.
@@ -46,6 +47,7 @@ When the vault is locked at startup the memory cache stays empty until unlock â†
 
 - `JsonTransactionRepository.GetAll()` deduplicates by `Transaction.Id` on load (keeps the last occurrence) and rewrites the file when it finds duplicates.
 - `JsonTransactionRepository` and `JsonPortfolioRepository` repair truncated JSON on parse failure (keep last `}` + close the array) and write the recovered content back.
+- `JsonMarketQuoteRepository.GetAll()` deduplicates by symbol + day (keeps the newest) and repairs truncated JSON on parse failure.
 
 ---
 

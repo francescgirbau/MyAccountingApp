@@ -1,4 +1,5 @@
-﻿using MyAccountingApp.Domain.Interfaces;
+﻿using MyAccountingApp.Domain.Entities;
+using MyAccountingApp.Domain.Interfaces;
 using MyAccountingApp.Domain.ValueObjects;
 using YahooFinanceApi;
 
@@ -16,9 +17,21 @@ public class YahooMarketPriceService : IMarketPriceService
 
     private readonly MarketPriceCache _cache = new();
 
-    public Task<Money?> GetPriceAsync(string symbol, string? quoteCurrency = null) => this.FetchAsync(symbol, useCache: true, quoteCurrency);
+    private readonly IMarketQuoteRepository? _quoteRepository;
 
-    public Task<Money?> RefreshPriceAsync(string symbol, string? quoteCurrency = null) => this.FetchAsync(symbol, useCache: false, quoteCurrency);
+    /// <summary>
+    /// Initializes a new instance of the <see cref="YahooMarketPriceService"/> class.
+    /// </summary>
+    /// <param name="quoteRepository">Optional repository where daily quotes are persisted, so the
+    /// price fetched on a day can be reused later that same day without another provider call.</param>
+    public YahooMarketPriceService(IMarketQuoteRepository? quoteRepository = null)
+    {
+        this._quoteRepository = quoteRepository;
+    }
+
+    public Task<Money?> GetPriceAsync(string symbol, string? quoteCurrency = null) => this.FetchAsync(symbol, useCache: true, useTodayStore: true, quoteCurrency);
+
+    public Task<Money?> RefreshPriceAsync(string symbol, string? quoteCurrency = null) => this.FetchAsync(symbol, useCache: false, useTodayStore: false, quoteCurrency);
 
     public Task<Money?> GetCachedPriceAsync(string symbol)
     {
@@ -31,7 +44,8 @@ public class YahooMarketPriceService : IMarketPriceService
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
         Money? cached = this._cache.TryGetFresh(normalized, now, out Money? price) ? price : null;
-        return Task.FromResult(cached);
+        Money? result = cached ?? this.GetStoredQuoteForDate(normalized, DateOnly.FromDateTime(now.UtcDateTime))?.Price;
+        return Task.FromResult(result);
     }
 
     public Task<CachedQuote?> GetLastQuoteAsync(string symbol)
@@ -43,10 +57,17 @@ public class YahooMarketPriceService : IMarketPriceService
             return Task.FromResult<CachedQuote?>(null);
         }
 
-        return Task.FromResult(this._cache.TryGetLast(normalized, out CachedQuote? quote) ? quote : null);
+        if (this._cache.TryGetLast(normalized, out CachedQuote? quote))
+        {
+            return Task.FromResult<CachedQuote?>(quote);
+        }
+
+        MarketQuote? stored = this._quoteRepository?.GetLatest(normalized);
+        return Task.FromResult<CachedQuote?>(
+            stored is null ? null : new CachedQuote(stored.Price, stored.RetrievedAtUtc));
     }
 
-    private async Task<Money?> FetchAsync(string symbol, bool useCache, string? quoteCurrency = null)
+    private async Task<Money?> FetchAsync(string symbol, bool useCache, bool useTodayStore, string? quoteCurrency = null)
     {
         string normalized = NormalizeSymbol(symbol);
 
@@ -62,18 +83,55 @@ public class YahooMarketPriceService : IMarketPriceService
             return cachedPrice;
         }
 
+        // Layer 2: a quote already persisted for today (UTC) is today's price — reuse it instead
+        // of hitting the provider again. Refreshing the in-memory cache keeps intraday calls cheap.
+        MarketQuote? storedToday = useTodayStore
+            ? this.GetStoredQuoteForDate(normalized, DateOnly.FromDateTime(now.UtcDateTime))
+            : null;
+        if (storedToday is not null)
+        {
+            this._cache.Set(normalized, storedToday.Price, now);
+            return storedToday.Price;
+        }
+
         Money? price = await this.FetchFromYahooAsync(normalized, quoteCurrency);
 
         if (price is not null)
         {
             this._cache.Set(normalized, price, now);
+            this.StoreQuote(normalized, price, now);
         }
         else if (this._cache.TryGetLast(normalized, out CachedQuote? last))
         {
             price = last.Price;
         }
+        else
+        {
+            price = this._quoteRepository?.GetLatest(normalized)?.Price;
+        }
 
         return price;
+    }
+
+    private MarketQuote? GetStoredQuoteForDate(string symbol, DateOnly date)
+    {
+        MarketQuote? latest = this._quoteRepository?.GetLatest(symbol);
+        return latest is not null && latest.Date == date ? latest : null;
+    }
+
+    private void StoreQuote(string normalizedSymbol, Money price, DateTimeOffset now)
+    {
+        if (this._quoteRepository is null)
+        {
+            return;
+        }
+
+        this._quoteRepository.Upsert(new MarketQuote(
+            normalizedSymbol,
+            DateOnly.FromDateTime(now.UtcDateTime),
+            price,
+            "Yahoo",
+            now));
     }
 
     /// <summary>

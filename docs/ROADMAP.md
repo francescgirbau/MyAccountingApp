@@ -30,6 +30,7 @@
 | A4 | feat: Contracts project — shared DTOs API ↔ Web (end duplication) | ⬜ Pending |
 | A5 | test: golden datasets + persistence compatibility tests | ⬜ Pending (before next persistence change) |
 | A6 | refactor: move Json\* repositories Core → Infrastructure | ⬜ Pending (only with a driver) |
+| Q1 | feat: persist daily market quotes (lazy price cache + audit trail) | 🟢 Done |
 
 ## Llegenda
 
