@@ -279,6 +279,38 @@ public static class TransactionsEndpoints
             return Results.Ok(result);
         });
 
+        app.MapPost($"{prefix}/asset-transactions/split/preview", (SplitAdjustmentRequest request, IAssetTransactionCommandService service) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Symbol))
+            {
+                return Results.BadRequest(new { message = "symbol is required." });
+            }
+
+            if (request.Factor <= 0)
+            {
+                return Results.BadRequest(new { message = "factor must be greater than zero." });
+            }
+
+            SplitAdjustmentPreview preview = service.PreviewSplit(request.Symbol, request.Factor, request.AsOfDate);
+            return Results.Ok(preview);
+        });
+
+        app.MapPost($"{prefix}/asset-transactions/split", (SplitAdjustmentRequest request, IAssetTransactionCommandService service) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Symbol))
+            {
+                return Results.BadRequest(new { message = "symbol is required." });
+            }
+
+            if (request.Factor <= 0)
+            {
+                return Results.BadRequest(new { message = "factor must be greater than zero." });
+            }
+
+            SplitAdjustmentResult result = service.ApplySplit(request.Symbol, request.Factor, request.AsOfDate);
+            return Results.Ok(result);
+        });
+
         app.MapPost($"{prefix}/asset-transactions/bulk-delete", (BulkDeleteRequest request, IAssetTransactionCommandService service) =>
         {
             if (request.Ids is null || request.Ids.Count == 0)
@@ -393,6 +425,7 @@ public static class TransactionsEndpoints
 record CreateTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category);
 record CreateFxTransactionRequest(DateTime Date, string FromCurrency, decimal FromAmount, string ToCurrency, decimal ToAmount, decimal? Rate = null, string? Description = null);
 record CreateAssetTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, decimal Quantity, string Type);
+record SplitAdjustmentRequest(string Symbol, decimal Factor, DateTime? AsOfDate = null);
 record UpdateOptionTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, string Isin, decimal Quantity, string Type);
 record BatchAssetTransactionPatchRequest(List<Guid> Ids, AssetTransactionPatch Patch);
 record BatchOptionTransactionPatchRequest(List<Guid> Ids, OptionTransactionPatch Patch);

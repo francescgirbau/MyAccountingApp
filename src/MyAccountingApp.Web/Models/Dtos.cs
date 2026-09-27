@@ -165,6 +165,26 @@ public class BatchPatchResultDto
     public List<BatchPatchFailureDto> Failures { get; set; } = new();
 }
 
+public class SplitAdjustmentItemDto
+{
+    public Guid Id { get; set; }
+    public DateTime Date { get; set; }
+    public decimal QuantityBefore { get; set; }
+    public decimal QuantityAfter { get; set; }
+    public decimal UnitaryCostBefore { get; set; }
+    public decimal UnitaryCostAfter { get; set; }
+    public decimal Amount { get; set; }
+    public string Currency { get; set; } = string.Empty;
+}
+
+public class SplitAdjustmentPreviewDto
+{
+    public string Symbol { get; set; } = string.Empty;
+    public decimal Factor { get; set; }
+    public DateTime? AsOfDate { get; set; }
+    public List<SplitAdjustmentItemDto> Items { get; set; } = new();
+}
+
 public class BulkDeleteResultDto
 {
     public int Requested { get; set; }

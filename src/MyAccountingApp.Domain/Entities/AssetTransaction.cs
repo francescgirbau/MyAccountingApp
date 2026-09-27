@@ -51,6 +51,28 @@ public class AssetTransaction
         this.Symbol = symbol;
     }
 
+    /// <summary>
+    /// Applies a split (factor &gt; 1) or reverse split / consolidation (factor &lt; 1) to this lot,
+    /// keeping the total invested amount unchanged. The unitary cost is derived from
+    /// Amount / Quantity, so it adjusts automatically (e.g. a 5:1 consolidation turns
+    /// 1000 shares @ 0.09 into 200 shares @ 0.45 with the same 90.00 total).
+    /// </summary>
+    public void ApplySplitFactor(decimal factor)
+    {
+        if (factor <= 0)
+        {
+            throw new ArgumentException("Split factor must be greater than zero.");
+        }
+
+        decimal newQuantity = Math.Round(this.Quantity * factor, 0, MidpointRounding.AwayFromZero);
+        if (newQuantity <= 0)
+        {
+            throw new ArgumentException("Split factor leaves no shares on this lot.");
+        }
+
+        this.Quantity = newQuantity;
+    }
+
     public void SetSource(string? source)
     {
         this.Source = source;

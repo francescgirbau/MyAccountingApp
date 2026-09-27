@@ -146,6 +146,10 @@ else
                        OnClick="@OpenCreateDialog" StartIcon="@Icons.Material.Filled.Add">
                 New
             </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                       OnClick="@OpenSplitDialog" StartIcon="@Icons.Material.Filled.CallSplit">
+                Split / reverse split
+            </MudButton>
             <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@LoadDataAsync" Size="Size.Small" />
         </ToolBarContent>
         <ColGroup>
@@ -328,6 +332,97 @@ else
     </DialogActions>
 </MudDialog>
 
+<MudDialog @bind-Visible="_showSplitDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Apply split / reverse split</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-4">
+            Adjusts all lots of a symbol on or before a given date by a factor, keeping the total
+            invested amount unchanged. Factor 0.2 = 5:1 consolidation (reverse split), 2 = 2:1 split.
+        </MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_splitSymbol" Label="Symbol" Variant="Variant.Outlined" FullWidth="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="decimal" @bind-Value="_splitFactor" Label="Factor (1/5 = 0.2)" Variant="Variant.Outlined"
+                                 Min="@(0.0001m)" FullWidth="true" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudDatePicker @bind-Date="_splitAsOfDate" Label="Cut-off date (optional — only lots on/before it)"
+                               Variant="Variant.Outlined" Clearable="true" />
+            </MudItem>
+        </MudGrid>
+
+        <div class="d-flex align-center mt-4 mb-2">
+            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@PreviewSplitAsync"
+                       Disabled="@(!SplitInputValid() || _splitPreviewLoading)" StartIcon="@Icons.Material.Filled.Search">
+                @(_splitPreviewLoading ? "Loading…" : "Preview")
+            </MudButton>
+            <MudText Typo="Typo.caption" Class="ml-2 mud-text-secondary">Shows affected lots before confirming</MudText>
+        </div>
+
+        @if (_splitPreviewError is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-2">@_splitPreviewError</MudAlert>
+        }
+
+        @if (_splitPreview is not null)
+        {
+            if (_splitPreview.Items.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Class="mt-2">No lots match this symbol and cut-off date.</MudAlert>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Warning" Class="mt-2" Dense="true">
+                    <strong>@_splitPreview.Items.Count</strong> lot(s) affected — total amount stays the same
+                    (@_splitPreview.Items.Sum(i => i.Amount).ToString("N2") @_splitPreview.Items.FirstOrDefault()?.Currency).
+                </MudAlert>
+                @if (_splitPreview.Items.Any(i => i.QuantityAfter <= 0))
+                {
+                    <MudAlert Severity="Severity.Error" Class="mt-2" Dense="true">
+                        Some lots would be reduced to zero shares and will be skipped on apply.
+                    </MudAlert>
+                }
+                <MudSimpleTable Dense="true" Class="mt-2">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th style="text-align:right">Qty before</th>
+                            <th style="text-align:right">Qty after</th>
+                            <th style="text-align:right">Unit before</th>
+                            <th style="text-align:right">Unit after</th>
+                            <th style="text-align:right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in _splitPreview.Items)
+                        {
+                            <tr>
+                                <td>@item.Date.ToString("yyyy-MM-dd")</td>
+                                <td style="text-align:right">@item.QuantityBefore.ToString("G")</td>
+                                <td style="text-align:right"><strong>@item.QuantityAfter.ToString("G")</strong></td>
+                                <td style="text-align:right">@item.UnitaryCostBefore.ToString("N4")</td>
+                                <td style="text-align:right">@item.UnitaryCostAfter.ToString("N4")</td>
+                                <td style="text-align:right">@item.Amount.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@CloseSplitDialog">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@ApplySplitAsync"
+                   Disabled="@(_splitPreview is null || _splitPreview.Items.Count == 0 || _splitPreviewLoading)">
+            Apply
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
     private List<AssetTransactionDto> _allTransactions = new();
     private List<AssetTransactionDto> _filteredTransactions = new();
@@ -352,6 +447,14 @@ else
     private AssetTransactionDto? _deletingTx;
     private HashSet<AssetTransactionDto> _selected = new();
     private string _bulkSymbol = "";
+
+    private bool _showSplitDialog;
+    private string _splitSymbol = "";
+    private decimal _splitFactor;
+    private DateTime? _splitAsOfDate;
+    private SplitAdjustmentPreviewDto? _splitPreview;
+    private string? _splitPreviewError;
+    private bool _splitPreviewLoading;
 
     private DateTime? _formDate;
     private string _formDescription = "";
@@ -687,6 +790,101 @@ else
             {
                 string details = string.Join("; ", result.Failures.Select(f => f.Error));
                 Snackbar.Add($"{result.Updated} updated, {result.Failures.Count} failed: {details}", Severity.Warning);
+            }
+
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void OpenSplitDialog()
+    {
+        _splitSymbol = _selectedSymbol ?? string.Empty;
+        _splitFactor = 0;
+        _splitAsOfDate = null;
+        _splitPreview = null;
+        _splitPreviewError = null;
+        _showSplitDialog = true;
+    }
+
+    private void CloseSplitDialog()
+    {
+        _showSplitDialog = false;
+    }
+
+    private bool SplitInputValid() => !string.IsNullOrWhiteSpace(_splitSymbol) && _splitFactor > 0;
+
+    private async Task PreviewSplitAsync()
+    {
+        if (!SplitInputValid())
+        {
+            Snackbar.Add("Enter a symbol and a factor first", Severity.Warning);
+            return;
+        }
+
+        _splitPreviewLoading = true;
+        _splitPreviewError = null;
+        try
+        {
+            var payload = new { symbol = _splitSymbol.Trim(), factor = _splitFactor, asOfDate = _splitAsOfDate };
+            HttpResponseMessage response = await Http.PostAsJsonAsync("/api/asset-transactions/split/preview", payload);
+            if (!response.IsSuccessStatusCode)
+            {
+                _splitPreviewError = await response.Content.ReadAsStringAsync();
+                _splitPreview = null;
+            }
+            else
+            {
+                _splitPreview = await response.Content.ReadFromJsonAsync<SplitAdjustmentPreviewDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            _splitPreviewError = ex.Message;
+            _splitPreview = null;
+        }
+        finally
+        {
+            _splitPreviewLoading = false;
+        }
+    }
+
+    private async Task ApplySplitAsync()
+    {
+        if (_splitPreview is null || _splitPreview.Items.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var payload = new { symbol = _splitSymbol.Trim(), factor = _splitFactor, asOfDate = _splitAsOfDate };
+            HttpResponseMessage response = await Http.PostAsJsonAsync("/api/asset-transactions/split", payload);
+            if (!response.IsSuccessStatusCode)
+            {
+                string body = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Split failed ({(int)response.StatusCode}): {Trim(body)}", Severity.Error);
+                return;
+            }
+
+            BatchPatchResultDto? result = await response.Content.ReadFromJsonAsync<BatchPatchResultDto>();
+            _showSplitDialog = false;
+
+            if (result is null)
+            {
+                Snackbar.Add("Split applied", Severity.Success);
+            }
+            else if (result.Failures.Count == 0)
+            {
+                Snackbar.Add($"{result.Updated} lot(s) adjusted", Severity.Success);
+            }
+            else
+            {
+                string details = string.Join("; ", result.Failures.Select(f => f.Error));
+                Snackbar.Add($"{result.Updated} adjusted, {result.Failures.Count} skipped: {details}", Severity.Warning);
             }
 
             await LoadDataAsync();
