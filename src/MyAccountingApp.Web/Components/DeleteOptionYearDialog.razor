@@ -1,0 +1,41 @@
+<MudDialog @bind-Visible="_dialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete Option Transactions by Year</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (Count.HasValue)
+        {
+            <MudText>This will delete <strong>@Count option transactions</strong> from @Year.</MudText>
+            <MudText Class="mt-2" Color="Color.Error">This action cannot be undone.</MudText>
+        }
+        else
+        {
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@Close">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@Confirm"
+                   Disabled="@(!Count.HasValue)">
+            Delete @Year
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public int? Year { get; set; }
+    [Parameter] public int? Count { get; set; }
+    [Parameter] public EventCallback ConfirmRequested { get; set; }
+
+    private bool _dialogVisible
+    {
+        get => Visible;
+        set => VisibleChanged.InvokeAsync(value);
+    }
+
+    private void Close() => _dialogVisible = false;
+
+    private async Task Confirm() => await ConfirmRequested.InvokeAsync();
+}

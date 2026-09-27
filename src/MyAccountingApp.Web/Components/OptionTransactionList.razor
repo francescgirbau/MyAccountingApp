@@ -1,0 +1,61 @@
+<MudTable Items="@Transactions" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true" SortLabel="Sort by"
+          MultiSelection="true" @bind-SelectedItems="_selected">
+    <ToolBarContent>
+        <MudText Typo="Typo.subtitle1">@Transactions.Count option transactions</MudText>
+        <MudSpacer />
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@(() => OnRefresh.InvokeAsync())" Size="Size.Small" />
+    </ToolBarContent>
+    <ColGroup>
+        <col style="width: 120px" />
+        <col style="width: 80px" />
+        <col />
+        <col style="width: 80px" />
+        <col style="width: 100px" />
+        <col style="width: 80px" />
+        <col style="width: 80px" />
+        <col style="width: 100px" />
+    </ColGroup>
+    <HeaderContent>
+        <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Transaction.Date)">Date</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Symbol)">Symbol</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Transaction.Description)">Description</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Quantity)">Qty</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Transaction.Money.Amount)">Amount</MudTableSortLabel></MudTh>
+        <MudTh>Curr.</MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<OptionTransactionDto, object>(t => t.Type)">Type</MudTableSortLabel></MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Date">@context.Transaction.Date.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd DataLabel="Symbol">
+            <MudChip T="string" Size="Size.Small" Color="Color.Primary">@context.Symbol</MudChip>
+        </MudTd>
+        <MudTd DataLabel="Description">@context.Transaction.Description</MudTd>
+        <MudTd DataLabel="Qty">@context.Quantity.ToString("G")</MudTd>
+        <MudTd DataLabel="Amount">@context.Transaction.Money.Amount.ToString("N2")</MudTd>
+        <MudTd DataLabel="Curr.">@context.Transaction.Money.Currency</MudTd>
+        <MudTd DataLabel="Type">@context.Type</MudTd>
+        <MudTd DataLabel="Actions">
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => OnEdit.InvokeAsync(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => OnDelete.InvokeAsync(context))" />
+        </MudTd>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="@(new int[]{25, 50, 100})" />
+    </PagerContent>
+</MudTable>
+
+@code {
+    [Parameter] public IReadOnlyList<OptionTransactionDto> Transactions { get; set; } = new List<OptionTransactionDto>();
+    [Parameter] public HashSet<OptionTransactionDto> Selected { get; set; } = new();
+    [Parameter] public EventCallback<HashSet<OptionTransactionDto>> SelectedChanged { get; set; }
+    [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter] public EventCallback<OptionTransactionDto> OnEdit { get; set; }
+    [Parameter] public EventCallback<OptionTransactionDto> OnDelete { get; set; }
+
+    private HashSet<OptionTransactionDto> _selected
+    {
+        get => Selected;
+        set => SelectedChanged.InvokeAsync(value);
+    }
+}
