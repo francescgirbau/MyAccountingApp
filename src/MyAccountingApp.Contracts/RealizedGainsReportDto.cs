@@ -1,4 +1,4 @@
-namespace MyAccountingApp.Application.DTOs;
+namespace MyAccountingApp.Contracts;
 
 public record RealizedGainsReportDto(
     int Year,

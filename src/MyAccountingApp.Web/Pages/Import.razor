@@ -805,7 +805,8 @@
 
         foreach (var kv in _editableSymbols)
         {
-            AssetTransactionDto? original = _result.AssetTransactions.FirstOrDefault(a => a.Transaction.Id == kv.Key);
+            int originalIndex = _result.AssetTransactions.FindIndex(a => a.Transaction.Id == kv.Key);
+            AssetTransactionDto? original = originalIndex >= 0 ? _result.AssetTransactions[originalIndex] : null;
             if (original is null) continue;
             if (original.Symbol == kv.Value) continue;
 
@@ -826,7 +827,8 @@
                 var response = await Http.PutAsJsonAsync($"/api/asset-transactions/{kv.Key}", request);
                 if (response.IsSuccessStatusCode)
                 {
-                    original.Symbol = kv.Value;
+                    original = original with { Symbol = kv.Value };
+                    _result.AssetTransactions[originalIndex] = original;
                     saved++;
                 }
                 else
@@ -892,13 +894,5 @@
     {
         _editableSymbols[assetId] = symbol;
         _symbolResults.Remove(assetId);
-    }
-
-    private sealed class SymbolLookupResult
-    {
-        public string Symbol { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
-        public string Exchange { get; set; } = string.Empty;
-        public string Type { get; set; } = string.Empty;
     }
 }

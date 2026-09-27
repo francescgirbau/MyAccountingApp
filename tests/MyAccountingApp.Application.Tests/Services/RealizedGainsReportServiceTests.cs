@@ -1,5 +1,5 @@
-using MyAccountingApp.Application.DTOs;
 using MyAccountingApp.Application.Services;
+using MyAccountingApp.Contracts;
 using MyAccountingApp.Core.Persistence;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;

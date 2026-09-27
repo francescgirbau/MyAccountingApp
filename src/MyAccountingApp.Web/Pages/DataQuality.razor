@@ -332,9 +332,9 @@ else
             {
                 HttpResponseMessage response = await Http.PostAsJsonAsync(
                     "/api/transactions/bulk-delete",
-                    new BulkDeleteRequest { Ids = deleteIds });
+                    new BulkDeleteRequest(deleteIds));
                 response.EnsureSuccessStatusCode();
-                BulkDeleteResultDto? result = await response.Content.ReadFromJsonAsync<BulkDeleteResultDto>();
+                BatchDeleteResult? result = await response.Content.ReadFromJsonAsync<BatchDeleteResult>();
                 Snackbar.Add(
                     $"Resolved: kept 1 transaction and deleted {result?.Deleted ?? 0} duplicate(s).",
                     Severity.Success);
@@ -452,9 +452,9 @@ else
             {
                 HttpResponseMessage response = await Http.PostAsJsonAsync(
                     "/api/transactions/bulk-delete",
-                    new BulkDeleteRequest { Ids = deleteIds });
+                    new BulkDeleteRequest(deleteIds));
                 response.EnsureSuccessStatusCode();
-                BulkDeleteResultDto? result = await response.Content.ReadFromJsonAsync<BulkDeleteResultDto>();
+                BatchDeleteResult? result = await response.Content.ReadFromJsonAsync<BatchDeleteResult>();
                 Snackbar.Add(
                     $"Resolved {_bulkGroups.Count} group(s): kept 1 per group and deleted {result?.Deleted ?? 0} duplicate(s).",
                     Severity.Success);
@@ -507,7 +507,7 @@ else
         {
             HttpResponseMessage response = await Http.PostAsync("/api/data-quality/transfer-matches/recalculate", null);
             response.EnsureSuccessStatusCode();
-            TransferMatchingResultDto? result = await response.Content.ReadFromJsonAsync<TransferMatchingResultDto>();
+            TransferMatchingResult? result = await response.Content.ReadFromJsonAsync<TransferMatchingResult>();
             if (result is not null)
             {
                 Snackbar.Add(
@@ -554,12 +554,6 @@ else
         {
             _syncingFx = false;
         }
-    }
-
-    private sealed class SyncMissingFxResult
-    {
-        public int RequestedDates { get; set; }
-        public int SyncedDates { get; set; }
     }
 
     private sealed record BulkDuplicateGroup(

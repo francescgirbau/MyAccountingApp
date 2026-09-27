@@ -568,8 +568,8 @@ else
 
     private void BuildLegend()
     {
-        List<AllocationSliceDto> current = _overview?.CurrentAllocation ?? new List<AllocationSliceDto>();
-        List<AllocationSliceDto> purchase = _overview?.PurchaseAllocation ?? new List<AllocationSliceDto>();
+        IReadOnlyList<AllocationSliceDto> current = _overview?.CurrentAllocation ?? Array.Empty<AllocationSliceDto>();
+        IReadOnlyList<AllocationSliceDto> purchase = _overview?.PurchaseAllocation ?? Array.Empty<AllocationSliceDto>();
         _legend = current
             .GroupJoin(purchase, c => c.Key, p => p.Key,
                 (c, purchases) => new LegendItemDto(

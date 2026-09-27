@@ -1,6 +1,4 @@
-using MyAccountingApp.Application.Interfaces;
-
-namespace MyAccountingApp.Application.DTOs;
+namespace MyAccountingApp.Contracts;
 
 public record ImportResultDto(
     List<TransactionDto> Transactions,

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Builder;
-using MyAccountingApp.Application.DTOs;
 using MyAccountingApp.Application.Interfaces;
+using MyAccountingApp.Contracts;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Interfaces;
 
@@ -69,20 +69,18 @@ public static class PortfolioEndpoints
         {
             DateOnly valuationDate = DateOnly.FromDateTime((asOf ?? DateTime.UtcNow).Date);
             IReadOnlyList<PositionValuationDto> valuations = await valuationService.GetValuationsAsync(valuationDate);
-            return Results.Ok(new { asOf = valuationDate, positions = valuations });
+            return Results.Ok(new PositionValuationResponse(valuationDate, valuations));
         });
 
         app.MapGet($"{prefix}/validate", (IValidationQuery validationQuery) =>
         {
             ValidationResult result = validationQuery.ValidateAll();
-            return Results.Ok(new
-            {
-                isValid = result.IsValid,
-                errorCount = result.Errors.Count,
-                warningCount = result.Warnings.Count,
-                errors = result.Errors,
-                warnings = result.Warnings,
-            });
+            return Results.Ok(new ValidationResponseDto(
+                result.IsValid,
+                result.Errors.Count,
+                result.Warnings.Count,
+                result.Errors,
+                result.Warnings));
         });
     }
 }

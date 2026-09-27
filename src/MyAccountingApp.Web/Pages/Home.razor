@@ -243,7 +243,7 @@ else
 </MudGrid>
 
 @code {
-    private DashboardDto _dashboard = new();
+    private DashboardDto _dashboard = EmptyDashboard();
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
@@ -256,13 +256,23 @@ else
         _loading = true;
         try
         {
-            _dashboard = await Http.GetFromJsonAsync<DashboardDto>("/api/dashboard") ?? new();
+            _dashboard = await Http.GetFromJsonAsync<DashboardDto>("/api/dashboard") ?? EmptyDashboard();
         }
         finally
         {
             _loading = false;
         }
     }
+
+    private static DashboardDto EmptyDashboard() => new(
+        DateOnly.MinValue,
+        new CashSnapshotDto(
+            new OperatingCashFlowDto(0, 0, 0),
+            new OperatingCashFlowDto(0, 0, 0),
+            new InvestingCashFlowDto(0, 0, 0),
+            new InternalCashFlowDto(0, 0, 0, 0, 0, 0, 0, 0)),
+        new PortfolioSnapshotDto(0, null, null, 0, 0, 0, 0),
+        Array.Empty<DashboardAlertDto>());
 
     private static Severity MapSeverity(string severity) => severity switch
     {

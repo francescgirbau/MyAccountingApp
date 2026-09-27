@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MyAccountingApp.Application\MyAccountingApp.Application.csproj" />
+    <ProjectReference Include="..\MyAccountingApp.Contracts\MyAccountingApp.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,4 @@
-namespace MyAccountingApp.Application.DTOs;
+namespace MyAccountingApp.Contracts;
 
 /// <summary>
 /// Represents the EUR valuation of an open position, including the FX rate applied and its rate date.

@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
+using MyAccountingApp.Contracts;
 using MyAccountingApp.Core.Vault;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Interfaces;
@@ -86,7 +87,7 @@ public static class BackupEndpoints
             {
                 string json = await client.GetStringAsync(url);
                 using JsonDocument doc = JsonDocument.Parse(json);
-                List<object> results = new();
+                List<SymbolLookupResult> results = new();
 
                 foreach (JsonElement quote in doc.RootElement.GetProperty("quotes").EnumerateArray())
                 {
@@ -97,7 +98,7 @@ public static class BackupEndpoints
 
                     if (symbol is not null)
                     {
-                        results.Add(new { symbol, name = longName ?? symbol, exchange = exchange ?? string.Empty, type = quoteType ?? string.Empty });
+                        results.Add(new SymbolLookupResult(symbol, longName ?? symbol, exchange ?? string.Empty, quoteType ?? string.Empty));
                     }
                 }
 
@@ -105,7 +106,7 @@ public static class BackupEndpoints
             }
             catch (Exception)
             {
-                return Results.Ok(new List<object>());
+                return Results.Ok(new List<SymbolLookupResult>());
             }
         });
     }

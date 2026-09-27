@@ -2,7 +2,7 @@ namespace MyAccountingApp.Application.Tests.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using MyAccountingApp.Application.DTOs;
+using MyAccountingApp.Contracts;
 using MyAccountingApp.Application.Interfaces;
 using MyAccountingApp.Application.Services;
 using MyAccountingApp.Domain.Entities;

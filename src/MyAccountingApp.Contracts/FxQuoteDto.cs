@@ -1,4 +1,4 @@
-namespace MyAccountingApp.Application.DTOs;
+namespace MyAccountingApp.Contracts;
 
 /// <summary>
 /// Represents a single currency quote with full traceability of the requested date

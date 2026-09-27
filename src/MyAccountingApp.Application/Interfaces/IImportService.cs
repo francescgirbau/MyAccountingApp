@@ -1,3 +1,4 @@
+using MyAccountingApp.Contracts;
 using MyAccountingApp.Domain.Entities;
 
 namespace MyAccountingApp.Application.Interfaces;

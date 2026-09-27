@@ -469,7 +469,7 @@ else
     private string _splitSymbol = "";
     private decimal _splitFactor;
     private DateTime? _splitAsOfDate;
-    private SplitAdjustmentPreviewDto? _splitPreview;
+    private SplitAdjustmentPreview? _splitPreview;
     private string? _splitPreviewError;
     private bool _splitPreviewLoading;
 
@@ -803,7 +803,7 @@ else
                 return;
             }
 
-            BatchPatchResultDto? result = await response.Content.ReadFromJsonAsync<BatchPatchResultDto>();
+            BatchPatchResult? result = await response.Content.ReadFromJsonAsync<BatchPatchResult>();
             _showBulkSymbolDialog = false;
             _selected.Clear();
 
@@ -867,7 +867,7 @@ else
             }
             else
             {
-                _splitPreview = await response.Content.ReadFromJsonAsync<SplitAdjustmentPreviewDto>();
+                _splitPreview = await response.Content.ReadFromJsonAsync<SplitAdjustmentPreview>();
             }
         }
         catch (Exception ex)
@@ -899,7 +899,7 @@ else
                 return;
             }
 
-            BatchPatchResultDto? result = await response.Content.ReadFromJsonAsync<BatchPatchResultDto>();
+            BatchPatchResult? result = await response.Content.ReadFromJsonAsync<BatchPatchResult>();
             _showSplitDialog = false;
 
             if (result is null)

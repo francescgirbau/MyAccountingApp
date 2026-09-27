@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using MyAccountingApp.Application.Interfaces;
+using MyAccountingApp.Contracts;
 
 namespace MyAccountingApp.Api.Endpoints;
 
@@ -27,7 +28,7 @@ public static class DataQualityEndpoints
                 .ToList();
 
             int synced = await rateService.SyncDatesAsync(dates);
-            return Results.Ok(new { requestedDates = dates.Count, syncedDates = synced });
+            return Results.Ok(new SyncMissingFxResult(dates.Count, synced));
         });
     }
 }

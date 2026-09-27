@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.AspNetCore.Builder;
 using MyAccountingApp.Application.DTOs;
 using MyAccountingApp.Application.Interfaces;
+using MyAccountingApp.Contracts;
 using MyAccountingApp.Core.Imports.Common;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
@@ -122,13 +123,7 @@ public static class ImportEndpoints
 
             if (parsed.Count == 0)
             {
-                return Results.Ok(new
-                {
-                    imported = 0,
-                    skipped = 0,
-                    errors = errors,
-                    message = "No valid transactions found in CSV",
-                });
+                return Results.Ok(new RawCsvResultDto(0, 0, errors));
             }
 
             List<Transaction> existing = transactionRepo.GetAll().ToList();
@@ -137,12 +132,7 @@ public static class ImportEndpoints
 
             logger.LogInformation("Raw CSV import: {Imported} imported", parsed.Count);
 
-            return Results.Ok(new
-            {
-                imported = parsed.Count,
-                skipped = 0,
-                errors = errors,
-            });
+            return Results.Ok(new RawCsvResultDto(parsed.Count, 0, errors));
         });
 
         // Clears cash transactions, portfolio data, and option transactions. Does not touch currency conversions.
@@ -162,15 +152,7 @@ public static class ImportEndpoints
                 assetTransactionCount,
                 optionCount);
 
-            return Results.Ok(new
-            {
-                message = "Database reset completed",
-                clearedTransactions = transactionCount,
-                clearedAssetTransactions = assetTransactionCount,
-                clearedOptionTransactions = optionCount,
-            });
+            return Results.Ok(new ResetResultDto("Database reset completed", transactionCount, assetTransactionCount, optionCount));
         });
     }
 }
-
-record ImportRequest(List<string> FolderPaths);

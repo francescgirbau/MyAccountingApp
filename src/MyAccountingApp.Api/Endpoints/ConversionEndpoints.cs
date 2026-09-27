@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using MyAccountingApp.Application.DTOs;
 using MyAccountingApp.Application.Interfaces;
+using MyAccountingApp.Contracts;
 using MyAccountingApp.Domain.Constants;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
@@ -101,13 +102,7 @@ public static class ConversionEndpoints
         app.MapGet($"{prefix}/conversions/status", async (ICurrencyRateService currencyRateService) =>
         {
             ConversionStatus status = await currencyRateService.GetStatusAsync();
-            return Results.Ok(new
-            {
-                provider = status.Provider,
-                cachedDays = status.CachedDays,
-                lastCachedDate = status.LastCachedDate,
-                pendingCount = status.PendingCount,
-            });
+            return Results.Ok(status);
         });
 
         app.MapPost($"{prefix}/conversions/sync", async (SyncConversionsRequest? request, ICurrencyRateService currencyRateService) =>

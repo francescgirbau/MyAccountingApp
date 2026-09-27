@@ -1,4 +1,5 @@
 using MyAccountingApp.Application.Interfaces;
+using MyAccountingApp.Contracts;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
@@ -71,9 +72,20 @@ public class ValidationQuery : IValidationQuery
 
         return new ValidationResult(
             allErrors.Count == 0,
-            allErrors,
-            allWarnings);
+            allErrors.Select(WithDeepLink).ToList(),
+            allWarnings.Select(WithDeepLink).ToList());
     }
+
+    private static ValidationError WithDeepLink(ValidationError error) =>
+        new(
+            error.Field,
+            error.Message,
+            error.Severity,
+            error.EntityType,
+            error.EntityIds,
+            error.Symbol,
+            error.Date,
+            ValidationDeepLink.Build(error.EntityType, error.Symbol, error.EntityIds));
 
     private void AddNeedsReviewRules(List<ValidationError> warnings)
     {
