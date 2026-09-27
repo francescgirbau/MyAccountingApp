@@ -57,5 +57,6 @@ public static class DtoMapper
             result.Errors,
             result.ValidationErrors,
             result.ValidationWarnings,
-            result.FilesProcessed);
+            result.FilesProcessed,
+            result.SkippedAssetTransactions);
 }

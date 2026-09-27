@@ -89,4 +89,27 @@ public class AssetTransaction
 
         return new Money(unitaryAmount, Transaction.Money.Currency);
     }
+
+    /// <summary>
+    /// Computes a stable content fingerprint used to detect duplicate imports of the same
+    /// source file. Only fields that are deterministic across re-parses of the same file are
+    /// used: GUIDs are regenerated on every parse, so they must not be part of the identity.
+    /// </summary>
+    public AssetTransactionFingerprint GetFingerprint() => new(
+        this.Symbol.Trim().ToUpperInvariant(),
+        this.Transaction.Date.Date,
+        this.Quantity,
+        Math.Abs(this.Transaction.Money.Amount),
+        this.Transaction.Money.Currency.ToUpperInvariant(),
+        this.Type.ToString().ToUpperInvariant(),
+        this.Transaction.Description.Trim().ToUpperInvariant());
 }
+
+public record AssetTransactionFingerprint(
+    string Symbol,
+    DateTime Date,
+    decimal Quantity,
+    decimal Amount,
+    string Currency,
+    string Type,
+    string Description);

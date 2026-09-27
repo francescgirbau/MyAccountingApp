@@ -100,6 +100,7 @@ public class ImportResultDto
     public List<ValidationError> ValidationErrors { get; set; } = new();
     public List<ValidationError> ValidationWarnings { get; set; } = new();
     public int FilesProcessed { get; set; }
+    public int SkippedAssetTransactions { get; set; }
 }
 
 public class PositionValuationDto

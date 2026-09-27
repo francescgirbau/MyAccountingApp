@@ -42,6 +42,13 @@ public class ImportService : IImportService
         List<Domain.Entities.AssetTransaction> pendingAssets = new List<Domain.Entities.AssetTransaction>();
         List<Domain.Entities.OptionTransaction> pendingOptions = new List<Domain.Entities.OptionTransaction>();
 
+        // Rows already persisted are skipped so re-importing the same file never duplicates lots.
+        // The fingerprint is content-based because GUIDs are regenerated on every parse and
+        // therefore cannot identify a lot across imports.
+        HashSet<AssetTransactionFingerprint> persistedAssetFingerprints = new(
+            this._portfolioRepo.GetAllTransactions().Select(t => t.GetFingerprint()));
+        HashSet<Domain.Entities.AssetTransaction> skippedAssets = new();
+
         foreach (string folderPath in folderPaths)
         {
             if (!Directory.Exists(folderPath))
@@ -62,9 +69,11 @@ public class ImportService : IImportService
 
                     if (folderPath.Contains("CORPORATE", StringComparison.OrdinalIgnoreCase))
                     {
-                        IEnumerable<Domain.Entities.AssetTransaction> corporateTransactions =
-                            await this._broker.ParseCorporateActionsAsync(csvFile);
-                        foreach (Domain.Entities.AssetTransaction tx in corporateTransactions)
+                        List<Domain.Entities.AssetTransaction> parsedCorporate =
+                            (await this._broker.ParseCorporateActionsAsync(csvFile)).ToList();
+                        List<Domain.Entities.AssetTransaction> freshCorporate =
+                            NonDuplicateRows(parsedCorporate, persistedAssetFingerprints, skippedAssets).ToList();
+                        foreach (Domain.Entities.AssetTransaction tx in freshCorporate)
                         {
                             tx.SetSource(source);
                             ValidationResult vr = this._validator.Validate(tx);
@@ -76,7 +85,7 @@ public class ImportService : IImportService
                             }
                         }
 
-                        result.AssetTransactions.AddRange(corporateTransactions);
+                        result.AssetTransactions.AddRange(freshCorporate);
                     }
                     else
                     {
@@ -95,7 +104,9 @@ public class ImportService : IImportService
                             }
                         }
 
-                        foreach (Domain.Entities.AssetTransaction tx in assetTransactions)
+                        List<Domain.Entities.AssetTransaction> freshAssets =
+                            NonDuplicateRows(assetTransactions, persistedAssetFingerprints, skippedAssets).ToList();
+                        foreach (Domain.Entities.AssetTransaction tx in freshAssets)
                         {
                             tx.SetSource(source);
                             ValidationResult vr = this._validator.Validate(tx);
@@ -113,7 +124,7 @@ public class ImportService : IImportService
                         }
 
                         result.Transactions.AddRange(transactions);
-                        result.AssetTransactions.AddRange(assetTransactions);
+                        result.AssetTransactions.AddRange(freshAssets);
                         result.OptionTransactions.AddRange(optionTransactions);
                     }
 
@@ -179,7 +190,27 @@ public class ImportService : IImportService
             this._optionRepo.Initialize(mergedOptions);
         }
 
+        result.SkippedAssetTransactions = skippedAssets.Count;
+
         return result;
+    }
+
+    private static IEnumerable<Domain.Entities.AssetTransaction> NonDuplicateRows(
+        IEnumerable<Domain.Entities.AssetTransaction> parsed,
+        HashSet<AssetTransactionFingerprint> persistedFingerprints,
+        HashSet<Domain.Entities.AssetTransaction> skipped)
+    {
+        foreach (Domain.Entities.AssetTransaction tx in parsed)
+        {
+            if (persistedFingerprints.Contains(tx.GetFingerprint()))
+            {
+                skipped.Add(tx);
+            }
+            else
+            {
+                yield return tx;
+            }
+        }
     }
 
     private static bool IsFxLeg(Domain.Entities.Transaction tx) =>

@@ -16,4 +16,10 @@ public class ImportResult
     public List<ValidationError> ValidationErrors { get; init; } = new();
     public List<ValidationError> ValidationWarnings { get; init; } = new();
     public int FilesProcessed { get; set; }
+
+    /// <summary>
+    /// Gets the number of asset transactions skipped because a row with the same content
+    /// fingerprint was already present (i.e. the same file was imported before).
+    /// </summary>
+    public int SkippedAssetTransactions { get; set; }
 }
