@@ -152,8 +152,7 @@ public class YahooMarketPriceService : IMarketPriceService
         }
 
         decimal amount = (decimal)security.RegularMarketPrice;
-        string currency = ResolveCurrency(hasCurrency ? security.Currency : null, hasMarket ? security.Market : null);
-        return new Money(amount, currency);
+        return BuildQuote(amount, hasCurrency ? security.Currency : null, hasMarket ? security.Market : null);
     }
 
     /// <summary>
@@ -230,6 +229,23 @@ public class YahooMarketPriceService : IMarketPriceService
         }
 
         return MapYahooMarketIntoCurrency(market ?? string.Empty);
+    }
+
+    /// <summary>
+    /// Builds the quote from the raw Yahoo fields. Yahoo reports UK-listed equities in pence with
+    /// the explicit currency "GBp" (e.g. DGE.L price 1642 = GBP 16.42), so the amount must be
+    /// divided by 100 and normalized to GBP before it can be treated as a regular Money value.
+    /// </summary>
+    public static Money BuildQuote(decimal amount, string? yahooCurrency, string? market)
+    {
+        string currency = ResolveCurrency(yahooCurrency, market);
+        if (string.Equals(yahooCurrency, "GBp", StringComparison.OrdinalIgnoreCase))
+        {
+            amount /= 100m;
+            currency = "GBP";
+        }
+
+        return new Money(amount, currency);
     }
 
     private static string MapYahooMarketIntoCurrency(string market)
