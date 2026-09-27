@@ -1,0 +1,112 @@
+<MudPaper Class="pa-4 mb-4" Outlined="true" Style="border-color: var(--mud-palette-error);">
+    <MudText Typo="Typo.h6" GutterBottom="true" Color="Color.Error">Danger Zone</MudText>
+    <MudText Typo="Typo.body2" Class="mb-4">
+        Reset the database: deletes <strong>all cash transactions</strong>, <strong>all portfolio / asset transactions</strong>, and <strong>all option transactions</strong>.
+        Currency conversions are kept. This cannot be undone — make a backup first if needed.
+    </MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Error" Size="Size.Large"
+               OnClick="@(() => OnReset.InvokeAsync())" Disabled="@IsResetting"
+               StartIcon="@Icons.Material.Filled.DeleteForever">
+        Reset database
+    </MudButton>
+    @if (ResetResult is not null)
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-4">
+            Cleared <strong>@ResetResult.ClearedTransactions</strong> transactions,
+            <strong>@ResetResult.ClearedAssetTransactions</strong> asset transactions, and
+            <strong>@ResetResult.ClearedOptionTransactions</strong> option transactions.
+        </MudAlert>
+    }
+
+    <MudDivider Class="my-4" />
+
+    <MudText Typo="Typo.subtitle1" GutterBottom="true">Delete transactions by year</MudText>
+    <MudText Typo="Typo.body2" Class="mb-4">
+        Delete all cash, asset, and option transactions for a specific year.
+    </MudText>
+    <MudGrid>
+        <MudItem xs="6" sm="3">
+            <MudSelect T="int?" @bind-Value="_deleteYear" Label="Year" Variant="Variant.Outlined"
+                       Disabled="@IsDeletingYear">
+                @foreach (int y in Enumerable.Range(2000, 50))
+                {
+                    <MudSelectItem T="int?" Value="y">@y</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="6" sm="3" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Warning"
+                       OnClick="@(() => OnDeleteYear.InvokeAsync())" Disabled="@(DeleteYear is null || IsDeletingYear)">
+                Delete year
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+    @if (DeleteYearResult is not null)
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-2">
+            Deleted <strong>@DeleteYearResult.DeletedTransactions</strong> transactions,
+            <strong>@DeleteYearResult.DeletedAssets</strong> asset transactions, and
+            <strong>@DeleteYearResult.DeletedOptions</strong> option transactions for year @DeleteYear.
+        </MudAlert>
+    }
+
+    <MudDivider Class="my-4" />
+
+    <MudText Typo="Typo.subtitle1" GutterBottom="true">Delete asset transactions by year</MudText>
+    <MudText Typo="Typo.body2" Class="mb-4">
+        Delete only portfolio / asset transactions for a specific year. Cash transactions are kept.
+    </MudText>
+    <MudGrid>
+        <MudItem xs="6" sm="3">
+            <MudSelect T="int?" @bind-Value="_deleteAssetYear" Label="Year" Variant="Variant.Outlined"
+                       Disabled="@IsDeletingAssetYear">
+                @foreach (int y in Enumerable.Range(2000, 50))
+                {
+                    <MudSelectItem T="int?" Value="y">@y</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="6" sm="3" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Warning"
+                       OnClick="@(() => OnDeleteAssetYear.InvokeAsync())" Disabled="@(DeleteAssetYear is null || IsDeletingAssetYear)">
+                Delete asset year
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+    @if (DeleteAssetYearResult is not null)
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-2">
+            Deleted <strong>@DeleteAssetYearResult.DeletedAssets</strong> asset transactions for year @DeleteAssetYear.
+        </MudAlert>
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public bool IsResetting { get; set; }
+    [Parameter] public EventCallback OnReset { get; set; }
+    [Parameter] public ResetResultDto? ResetResult { get; set; }
+
+    [Parameter] public int? DeleteYear { get; set; }
+    [Parameter] public EventCallback<int?> DeleteYearChanged { get; set; }
+    [Parameter] public bool IsDeletingYear { get; set; }
+    [Parameter] public EventCallback OnDeleteYear { get; set; }
+    [Parameter] public DeleteYearResultDto? DeleteYearResult { get; set; }
+
+    [Parameter] public int? DeleteAssetYear { get; set; }
+    [Parameter] public EventCallback<int?> DeleteAssetYearChanged { get; set; }
+    [Parameter] public bool IsDeletingAssetYear { get; set; }
+    [Parameter] public EventCallback OnDeleteAssetYear { get; set; }
+    [Parameter] public DeleteAssetYearResultDto? DeleteAssetYearResult { get; set; }
+
+    private int? _deleteYear
+    {
+        get => DeleteYear;
+        set => DeleteYearChanged.InvokeAsync(value);
+    }
+
+    private int? _deleteAssetYear
+    {
+        get => DeleteAssetYear;
+        set => DeleteAssetYearChanged.InvokeAsync(value);
+    }
+}

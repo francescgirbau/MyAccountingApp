@@ -1,0 +1,36 @@
+<MudDialog Visible="@Visible" VisibleChanged="@SetVisibleAsync">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete year @Year?</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>
+            This will remove <strong>@PreviewTransactions</strong> cash,
+            <strong>@PreviewAssets</strong> asset, and
+            <strong>@PreviewOptions</strong> option transactions for year @Year.
+        </MudText>
+        <MudText Class="mt-2" Typo="Typo.body2">This cannot be undone.</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => SetVisibleAsync(false))">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@ConfirmAsync" Disabled="@IsDeleting">Yes, delete @Year</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public int? Year { get; set; }
+    [Parameter] public int PreviewTransactions { get; set; }
+    [Parameter] public int PreviewAssets { get; set; }
+    [Parameter] public int PreviewOptions { get; set; }
+    [Parameter] public bool IsDeleting { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+
+    private async Task ConfirmAsync() => await OnConfirm.InvokeAsync();
+
+    private async Task SetVisibleAsync(bool value)
+    {
+        Visible = value;
+        await VisibleChanged.InvokeAsync(value);
+    }
+}
