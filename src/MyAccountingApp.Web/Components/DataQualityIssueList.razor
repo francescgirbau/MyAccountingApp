@@ -1,0 +1,93 @@
+<MudTable Items="@Issues" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true">
+    <HeaderContent>
+        <MudTh Style="width:50px"></MudTh>
+        <MudTh>Severity</MudTh>
+        <MudTh>Code</MudTh>
+        <MudTh>Message</MudTh>
+        <MudTh>Impacted</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>
+            @if (context.Field == "DUPLICATE_FINGERPRINT")
+            {
+                <MudCheckBox T="bool"
+                             Value="@(SelectedIssues.Contains(context))"
+                             ValueChanged="@((bool val) => ToggleSelection(context, val))"
+                             Size="Size.Small" Color="Color.Primary" />
+            }
+        </MudTd>
+        <MudTd DataLabel="Severity">
+            <MudChip T="string" Size="Size.Small" Color="@MapSeverityColor(context.Severity)">@context.Severity</MudChip>
+        </MudTd>
+        <MudTd DataLabel="Code"><MudText Typo="Typo.body2" Style="font-family: monospace">@context.Field</MudText></MudTd>
+        <MudTd DataLabel="Message">@context.Message</MudTd>
+        <MudTd DataLabel="Impacted">
+            @if (!string.IsNullOrEmpty(context.DeepLink))
+            {
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                           OnClick="@(() => Navigation.NavigateTo(context.DeepLink!))"
+                           StartIcon="@Icons.Material.Filled.OpenInNew">
+                    View @(context.EntityIds is { Count: > 0 } ids ? $"{ids.Count} {(ids.Count == 1 ? "transaction" : "transactions")}" : "movements")
+                </MudButton>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">—</MudText>
+            }
+            @if (context.Field == "DUPLICATE_FINGERPRINT")
+            {
+                <MudButton Variant="Variant.Text" Color="Color.Success" Size="Size.Small"
+                           OnClick="@(() => OnResolve.InvokeAsync(context))"
+                           StartIcon="@Icons.Material.Filled.CleaningServices">
+                    Resolve
+                </MudButton>
+            }
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Class="pa-4">No issues.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@if (SelectedIssues.Count > 0)
+{
+    <MudPaper Class="pa-3 mt-4" Outlined="true">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="4">
+            <MudText Typo="Typo.body2">
+                @SelectedIssues.Count group(s) selected, ~@BulkDeleteCount duplicate(s) to delete
+            </MudText>
+            <MudSpacer />
+            <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small"
+                       OnClick="@(() => OnClearSelection.InvokeAsync())">Clear</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.CleaningServices"
+                       OnClick="@(() => OnResolveSelected.InvokeAsync())"
+                       Disabled="@Resolving">
+                Resolve selected
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<ValidationError> Issues { get; set; } = Array.Empty<ValidationError>();
+    [Parameter] public IReadOnlyList<ValidationError> SelectedIssues { get; set; } = Array.Empty<ValidationError>();
+    [Parameter] public int BulkDeleteCount { get; set; }
+    [Parameter] public bool Resolving { get; set; }
+    [Parameter] public Action<ValidationError, bool> SelectionToggled { get; set; } = static (_, _) => { };
+    [Parameter] public EventCallback OnClearSelection { get; set; }
+    [Parameter] public EventCallback OnResolveSelected { get; set; }
+    [Parameter] public EventCallback<ValidationError> OnResolve { get; set; }
+
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private void ToggleSelection(ValidationError issue, bool isSelected) => SelectionToggled.Invoke(issue, isSelected);
+
+    private static Color MapSeverityColor(string severity) => severity switch
+    {
+        "error" => Color.Error,
+        "warning" => Color.Warning,
+        "info" => Color.Info,
+        _ => Color.Default,
+    };
+}

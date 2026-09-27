@@ -1,0 +1,29 @@
+<MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+           OnClick="@(() => OnRefresh.InvokeAsync())" Disabled="@Loading" Class="mb-4">
+    Re-check
+</MudButton>
+@if (ShowRecalculate)
+{
+    <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.SwapHoriz"
+               OnClick="@(() => OnRecalculate.InvokeAsync())" Disabled="@Recalculating" Class="mb-4 ml-4">
+        @(Recalculating ? "Calculating…" : "Recalculate transfer matches")
+    </MudButton>
+}
+@if (ShowSyncFx)
+{
+    <MudButton Variant="Variant.Filled" Color="Color.Warning" StartIcon="@Icons.Material.Filled.AttachMoney"
+               OnClick="@(() => OnSyncFx.InvokeAsync())" Disabled="@SyncingFx" Class="mb-4 ml-4">
+        @(SyncingFx ? "Fetching…" : "Fetch missing FX")
+    </MudButton>
+}
+
+@code {
+    [Parameter] public bool Loading { get; set; }
+    [Parameter] public bool Recalculating { get; set; }
+    [Parameter] public bool SyncingFx { get; set; }
+    [Parameter] public bool ShowRecalculate { get; set; }
+    [Parameter] public bool ShowSyncFx { get; set; }
+    [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter] public EventCallback OnRecalculate { get; set; }
+    [Parameter] public EventCallback OnSyncFx { get; set; }
+}
