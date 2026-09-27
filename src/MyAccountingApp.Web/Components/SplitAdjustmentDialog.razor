@@ -1,0 +1,154 @@
+<MudDialog @bind-Visible="_dialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Apply split / reverse split</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-4">
+            Adjusts all lots of a symbol on or before a given date by a factor, keeping the total
+            invested amount unchanged. Factor 0.2 = 5:1 consolidation (reverse split), 2 = 2:1 split.
+        </MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_symbol" Label="Symbol" Variant="Variant.Outlined" FullWidth="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="decimal" @bind-Value="_factor" Label="Factor (1/5 = 0.2)" Variant="Variant.Outlined"
+                                 Min="@(0.0001m)" FullWidth="true" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudDatePicker @bind-Date="_asOfDate" Label="Cut-off date (optional — only lots on/before it)"
+                               Variant="Variant.Outlined" Clearable="true" />
+            </MudItem>
+        </MudGrid>
+
+        <div class="d-flex align-center mt-4 mb-2">
+            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@PreviewAsync"
+                       Disabled="@(!SplitInputValid() || PreviewLoading)" StartIcon="@Icons.Material.Filled.Search">
+                @(PreviewLoading ? "Loading…" : "Preview")
+            </MudButton>
+            <MudText Typo="Typo.caption" Class="ml-2 mud-text-secondary">Shows affected lots before confirming</MudText>
+        </div>
+
+        @if (PreviewError is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-2">@PreviewError</MudAlert>
+        }
+
+        @if (Preview is not null)
+        {
+            if (Preview.Items.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Class="mt-2">No lots match this symbol and cut-off date.</MudAlert>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Warning" Class="mt-2" Dense="true">
+                    <strong>@Preview.Items.Count</strong> lot(s) affected — total amount stays the same
+                    (@Preview.Items.Sum(i => i.Amount).ToString("N2") @Preview.Items.FirstOrDefault()?.Currency).
+                </MudAlert>
+                @if (Preview.Items.Any(i => i.QuantityAfter <= 0))
+                {
+                    <MudAlert Severity="Severity.Error" Class="mt-2" Dense="true">
+                        Some lots would be reduced to zero shares and will be skipped on apply.
+                    </MudAlert>
+                }
+                <MudSimpleTable Dense="true" Class="mt-2">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th style="text-align:right">Qty before</th>
+                            <th style="text-align:right">Qty after</th>
+                            <th style="text-align:right">Unit before</th>
+                            <th style="text-align:right">Unit after</th>
+                            <th style="text-align:right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Preview.Items)
+                        {
+                            <tr>
+                                <td>@item.Date.ToString("yyyy-MM-dd")</td>
+                                <td style="text-align:right">@item.QuantityBefore.ToString("G")</td>
+                                <td style="text-align:right"><strong>@item.QuantityAfter.ToString("G")</strong></td>
+                                <td style="text-align:right">@item.UnitaryCostBefore.ToString("N4")</td>
+                                <td style="text-align:right">@item.UnitaryCostAfter.ToString("N4")</td>
+                                <td style="text-align:right">@item.Amount.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@Close">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@Apply"
+                   Disabled="@(Preview is null || Preview.Items.Count == 0 || PreviewLoading)">
+            Apply
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public string InitialSymbol { get; set; } = "";
+    [Parameter] public SplitAdjustmentPreview? Preview { get; set; }
+    [Parameter] public string? PreviewError { get; set; }
+    [Parameter] public bool PreviewLoading { get; set; }
+    [Parameter] public EventCallback<SplitAdjustmentInput> PreviewRequested { get; set; }
+    [Parameter] public EventCallback<SplitAdjustmentInput> ApplyRequested { get; set; }
+
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private bool _snapshotted;
+    private string _symbol = "";
+    private decimal _factor;
+    private DateTime? _asOfDate;
+
+    private bool _dialogVisible
+    {
+        get => Visible;
+        set => VisibleChanged.InvokeAsync(value);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Visible && !_snapshotted)
+        {
+            _snapshotted = true;
+            _symbol = InitialSymbol ?? string.Empty;
+            _factor = 0;
+            _asOfDate = null;
+        }
+        else if (!Visible)
+        {
+            _snapshotted = false;
+        }
+    }
+
+    private bool SplitInputValid() => !string.IsNullOrWhiteSpace(_symbol) && _factor > 0;
+
+    private void Close() => _dialogVisible = false;
+
+    private async Task PreviewAsync()
+    {
+        if (!SplitInputValid())
+        {
+            Snackbar.Add("Enter a symbol and a factor first", Severity.Warning);
+            return;
+        }
+
+        await PreviewRequested.InvokeAsync(new SplitAdjustmentInput(_symbol.Trim(), _factor, _asOfDate));
+    }
+
+    private async Task Apply()
+    {
+        if (Preview is null || Preview.Items.Count == 0)
+        {
+            return;
+        }
+
+        await ApplyRequested.InvokeAsync(new SplitAdjustmentInput(_symbol.Trim(), _factor, _asOfDate));
+    }
+}
