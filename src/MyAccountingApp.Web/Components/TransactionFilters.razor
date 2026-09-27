@@ -1,0 +1,145 @@
+<MudPaper Class="pa-4 mb-4" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="3">
+            <MudSelect T="int?" @bind-Value="_selectedYear" Label="Year" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+                @foreach (var year in AvailableYears)
+                {
+                    <MudSelectItem T="int?" Value="@((int?)year)">@year</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudSelect T="int?" @bind-Value="_selectedMonth" Label="Month" Variant="Variant.Outlined" FullWidth="true" Clearable="true"
+                       Disabled="@(!SelectedYear.HasValue)">
+                @for (int m = 1; m <= 12; m++)
+                {
+                    <MudSelectItem T="int?" Value="@((int?)m)">@_monthNames[m - 1]</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudSelect T="string" Label="Categories" Variant="Variant.Outlined" FullWidth="true"
+                       MultiSelection="true"
+                       SelectedValues="@SelectedCategories"
+                       SelectedValuesChanged="@OnCategoriesChanged"
+                       ToStringFunc="@(value => value ?? string.Empty)"
+                       MultiSelectionTextFunc="@CategoriesSelectionText">
+                @foreach (var cat in Categories)
+                {
+                    <MudSelectItem T="string" Value="@cat">@cat</MudSelectItem>
+                }
+            </MudSelect>
+            @if (SelectedCategories.Count > 0)
+            {
+                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" OnClick="@ClearCategories" Class="mt-1">
+                    Clear categories
+                </MudButton>
+            }
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudTextField @bind-Value="_searchText" Label="Search description" Variant="Variant.Outlined" FullWidth="true" Immediate="true" Placeholder="Type to search..." />
+        </MudItem>
+    </MudGrid>
+    <MudText Typo="Typo.subtitle2" Class="mt-3 mb-1">Quick filters</MudText>
+    <div class="d-flex flex-wrap gap-2">
+        <MudChip T="string" Color="@(TransactionBuckets.IsBucketActive(TransactionBuckets.Operating, SelectedCategories) ? Color.Primary : Color.Default)"
+                 Variant="@(TransactionBuckets.IsBucketActive(TransactionBuckets.Operating, SelectedCategories) ? Variant.Filled : Variant.Outlined)"
+                 OnClick="@(() => ToggleBucket(TransactionBuckets.Operating))">Operating</MudChip>
+        <MudChip T="string" Color="@(TransactionBuckets.IsBucketActive(TransactionBuckets.Internal, SelectedCategories) ? Color.Primary : Color.Default)"
+                 Variant="@(TransactionBuckets.IsBucketActive(TransactionBuckets.Internal, SelectedCategories) ? Variant.Filled : Variant.Outlined)"
+                 OnClick="@(() => ToggleBucket(TransactionBuckets.Internal))">Internal moves</MudChip>
+        <MudChip T="string" Color="@(TransactionBuckets.IsBucketActive(TransactionBuckets.Loans, SelectedCategories) ? Color.Primary : Color.Default)"
+                 Variant="@(TransactionBuckets.IsBucketActive(TransactionBuckets.Loans, SelectedCategories) ? Variant.Filled : Variant.Outlined)"
+                 OnClick="@(() => ToggleBucket(TransactionBuckets.Loans))">Loans</MudChip>
+        <MudChip T="string" Color="@(TransactionBuckets.IsBucketActive(TransactionBuckets.Fx, SelectedCategories) ? Color.Primary : Color.Default)"
+                 Variant="@(TransactionBuckets.IsBucketActive(TransactionBuckets.Fx, SelectedCategories) ? Variant.Filled : Variant.Outlined)"
+                 OnClick="@(() => ToggleBucket(TransactionBuckets.Fx))">FX</MudChip>
+        <MudTooltip Placement="Placement.Top">
+            <ChildContent>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.TrendingUp"
+                           OnClick="@(() => OnInvestments.InvokeAsync())">View investments</MudButton>
+            </ChildContent>
+            <TooltipContent><span>View asset purchases and sales, quantities and prices.</span></TooltipContent>
+        </MudTooltip>
+    </div>
+    <MudText Typo="Typo.caption" Class="mud-text-secondary mt-2">
+        Quick filters select whole cash-flow buckets. Use the Categories dropdown for finer control.
+    </MudText>
+</MudPaper>
+
+@code {
+    [Parameter] public IReadOnlyList<int> AvailableYears { get; set; } = Array.Empty<int>();
+    [Parameter] public int? SelectedYear { get; set; }
+    [Parameter] public EventCallback<int?> SelectedYearChanged { get; set; }
+    [Parameter] public int? SelectedMonth { get; set; }
+    [Parameter] public EventCallback<int?> SelectedMonthChanged { get; set; }
+    [Parameter] public IReadOnlySet<string> SelectedCategories { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    [Parameter] public EventCallback<IEnumerable<string>> SelectedCategoriesChanged { get; set; }
+    [Parameter] public IReadOnlyList<string> Categories { get; set; } = Array.Empty<string>();
+    [Parameter] public string? SearchText { get; set; }
+    [Parameter] public EventCallback<string?> SearchTextChanged { get; set; }
+    [Parameter] public EventCallback OnInvestments { get; set; }
+
+    private static readonly string[] _monthNames =
+    {
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+    };
+
+    private int? _selectedYear
+    {
+        get => SelectedYear;
+        set => SelectedYearChanged.InvokeAsync(value);
+    }
+
+    private int? _selectedMonth
+    {
+        get => SelectedMonth;
+        set => SelectedMonthChanged.InvokeAsync(value);
+    }
+
+    private string? _searchText
+    {
+        get => SearchText;
+        set => SearchTextChanged.InvokeAsync(value);
+    }
+
+    private void OnCategoriesChanged(IEnumerable<string> values) => SelectedCategoriesChanged.InvokeAsync(values);
+
+    private static string CategoriesSelectionText(IReadOnlyList<string> values) => values.Count switch
+    {
+        0 => "All categories",
+        1 => "1 category",
+        _ => $"{values.Count} categories",
+    };
+
+    private void ClearCategories() =>
+        SelectedCategoriesChanged.InvokeAsync(new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+
+    private void ToggleBucket(IReadOnlyList<string> bucket)
+    {
+        HashSet<string> updated = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string cat in SelectedCategories)
+        {
+            updated.Add(cat);
+        }
+
+        if (TransactionBuckets.IsBucketActive(bucket, SelectedCategories))
+        {
+            foreach (string cat in bucket)
+            {
+                updated.Remove(cat);
+            }
+        }
+        else
+        {
+            foreach (string cat in bucket)
+            {
+                updated.Add(cat);
+            }
+        }
+
+        SelectedCategoriesChanged.InvokeAsync(updated);
+    }
+}

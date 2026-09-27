@@ -1,0 +1,100 @@
+<MudDialog @bind-Visible="_dialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(EditingId is null ? "New Transaction" : "Edit Transaction")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudDatePicker @bind-Date="_date" Label="Date" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_description" Label="Description" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="decimal" @bind-Value="_amount" Label="Amount" Variant="Variant.Outlined" Min="@(0.01m)" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect @bind-Value="_currency" Label="Currency" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("EUR")">EUR</MudSelectItem>
+                    <MudSelectItem Value="@("USD")">USD</MudSelectItem>
+                    <MudSelectItem Value="@("GBP")">GBP</MudSelectItem>
+                    <MudSelectItem Value="@("CHF")">CHF</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12">
+                <MudSelect @bind-Value="_category" Label="Category" Variant="Variant.Outlined">
+                    @foreach (var cat in Categories.Where(c => c != "FX_CONVERSION"))
+                    {
+                        <MudSelectItem Value="cat">@cat</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@Close">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@Save" Disabled="@IsFormInvalid()">
+            Save
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public Guid? EditingId { get; set; }
+    [Parameter] public TransactionDto? EditingTransaction { get; set; }
+    [Parameter] public IReadOnlyList<string> Categories { get; set; } = Array.Empty<string>();
+    [Parameter] public EventCallback<TransactionFormValue> SaveRequested { get; set; }
+
+    private bool _snapshotted;
+    private DateTime? _date;
+    private string _description = "";
+    private decimal _amount;
+    private string _currency = "EUR";
+    private string _category = "EXPENSE";
+
+    private bool _dialogVisible
+    {
+        get => Visible;
+        set => VisibleChanged.InvokeAsync(value);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Visible && !_snapshotted)
+        {
+            _snapshotted = true;
+            if (EditingTransaction is not null)
+            {
+                _date = EditingTransaction.Date;
+                _description = EditingTransaction.Description;
+                _amount = EditingTransaction.Money.Amount;
+                _currency = EditingTransaction.Money.Currency;
+                _category = EditingTransaction.Category;
+            }
+            else
+            {
+                _date = DateTime.Today;
+                _description = "";
+                _amount = 0;
+                _currency = "EUR";
+                _category = "EXPENSE";
+            }
+        }
+        else if (!Visible)
+        {
+            _snapshotted = false;
+        }
+    }
+
+    private bool IsFormInvalid() => string.IsNullOrWhiteSpace(_description) || _amount <= 0;
+
+    private void Close() => _dialogVisible = false;
+
+    private async Task Save()
+    {
+        await SaveRequested.InvokeAsync(new TransactionFormValue(
+            _date ?? DateTime.Today, _description, _amount, _currency, _category));
+    }
+}
