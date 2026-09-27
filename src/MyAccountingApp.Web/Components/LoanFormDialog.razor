@@ -1,0 +1,81 @@
+<MudDialog Visible="@Visible" VisibleChanged="@SetVisibleAsync">
+    <TitleContent>
+        <MudText Typo="Typo.h6">New loan</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_counterparty" Label="Counterparty (who)" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="string" @bind-Value="_direction" Label="Direction" Variant="Variant.Outlined" FullWidth="true">
+                    <MudSelectItem T="string" Value="@("Borrowed")">Borrowed (I owe)</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Lent")">Lent (they owe me)</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField T="string" @bind-Value="_currency" Label="Currency" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudNumericField T="decimal" @bind-Value="_amount" Label="Principal" Variant="Variant.Outlined" Min="@(0.01m)" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudDatePicker @bind-Date="_date" Label="Start date" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_notes" Label="Notes (optional)" Variant="Variant.Outlined" Lines="2" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Error" OnClick="@(() => SetVisibleAsync(false))">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@IsInvalid()" OnClick="@SubmitAsync">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public EventCallback<LoanFormValue> OnSubmit { get; set; }
+
+    private string _counterparty = string.Empty;
+    private string _direction = "Borrowed";
+    private decimal _amount;
+    private string _currency = "EUR";
+    private DateTime? _date;
+    private string _notes = string.Empty;
+    private bool _snapshotted;
+
+    protected override void OnParametersSet()
+    {
+        if (Visible && !_snapshotted)
+        {
+            _counterparty = string.Empty;
+            _direction = "Borrowed";
+            _amount = 0;
+            _currency = "EUR";
+            _date = DateTime.Today;
+            _notes = string.Empty;
+            _snapshotted = true;
+        }
+        else if (!Visible)
+        {
+            _snapshotted = false;
+        }
+    }
+
+    private bool IsInvalid() =>
+        string.IsNullOrWhiteSpace(_counterparty) ||
+        _amount <= 0 ||
+        string.IsNullOrWhiteSpace(_currency) ||
+        !_date.HasValue;
+
+    private async Task SubmitAsync() =>
+        await OnSubmit.InvokeAsync(new LoanFormValue(_counterparty, _direction, _amount, _currency, _date ?? DateTime.Today, _notes));
+
+    private async Task SetVisibleAsync(bool value)
+    {
+        Visible = value;
+        await VisibleChanged.InvokeAsync(value);
+    }
+}

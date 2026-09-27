@@ -1,30 +1,19 @@
 @page "/data-quality"
 @inject HttpClient Http
-@inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 
 <PageTitle>Data quality</PageTitle>
 
 <MudText Typo="Typo.h3" GutterBottom="true">Data quality</MudText>
 
-<MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
-           OnClick="@LoadDataAsync" Disabled="@_loading" Class="mb-4">
-    Re-check
-</MudButton>
-@if (ShowAdvancedMatching)
-{
-    <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.SwapHoriz"
-               OnClick="@RecalculateTransferMatchesAsync" Disabled="@_recalculating" Class="mb-4 ml-4">
-        @(_recalculating ? "Calculating…" : "Recalculate transfer matches")
-    </MudButton>
-}
-@if (HasMissingFxWarnings)
-{
-    <MudButton Variant="Variant.Filled" Color="Color.Warning" StartIcon="@Icons.Material.Filled.AttachMoney"
-               OnClick="@SyncMissingFxAsync" Disabled="@_syncingFx" Class="mb-4 ml-4">
-        @(_syncingFx ? "Fetching…" : "Fetch missing FX")
-    </MudButton>
-}
+<DataQualityActions Loading="@_loading"
+                   Recalculating="@_recalculating"
+                   SyncingFx="@_syncingFx"
+                   ShowRecalculate="@ShowAdvancedMatching"
+                   ShowSyncFx="@HasMissingFxWarnings"
+                   OnRefresh="@LoadDataAsync"
+                   OnRecalculate="@RecalculateTransferMatchesAsync"
+                   OnSyncFx="@SyncMissingFxAsync" />
 
 @if (_loading || _recalculating || _syncingFx)
 {
@@ -38,191 +27,33 @@ else
     }
     else
     {
-        <MudPaper Class="pa-4 mb-4" Outlined="true">
-            <MudGrid>
-                <MudItem xs="4" md="3">
-                    <MudChip T="string" Color="Color.Error" Size="Size.Medium">
-                        @_result?.ErrorCount errors
-                    </MudChip>
-                </MudItem>
-                <MudItem xs="4" md="3">
-                    <MudChip T="string" Color="Color.Warning" Size="Size.Medium">
-                        @WarningCount warnings
-                    </MudChip>
-                </MudItem>
-                <MudItem xs="4" md="3">
-                    <MudChip T="string" Color="Color.Info" Size="Size.Medium">
-                        @InfoCount info
-                    </MudChip>
-                </MudItem>
-            </MudGrid>
-        </MudPaper>
+        <DataQualitySummary ErrorCount="@(_result?.ErrorCount)"
+                            WarningCount="@WarningCount"
+                            InfoCount="@InfoCount" />
 
-        <MudTable Items="@_issues" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true">
-            <HeaderContent>
-                <MudTh Style="width:50px"></MudTh>
-                <MudTh>Severity</MudTh>
-                <MudTh>Code</MudTh>
-                <MudTh>Message</MudTh>
-                <MudTh>Impacted</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd>
-                    @if (context.Field == "DUPLICATE_FINGERPRINT")
-                    {
-                        <MudCheckBox T="bool"
-                                     Value="@(_selectedDuplicateIssues.Contains(context))"
-                                     ValueChanged="@((bool val) => ToggleSelection(context, val))"
-                                     Size="Size.Small" Color="Color.Primary" />
-                    }
-                </MudTd>
-                <MudTd DataLabel="Severity">
-                    <MudChip T="string" Size="Size.Small" Color="@MapSeverityColor(context.Severity)">@context.Severity</MudChip>
-                </MudTd>
-                <MudTd DataLabel="Code"><MudText Typo="Typo.body2" Style="font-family: monospace">@context.Field</MudText></MudTd>
-                <MudTd DataLabel="Message">@context.Message</MudTd>
-                <MudTd DataLabel="Impacted">
-                    @if (!string.IsNullOrEmpty(context.DeepLink))
-                    {
-                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
-                                   OnClick="@(() => Navigation.NavigateTo(context.DeepLink!))"
-                                   StartIcon="@Icons.Material.Filled.OpenInNew">
-                            View @(context.EntityIds is { Count: > 0 } ids ? $"{ids.Count} {(ids.Count == 1 ? "transaction" : "transactions")}" : "movements")
-                        </MudButton>
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.body2" Class="mud-text-secondary">—</MudText>
-                    }
-                    @if (context.Field == "DUPLICATE_FINGERPRINT")
-                    {
-                        <MudButton Variant="Variant.Text" Color="Color.Success" Size="Size.Small"
-                                   OnClick="@(() => OpenResolveAsync(context))"
-                                   StartIcon="@Icons.Material.Filled.CleaningServices">
-                            Resolve
-                        </MudButton>
-                    }
-                </MudTd>
-            </RowTemplate>
-            <NoRecordsContent>
-                <MudText Class="pa-4">No issues.</MudText>
-            </NoRecordsContent>
-        </MudTable>
-
-        @if (_selectedDuplicateIssues.Count > 0)
-        {
-            <MudPaper Class="pa-3 mt-4" Outlined="true">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="4">
-                    <MudText Typo="Typo.body2">
-                        @_selectedDuplicateIssues.Count group(s) selected, ~@BulkDeleteCount duplicate(s) to delete
-                    </MudText>
-                    <MudSpacer />
-                    <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small"
-                               OnClick="@ClearSelection">Clear</MudButton>
-                    <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.CleaningServices"
-                               OnClick="@OpenBulkResolveAsync"
-                               Disabled="@_resolving">
-                        Resolve selected
-                    </MudButton>
-                </MudStack>
-            </MudPaper>
-        }
+        <DataQualityIssueList Issues="@_issues"
+                              SelectedIssues="@_selectedDuplicateIssues"
+                              BulkDeleteCount="@BulkDeleteCount"
+                              Resolving="@_resolving"
+                              SelectionToggled="@ToggleSelection"
+                              OnClearSelection="@ClearSelection"
+                              OnResolveSelected="@OpenBulkResolveAsync"
+                              OnResolve="@OpenResolveAsync" />
     }
 }
 
-<MudOverlay Visible="_dialogOpen" OnClick="@CloseResolveAsync" />
+<ResolveDuplicatesDialog @bind-Visible="_dialogOpen"
+                         Rows="@_duplicateRows"
+                         Resolving="@_resolving"
+                         CloseRequested="@CloseResolveAsync"
+                         ConfirmRequested="@ConfirmResolveAsync" />
 
-<MudDialog @bind-Visible="_dialogOpen" Options="new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Large, FullWidth = true }">
-    <DialogContent>
-        <MudText Typo="Typo.h6" Class="mb-2">Resolve duplicate transactions</MudText>
-        <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
-            This group of transactions shares the same date, description and amount.
-            Choose the one to keep; the rest will be permanently deleted.
-        </MudText>
-
-        @if (_resolvingIssue is not null && _duplicateRows is { Count: > 0 })
-        {
-            <MudRadioGroup T="Guid" @bind-Value="_keeperId">
-                <MudTable Items="_duplicateRows" Hover="true" Elevation="0" Outlined="true" Striped="true">
-                    <HeaderContent>
-                        <MudTh>Keep</MudTh>
-                        <MudTh>Date</MudTh>
-                        <MudTh>Description</MudTh>
-                        <MudTh>Amount</MudTh>
-                        <MudTh>Category</MudTh>
-                        <MudTh>Source</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd><MudRadio T="Guid" Value="@context.Id" /></MudTd>
-                        <MudTd>@context.Date.ToString("yyyy-MM-dd")</MudTd>
-                        <MudTd>@context.Description</MudTd>
-                        <MudTd>@context.Money.Amount.ToString("0.##") @context.Money.Currency</MudTd>
-                        <MudTd>@context.Category</MudTd>
-                        <MudTd>
-                            @if (string.IsNullOrEmpty(context.Source))
-                            {
-                                <MudText Typo="Typo.body2" Class="mud-text-secondary">—</MudText>
-                            }
-                            else
-                            {
-                                <MudText Typo="Typo.body2">@context.Source</MudText>
-                            }
-                        </MudTd>
-                    </RowTemplate>
-                </MudTable>
-            </MudRadioGroup>
-
-            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-4 mb-4">
-                @DupesToDelete duplicate(s) will be permanently deleted.
-            </MudAlert>
-
-            <MudForm>
-                <MudCheckBox T="bool" @bind-Value="_confirmed" Label="I understand this action cannot be undone." Color="Color.Error" />
-            </MudForm>
-        }
-    </DialogContent>
-    <DialogActions>
-        <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="@CloseResolveAsync" Disabled="@_resolving">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Error"
-                   OnClick="@ConfirmResolveAsync"
-                   Disabled="@(_confirmed == false || _resolving)">
-            @(_resolving ? "Deleting…" : "Delete duplicates")
-        </MudButton>
-    </DialogActions>
-</MudDialog>
-
-<MudOverlay Visible="_bulkDialogOpen" OnClick="@CloseBulkResolveAsync" />
-
-<MudDialog @bind-Visible="_bulkDialogOpen" Options="new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true }">
-    <DialogContent>
-        <MudText Typo="Typo.h6" Class="mb-2">Resolve all selected duplicates</MudText>
-        <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
-            For each selected group the system will keep one transaction (the one with
-            import provenance or the lowest id) and permanently delete the rest.
-        </MudText>
-
-        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mb-4">
-            @_selectedDuplicateIssues.Count group(s) selected —
-            ~@BulkDeleteCount duplicate(s) will be permanently deleted.
-        </MudAlert>
-
-        <MudForm>
-            <MudCheckBox T="bool" @bind-Value="_bulkConfirmed"
-                         Label="I understand this action cannot be undone."
-                         Color="Color.Error" />
-        </MudForm>
-    </DialogContent>
-    <DialogActions>
-        <MudButton Variant="Variant.Text" Color="Color.Default"
-                   OnClick="@CloseBulkResolveAsync" Disabled="@_resolving">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Error"
-                   OnClick="@ConfirmBulkResolveAsync"
-                   Disabled="@(_bulkConfirmed == false || _resolving)">
-            @(_resolving ? "Deleting…" : "Delete duplicates")
-        </MudButton>
-    </DialogActions>
-</MudDialog>
+<BulkResolveDuplicatesDialog @bind-Visible="_bulkDialogOpen"
+                             SelectedCount="@_selectedDuplicateIssues.Count"
+                             BulkDeleteCount="@BulkDeleteCount"
+                             Resolving="@_resolving"
+                             CloseRequested="@CloseBulkResolveAsync"
+                             ConfirmRequested="@ConfirmBulkResolveAsync" />
 
 @code {
     private static bool ShowAdvancedMatching = false;
@@ -236,18 +67,13 @@ else
     private bool _dialogOpen;
     private ValidationError? _resolvingIssue;
     private List<TransactionDto> _duplicateRows = new();
-    private Guid _keeperId;
-    private bool _confirmed;
     private bool _resolving;
 
     private List<ValidationError> _selectedDuplicateIssues = new();
     private List<BulkDuplicateGroup> _bulkGroups = new();
     private bool _bulkDialogOpen;
-    private bool _bulkConfirmed;
 
     private int BulkDeleteCount => _bulkGroups.SelectMany(g => g.Rows.Where(r => r.Id != g.KeeperId)).Count();
-
-    private int DupesToDelete => _keeperId == Guid.Empty ? 0 : _duplicateRows.Count(t => t.Id != _keeperId);
 
     private int WarningCount => _result?.Warnings.Count(w => w.Severity != "info") ?? 0;
     private int InfoCount => _result?.Warnings.Count(w => w.Severity == "info") ?? 0;
@@ -282,15 +108,12 @@ else
     {
         _resolvingIssue = issue;
         _duplicateRows = new List<TransactionDto>();
-        _keeperId = Guid.Empty;
-        _confirmed = false;
 
         try
         {
             List<TransactionDto> all = await Http.GetFromJsonAsync<List<TransactionDto>>("/api/transactions") ?? new List<TransactionDto>();
             HashSet<Guid> ids = (issue.EntityIds ?? new List<Guid>()).ToHashSet();
             _duplicateRows = all.Where(t => ids.Contains(t.Id)).ToList();
-            _keeperId = PickDefaultKeeper(_duplicateRows);
             _dialogOpen = true;
         }
         catch (Exception ex)
@@ -309,13 +132,11 @@ else
         _dialogOpen = false;
         _resolvingIssue = null;
         _duplicateRows = new List<TransactionDto>();
-        _keeperId = Guid.Empty;
-        _confirmed = false;
     }
 
-    private async Task ConfirmResolveAsync()
+    private async Task ConfirmResolveAsync(ResolveDuplicatesInput input)
     {
-        if (_resolvingIssue is null || _keeperId == Guid.Empty)
+        if (_resolvingIssue is null || input.KeeperId == Guid.Empty)
         {
             return;
         }
@@ -323,7 +144,7 @@ else
         _resolving = true;
         try
         {
-            List<Guid> deleteIds = _duplicateRows.Where(t => t.Id != _keeperId).Select(t => t.Id).ToList();
+            List<Guid> deleteIds = _duplicateRows.Where(t => t.Id != input.KeeperId).Select(t => t.Id).ToList();
             if (deleteIds.Count > 0)
             {
                 HttpResponseMessage response = await Http.PostAsJsonAsync(
@@ -382,7 +203,6 @@ else
         }
 
         _bulkGroups = new List<BulkDuplicateGroup>();
-        _bulkConfirmed = false;
 
         try
         {
@@ -423,7 +243,6 @@ else
         }
 
         _bulkDialogOpen = false;
-        _bulkConfirmed = false;
     }
 
     private async Task ConfirmBulkResolveAsync()
@@ -540,12 +359,4 @@ else
         ValidationError Issue,
         List<TransactionDto> Rows,
         Guid KeeperId);
-
-    private static Color MapSeverityColor(string severity) => severity switch
-    {
-        "error" => Color.Error,
-        "warning" => Color.Warning,
-        "info" => Color.Info,
-        _ => Color.Default,
-    };
 }

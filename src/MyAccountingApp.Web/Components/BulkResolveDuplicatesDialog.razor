@@ -1,0 +1,67 @@
+<MudOverlay Visible="@Visible" OnClick="@Close" />
+
+<MudDialog @bind-Visible="_dialogVisible" Options="new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true }">
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-2">Resolve all selected duplicates</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+            For each selected group the system will keep one transaction (the one with
+            import provenance or the lowest id) and permanently delete the rest.
+        </MudText>
+
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mb-4">
+            @SelectedCount group(s) selected —
+            ~@BulkDeleteCount duplicate(s) will be permanently deleted.
+        </MudAlert>
+
+        <MudForm>
+            <MudCheckBox T="bool" @bind-Value="_bulkConfirmed"
+                         Label="I understand this action cannot be undone."
+                         Color="Color.Error" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" Color="Color.Default"
+                   OnClick="@Close" Disabled="@Resolving">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error"
+                   OnClick="@Confirm"
+                   Disabled="@(_bulkConfirmed == false || Resolving)">
+            @(Resolving ? "Deleting…" : "Delete duplicates")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public int SelectedCount { get; set; }
+    [Parameter] public int BulkDeleteCount { get; set; }
+    [Parameter] public bool Resolving { get; set; }
+    [Parameter] public EventCallback CloseRequested { get; set; }
+    [Parameter] public EventCallback ConfirmRequested { get; set; }
+
+    private bool _snapshotted;
+    private bool _bulkConfirmed;
+
+    private bool _dialogVisible
+    {
+        get => Visible;
+        set => VisibleChanged.InvokeAsync(value);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Visible && !_snapshotted)
+        {
+            _snapshotted = true;
+            _bulkConfirmed = false;
+        }
+        else if (!Visible)
+        {
+            _snapshotted = false;
+        }
+    }
+
+    private void Close() => CloseRequested.InvokeAsync();
+
+    private async Task Confirm() => await ConfirmRequested.InvokeAsync();
+}

@@ -1,0 +1,66 @@
+<MudPaper Class="pa-4 mb-4" Outlined="true">
+    <MudText Typo="Typo.subtitle1" GutterBottom="true">
+        Filtered totals — @Count transactions
+    </MudText>
+    @if (Summaries.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">No transactions match the current filters.</MudText>
+    }
+    else
+    {
+        <MudSimpleTable Dense="true" Hover="false" Bordered="false" Style="background: transparent;">
+            <thead>
+                <tr>
+                    <th rowspan="2">Currency</th>
+                    <th style="text-align:center" colspan="3">Operating</th>
+                    <th style="text-align:center" colspan="2">Investing</th>
+                    <th style="text-align:center" colspan="2">Internal</th>
+                    <th style="text-align:center" colspan="2">Loans</th>
+                    <th style="text-align:center" colspan="2" class="mud-text-secondary">FX</th>
+                </tr>
+                <tr>
+                    <th style="text-align:right">Income</th>
+                    <th style="text-align:right">Expense</th>
+                    <th style="text-align:right">Net</th>
+                    <th style="text-align:right">Purchases</th>
+                    <th style="text-align:right">Sales</th>
+                    <th style="text-align:right">Out</th>
+                    <th style="text-align:right">In</th>
+                    <th style="text-align:right">Out</th>
+                    <th style="text-align:right">In</th>
+                    <th style="text-align:right" class="mud-text-secondary">Out</th>
+                    <th style="text-align:right" class="mud-text-secondary">In</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var s in Summaries)
+                {
+                    <tr>
+                        <td><strong>@s.Currency</strong> <span class="mud-text-secondary">(@s.Count)</span></td>
+                        <td style="text-align:right" class="green--text">@s.Income.ToString("N2")</td>
+                        <td style="text-align:right" class="red--text">@s.Expense.ToString("N2")</td>
+                        <td style="text-align:right">
+                            <strong class="@(s.OperatingNet >= 0 ? "green--text" : "red--text")">@s.OperatingNet.ToString("N2")</strong>
+                        </td>
+                        <td style="text-align:right">@s.InvestingPurchase.ToString("N2")</td>
+                        <td style="text-align:right">@s.InvestingSale.ToString("N2")</td>
+                        <td style="text-align:right">@s.Transfer.ToString("N2")</td>
+                        <td style="text-align:right">@s.Deposit.ToString("N2")</td>
+                        <td style="text-align:right">@s.LoanOut.ToString("N2")</td>
+                        <td style="text-align:right">@s.LoanIn.ToString("N2")</td>
+                        <td style="text-align:right" class="mud-text-secondary">@s.FxOut.ToString("N2")</td>
+                        <td style="text-align:right" class="mud-text-secondary">@s.FxIn.ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+        <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
+            Operating net = Income − Expense. Investing (asset purchase/sale), internal transfers/deposits and loan movements are excluded from Operating net; FX legs sit in their own out / in columns (not in Operating net), and loan movements have their own out / in columns.
+        </MudText>
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public IReadOnlyList<FilterCurrencySummary> Summaries { get; set; } = new List<FilterCurrencySummary>();
+    [Parameter] public int Count { get; set; }
+}

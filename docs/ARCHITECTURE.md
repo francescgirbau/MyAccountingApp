@@ -100,7 +100,7 @@ derived bug is fixed in code, not in data.
 | Web → contracts-only (drop the `Application` reference) | **Done — PR-2 (2026-09):** Web depends on `Contracts` only; helpers moved to `Web/Services`; `DataQuality.razor` DTO-based | — |
 | `Core` → `Infrastructure` split (Persistence / Imports / MarketData / Currency / Vault) | Low–medium (mechanical) | Only with a driver: new storage, new broker, or large feature crossing those areas |
 | Api thinning (endpoints that reach into repositories directly behind use cases) | Medium | Opportunistically, per endpoint, as features require |
-| Web component splitting (big `.razor` pages → focused components) | Medium | Behavior-preserving, one page per PR |
+| Web component splitting (big `.razor` pages → focused components) | Medium | Behavior-preserving, one page per PR. **PR-3 (2026-09):** `Transactions` split into `Web/Components` (filters, totals, table, 5 dialogs); page keeps data + HTTP + filtering |
 | Golden datasets + persistence compatibility tests | High | Before the next persistence change (`docs/MIGRATION.md`) |
 | SQLite behind the persistence abstraction | — | Only if JSON stops being enough (volume/query/concurrency) — not now |
 | AI-assisted classification | — | Last; deterministic core first (`docs/VISION.md`) |

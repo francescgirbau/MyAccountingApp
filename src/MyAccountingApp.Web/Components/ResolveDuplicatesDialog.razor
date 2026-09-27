@@ -1,0 +1,99 @@
+<MudOverlay Visible="@Visible" OnClick="@Close" />
+
+<MudDialog @bind-Visible="_dialogVisible" Options="new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Large, FullWidth = true }">
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-2">Resolve duplicate transactions</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+            This group of transactions shares the same date, description and amount.
+            Choose the one to keep; the rest will be permanently deleted.
+        </MudText>
+
+        @if (Rows is { Count: > 0 })
+        {
+            <MudRadioGroup T="Guid" @bind-Value="_keeperId">
+                <MudTable Items="Rows" Hover="true" Elevation="0" Outlined="true" Striped="true">
+                    <HeaderContent>
+                        <MudTh>Keep</MudTh>
+                        <MudTh>Date</MudTh>
+                        <MudTh>Description</MudTh>
+                        <MudTh>Amount</MudTh>
+                        <MudTh>Category</MudTh>
+                        <MudTh>Source</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd><MudRadio T="Guid" Value="@context.Id" /></MudTd>
+                        <MudTd>@context.Date.ToString("yyyy-MM-dd")</MudTd>
+                        <MudTd>@context.Description</MudTd>
+                        <MudTd>@context.Money.Amount.ToString("0.##") @context.Money.Currency</MudTd>
+                        <MudTd>@context.Category</MudTd>
+                        <MudTd>
+                            @if (string.IsNullOrEmpty(context.Source))
+                            {
+                                <MudText Typo="Typo.body2" Class="mud-text-secondary">—</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2">@context.Source</MudText>
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudRadioGroup>
+
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-4 mb-4">
+                @DupesToDelete duplicate(s) will be permanently deleted.
+            </MudAlert>
+
+            <MudForm>
+                <MudCheckBox T="bool" @bind-Value="_confirmed" Label="I understand this action cannot be undone." Color="Color.Error" />
+            </MudForm>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="@Close" Disabled="@Resolving">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error"
+                   OnClick="@Confirm"
+                   Disabled="@(_confirmed == false || Resolving)">
+            @(Resolving ? "Deleting…" : "Delete duplicates")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public IReadOnlyList<TransactionDto> Rows { get; set; } = Array.Empty<TransactionDto>();
+    [Parameter] public bool Resolving { get; set; }
+    [Parameter] public EventCallback CloseRequested { get; set; }
+    [Parameter] public EventCallback<ResolveDuplicatesInput> ConfirmRequested { get; set; }
+
+    private bool _snapshotted;
+    private Guid _keeperId;
+    private bool _confirmed;
+
+    private bool _dialogVisible
+    {
+        get => Visible;
+        set => VisibleChanged.InvokeAsync(value);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Visible && !_snapshotted)
+        {
+            _snapshotted = true;
+            _keeperId = Rows.Count > 0 ? DuplicateResolutionService.PickDefaultKeeper(Rows).Id : Guid.Empty;
+            _confirmed = false;
+        }
+        else if (!Visible)
+        {
+            _snapshotted = false;
+        }
+    }
+
+    private int DupesToDelete => _keeperId == Guid.Empty ? 0 : Rows.Count(t => t.Id != _keeperId);
+
+    private void Close() => CloseRequested.InvokeAsync();
+
+    private async Task Confirm() => await ConfirmRequested.InvokeAsync(new ResolveDuplicatesInput(_keeperId));
+}
