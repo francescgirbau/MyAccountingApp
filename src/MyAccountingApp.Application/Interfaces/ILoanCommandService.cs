@@ -1,4 +1,4 @@
-using MyAccountingApp.Application.DTOs;
+using MyAccountingApp.Contracts;
 
 namespace MyAccountingApp.Application.Interfaces;
 

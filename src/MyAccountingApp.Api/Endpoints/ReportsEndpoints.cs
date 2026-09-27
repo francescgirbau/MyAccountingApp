@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Builder;
-using MyAccountingApp.Application.DTOs;
 using MyAccountingApp.Application.Interfaces;
+using MyAccountingApp.Contracts;
 
 namespace MyAccountingApp.Api.Endpoints;
 

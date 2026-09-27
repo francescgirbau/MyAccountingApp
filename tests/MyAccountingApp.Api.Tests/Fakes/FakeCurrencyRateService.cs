@@ -1,5 +1,6 @@
 using MyAccountingApp.Application.DTOs;
 using MyAccountingApp.Application.Interfaces;
+using MyAccountingApp.Contracts;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 

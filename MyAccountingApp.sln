@@ -29,6 +29,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyAccountingApp.Web", "src\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyAccountingApp.Api.Tests", "tests\MyAccountingApp.Api.Tests\MyAccountingApp.Api.Tests.csproj", "{E4F79C70-6BAC-4EB6-8A3C-27E0ABB22C6C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyAccountingApp.Contracts", "src\MyAccountingApp.Contracts\MyAccountingApp.Contracts.csproj", "{86CF792E-6DBE-4833-A77C-4FA5B451AF5F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -171,6 +173,18 @@ Global
 		{E4F79C70-6BAC-4EB6-8A3C-27E0ABB22C6C}.Release|x64.Build.0 = Release|Any CPU
 		{E4F79C70-6BAC-4EB6-8A3C-27E0ABB22C6C}.Release|x86.ActiveCfg = Release|Any CPU
 		{E4F79C70-6BAC-4EB6-8A3C-27E0ABB22C6C}.Release|x86.Build.0 = Release|Any CPU
+		{86CF792E-6DBE-4833-A77C-4FA5B451AF5F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{86CF792E-6DBE-4833-A77C-4FA5B451AF5F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{86CF792E-6DBE-4833-A77C-4FA5B451AF5F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{86CF792E-6DBE-4833-A77C-4FA5B451AF5F}.Debug|x64.Build.0 = Debug|Any CPU
+		{86CF792E-6DBE-4833-A77C-4FA5B451AF5F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{86CF792E-6DBE-4833-A77C-4FA5B451AF5F}.Debug|x86.Build.0 = Debug|Any CPU
+		{86CF792E-6DBE-4833-A77C-4FA5B451AF5F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{86CF792E-6DBE-4833-A77C-4FA5B451AF5F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{86CF792E-6DBE-4833-A77C-4FA5B451AF5F}.Release|x64.ActiveCfg = Release|Any CPU
+		{86CF792E-6DBE-4833-A77C-4FA5B451AF5F}.Release|x64.Build.0 = Release|Any CPU
+		{86CF792E-6DBE-4833-A77C-4FA5B451AF5F}.Release|x86.ActiveCfg = Release|Any CPU
+		{86CF792E-6DBE-4833-A77C-4FA5B451AF5F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -187,6 +201,7 @@ Global
 		{DAA50238-7F13-4F77-9106-0F5517BED2CF} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{D7C603DC-5853-426F-ADFE-6091AF4E9F45} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{E4F79C70-6BAC-4EB6-8A3C-27E0ABB22C6C} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{86CF792E-6DBE-4833-A77C-4FA5B451AF5F} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E3205FF5-80E6-4A74-8C16-F753C474104E}

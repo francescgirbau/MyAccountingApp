@@ -417,7 +417,7 @@ else
                 return;
             }
 
-            BatchPatchResultDto? result = await response.Content.ReadFromJsonAsync<BatchPatchResultDto>();
+            BatchPatchResult? result = await response.Content.ReadFromJsonAsync<BatchPatchResult>();
             _showBulkSymbolDialog = false;
             _selected.Clear();
 

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using MyAccountingApp.Contracts;
 using MyAccountingApp.Core.Persistence;
 using MyAccountingApp.Core.Vault;
 
@@ -12,12 +13,7 @@ public static class AuthEndpoints
     {
         app.MapGet($"{prefix}/auth/status", (IVaultService vault) =>
         {
-            return Results.Ok(new
-            {
-                isEnabled = vault.IsEnabled,
-                isInitialized = vault.IsInitialized,
-                isUnlocked = vault.IsUnlocked,
-            });
+            return Results.Ok(new AuthStatusDto(vault.IsEnabled, vault.IsInitialized, vault.IsUnlocked));
         });
 
         app.MapPost($"{prefix}/auth/setup", (AuthRequest request, IVaultService vault) =>

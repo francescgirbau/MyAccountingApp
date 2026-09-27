@@ -1,8 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MyAccountingApp.Application.DTOs;
 using MyAccountingApp.Application.Interfaces;
 using MyAccountingApp.Application.Options;
+using MyAccountingApp.Contracts;
 using MyAccountingApp.Domain.Constants;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;

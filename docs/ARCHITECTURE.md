@@ -32,17 +32,18 @@ MyAccountingApp
 |---|---|---|
 | **Domain** | Entities, value objects, enums, and the repository abstractions (`ITransactionRepository`, `IPortfolioRepository`, `IOptionTransactionRepository`, `ILoanRepository`, …) | none |
 | **Core** | **De facto infrastructure**: persistence (`Json*`/`Composite` repositories, `EncryptedJsonFileStorage`, `VaultService`), broker imports (IBKR, SelfBank, Cobas, MyInvestor, Degiro, Revolut, AbnAmro, Coinbase, generic bank/fund CSVs), market data (Yahoo, Frankfurter/exchangerate.host + quota), Vault | Domain |
-| **Application** | Orchestration: import service, command/query services, calculations (positions, split adjustments, validation), DTOs | Core, Domain |
-| **Api** | Minimal API endpoints, mostly thin | Core, Application |
-| **Web** | Blazor WASM + MudBlazor; talks to the API over HTTP; defines its own DTOs in `Web/Models/Dtos.cs` (duplicated from Application) | Application |
+| **Application** | Orchestration: import service, command/query services, calculations (positions, split adjustments, validation) | Core, Domain, Contracts |
+| **Contracts** | Wire shapes (DTOs, request records): single source of truth for the API/Web payloads, no logic | none |
+| **Api** | Minimal API endpoints, mostly thin; returns `Contracts` shapes | Core, Application, Contracts |
+| **Web** | Blazor WASM + MudBlazor; talks to the API over HTTP; consumes `Contracts` shapes (still references `Application` — PR-2 pending) | Application, Contracts |
 | **ConsoleApp** | Ops/maintenance tool | Core, Application |
 
 **Key observations**
 
 1. `Domain` already holds the repository *abstractions* — the dependency direction is healthy.
 2. `Core` is effectively the future `Infrastructure`: persistence, imports and external providers all live behind interfaces already. Splitting/renaming it is mostly mechanical — do it **only when there is a driver** (new storage, new broker kind, or before a big feature that touches several of those areas).
-3. `Web` references `Application` directly and duplicates the DTO shapes (`Application/DTOs` vs `Web/Models/Dtos.cs`). A `Contracts` project would end that duplication — the highest-value structural step, still medium-effort.
-4. The DTOs are duplicated by hand and drift is real (e.g. `ImportResultDto` exists as a record in Application and as a class in Web).
+3. `Web` has depended on `Application` directly since the beginning. **PR-1 (2026-09)** created `Contracts` and moved every wire shape there, ending the hand-duplicated DTOs; **PR-2** will drop the `Web → Application` project reference entirely (the three helpers it still uses move into the Web, `DataQuality.razor` stops touching `Domain`).
+4. The DTO wire is now single-sourced in `Contracts` and protected by `Api.Tests` (JSON-key assertions); no more drift by hand.
 
 ## Dependency rules (target)
 
@@ -95,7 +96,8 @@ derived bug is fixed in code, not in data.
 
 | Step | Value | When to do it |
 |---|---|---|
-| `Contracts` project (end DTO duplication) | High | When a new endpoint/feature group touches several DTOs, or next major Web change |
+| `Contracts` project (end DTO duplication) | **Done — PR-1 (2026-09):** wire shapes live in `Contracts`; Web consumes them; JSON keys enforced by `Api.Tests` | — |
+| Web → contracts-only (drop the `Application` reference; move remaining helpers into the Web) | High | Next structural step — PR-2 after PR-1 |
 | `Core` → `Infrastructure` split (Persistence / Imports / MarketData / Currency / Vault) | Low–medium (mechanical) | Only with a driver: new storage, new broker, or large feature crossing those areas |
 | Api thinning (endpoints that reach into repositories directly behind use cases) | Medium | Opportunistically, per endpoint, as features require |
 | Web component splitting (big `.razor` pages → focused components) | Medium | Behavior-preserving, one page per PR |

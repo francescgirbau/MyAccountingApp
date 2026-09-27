@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using MyAccountingApp.Application.DTOs;
 using MyAccountingApp.Application.Interfaces;
 using MyAccountingApp.Application.Services;
+using MyAccountingApp.Contracts;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
@@ -109,7 +110,7 @@ public static class TransactionsEndpoints
             repo.AddOrUpdate(inLeg);
             return Results.Created(
                 $"/api/transactions?ids={outLeg.Id},{inLeg.Id}",
-                new { pairId, outTransaction = outLeg.ToDto(), inTransaction = inLeg.ToDto() });
+                new FxCreateResponse(pairId, outLeg.ToDto(), inLeg.ToDto()));
         });
 
         app.MapPatch($"{prefix}/transactions/batch", (BatchTransactionPatchRequest request, ITransactionCommandService service) =>
@@ -182,7 +183,7 @@ public static class TransactionsEndpoints
             int transactionsRemoved = repo.DeleteByYear(year);
             int assetsRemoved = portfolioRepo.DeleteByYear(year);
             int optionsRemoved = optionRepo.DeleteByYear(year);
-            return Results.Ok(new { year, deletedTransactions = transactionsRemoved, deletedAssets = assetsRemoved, deletedOptions = optionsRemoved });
+            return Results.Ok(new DeleteYearResultDto(year, transactionsRemoved, assetsRemoved, optionsRemoved));
         });
 
         app.MapGet($"{prefix}/transactions/year/{{year:int}}/count", (int year, ITransactionRepository repo, IPortfolioRepository portfolioRepo, IOptionTransactionRepository optionRepo) =>
@@ -190,7 +191,7 @@ public static class TransactionsEndpoints
             int transactions = repo.GetAll().Count(t => t.Date.Year == year);
             int assets = portfolioRepo.GetAllTransactions().Count(a => a.Transaction.Date.Year == year);
             int options = optionRepo.GetAll().Count(o => o.Transaction.Date.Year == year);
-            return Results.Ok(new { year, transactions, assets, options });
+            return Results.Ok(new DeleteYearCountDto(year, transactions, assets, options));
         });
 
         app.MapGet($"{prefix}/asset-transactions", (IPortfolioRepository repo) =>
@@ -337,13 +338,13 @@ public static class TransactionsEndpoints
         app.MapDelete($"{prefix}/asset-transactions/year/{{year:int}}", (int year, IPortfolioRepository portfolioRepo) =>
         {
             int removed = portfolioRepo.DeleteByYear(year);
-            return Results.Ok(new { year, deletedAssets = removed });
+            return Results.Ok(new DeleteAssetYearResultDto(year, removed));
         });
 
         app.MapGet($"{prefix}/asset-transactions/year/{{year:int}}/count", (int year, IPortfolioRepository portfolioRepo) =>
         {
             int assets = portfolioRepo.GetAllTransactions().Count(a => a.Transaction.Date.Year == year);
-            return Results.Ok(new { year, assets });
+            return Results.Ok(new DeleteAssetYearCountDto(year, assets));
         });
 
         app.MapGet($"{prefix}/option-transactions", (IOptionTransactionRepository repo) =>
@@ -421,13 +422,3 @@ public static class TransactionsEndpoints
     private static bool MatchesRate(decimal implied, decimal rate) =>
         Math.Abs(implied - rate) / rate <= FxConversionPairing.RateTolerance;
 }
-
-record CreateTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category);
-record CreateFxTransactionRequest(DateTime Date, string FromCurrency, decimal FromAmount, string ToCurrency, decimal ToAmount, decimal? Rate = null, string? Description = null);
-record CreateAssetTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, decimal Quantity, string Type);
-record SplitAdjustmentRequest(string Symbol, decimal Factor, DateTime? AsOfDate = null);
-record UpdateOptionTransactionRequest(DateTime Date, string Description, decimal Amount, string Currency, string Category, string Symbol, string Isin, decimal Quantity, string Type);
-record BatchAssetTransactionPatchRequest(List<Guid> Ids, AssetTransactionPatch Patch);
-record BatchOptionTransactionPatchRequest(List<Guid> Ids, OptionTransactionPatch Patch);
-record BatchTransactionPatchRequest(List<Guid> Ids, TransactionPatch Patch);
-record BulkDeleteRequest(List<Guid> Ids);

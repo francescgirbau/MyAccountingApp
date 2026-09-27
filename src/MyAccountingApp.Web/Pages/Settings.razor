@@ -133,9 +133,9 @@
     @if (_deleteYearResult is not null)
     {
         <MudAlert Severity="Severity.Info" Class="mt-2">
-            Deleted <strong>@_deleteYearResult.deletedTransactions</strong> transactions,
-            <strong>@_deleteYearResult.deletedAssets</strong> asset transactions, and
-            <strong>@_deleteYearResult.deletedOptions</strong> option transactions for year @_deleteYear.
+            Deleted <strong>@_deleteYearResult.DeletedTransactions</strong> transactions,
+            <strong>@_deleteYearResult.DeletedAssets</strong> asset transactions, and
+            <strong>@_deleteYearResult.DeletedOptions</strong> option transactions for year @_deleteYear.
         </MudAlert>
     }
 
@@ -165,7 +165,7 @@
     @if (_deleteAssetYearResult is not null)
     {
         <MudAlert Severity="Severity.Info" Class="mt-2">
-            Deleted <strong>@_deleteAssetYearResult.deletedAssets</strong> asset transactions for year @_deleteAssetYear.
+            Deleted <strong>@_deleteAssetYearResult.DeletedAssets</strong> asset transactions for year @_deleteAssetYear.
         </MudAlert>
     }
 </MudPaper>
@@ -389,9 +389,9 @@
                 return;
             }
 
-            _deleteYearPreviewTransactions = preview.transactions;
-            _deleteYearPreviewAssets = preview.assets;
-            _deleteYearPreviewOptions = preview.options;
+            _deleteYearPreviewTransactions = preview.Transactions;
+            _deleteYearPreviewAssets = preview.Assets;
+            _deleteYearPreviewOptions = preview.Options;
             _showDeleteYearDialog = true;
         }
         catch (Exception ex)
@@ -426,7 +426,7 @@
 
             _deleteYearResult = await response.Content.ReadFromJsonAsync<DeleteYearResultDto>();
             _showDeleteYearDialog = false;
-            Snackbar.Add($"Deleted {_deleteYearResult?.deletedTransactions} transactions, {_deleteYearResult?.deletedAssets} assets, and {_deleteYearResult?.deletedOptions} options for {_deleteYear}.", Severity.Success);
+            Snackbar.Add($"Deleted {_deleteYearResult?.DeletedTransactions} transactions, {_deleteYearResult?.DeletedAssets} assets, and {_deleteYearResult?.DeletedOptions} options for {_deleteYear}.", Severity.Success);
         }
         catch (Exception ex)
         {
@@ -436,42 +436,6 @@
         {
             _isDeletingYear = false;
         }
-    }
-
-    private sealed class ResetResultDto
-    {
-        public string? Message { get; set; }
-        public int ClearedTransactions { get; set; }
-        public int ClearedAssetTransactions { get; set; }
-        public int ClearedOptionTransactions { get; set; }
-    }
-
-    private sealed class DeleteYearResultDto
-    {
-        public int year { get; set; }
-        public int deletedTransactions { get; set; }
-        public int deletedAssets { get; set; }
-        public int deletedOptions { get; set; }
-    }
-
-    private sealed class DeleteAssetYearResultDto
-    {
-        public int year { get; set; }
-        public int deletedAssets { get; set; }
-    }
-
-    private sealed class DeleteYearCountDto
-    {
-        public int year { get; set; }
-        public int transactions { get; set; }
-        public int assets { get; set; }
-        public int options { get; set; }
-    }
-
-    private sealed class DeleteAssetYearCountDto
-    {
-        public int year { get; set; }
-        public int assets { get; set; }
     }
 
     private async Task DeleteAssetYearAsync()
@@ -489,7 +453,7 @@
                 return;
             }
 
-            _deleteAssetYearPreviewAssets = preview.assets;
+            _deleteAssetYearPreviewAssets = preview.Assets;
             _showDeleteAssetYearDialog = true;
         }
         catch (Exception ex)
@@ -524,7 +488,7 @@
 
             _deleteAssetYearResult = await response.Content.ReadFromJsonAsync<DeleteAssetYearResultDto>();
             _showDeleteAssetYearDialog = false;
-            Snackbar.Add($"Deleted {_deleteAssetYearResult?.deletedAssets} asset transactions for {_deleteAssetYear}.", Severity.Success);
+            Snackbar.Add($"Deleted {_deleteAssetYearResult?.DeletedAssets} asset transactions for {_deleteAssetYear}.", Severity.Success);
         }
         catch (Exception ex)
         {

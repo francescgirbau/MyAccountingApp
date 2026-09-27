@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using MyAccountingApp.Application.Interfaces;
 using MyAccountingApp.Application.Services;
+using MyAccountingApp.Contracts;
 using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Enums;
 using MyAccountingApp.Domain.Interfaces;
