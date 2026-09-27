@@ -40,101 +40,23 @@ else if (_allTransactions.Count == 0)
 }
 else
 {
-    <MudPaper Class="pa-4 mb-4" Outlined="true">
-        <MudGrid>
-            <MudItem xs="12" sm="6" md="3">
-                <MudSelect T="int?" @bind-Value="_selectedYear" @bind-Value:after="ApplyFilters" Label="Year" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
-                    @foreach (var year in _availableYears)
-                    {
-                        <MudSelectItem T="int?" Value="@((int?)year)">@year</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6" md="3">
-                <MudSelect @bind-Value="_selectedSymbol" @bind-Value:after="ApplyFilters" Label="Symbol" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
-                    @foreach (var symbol in _availableSymbols)
-                    {
-                        <MudSelectItem Value="symbol">@symbol</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6" md="3">
-                <MudSelect @bind-Value="_selectedType" @bind-Value:after="ApplyFilters" Label="Type" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
-                    @foreach (var type in _types)
-                    {
-                        <MudSelectItem Value="type">@type</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6" md="3">
-                <MudSelect @bind-Value="_selectedCurrency" @bind-Value:after="ApplyFilters" Label="Currency" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
-                    @foreach (var currency in _availableCurrencies)
-                    {
-                        <MudSelectItem Value="currency">@currency</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12">
-                <MudTextField @bind-Value="_searchText" @bind-Value:after="ApplyFilters" Immediate="true"
-                              DebounceInterval="300" Label="Search description" Placeholder="e.g. 'dividend', 'Criterium'…"
-                              Variant="Variant.Outlined" FullWidth="true" Clearable="true" Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Filled.Search" />
-            </MudItem>
-        </MudGrid>
-        <MudText Typo="Typo.subtitle2" Class="mt-3 mb-1">Quick filters</MudText>
-        <div class="d-flex flex-wrap gap-2">
-            <MudChip T="string" Color="@(_selectedType == "Buy" ? Color.Primary : Color.Default)"
-                     Variant="@(_selectedType == "Buy" ? Variant.Filled : Variant.Outlined)"
-                     OnClick="@(() => ToggleType("Buy"))">Buy</MudChip>
-            <MudChip T="string" Color="@(_selectedType == "Sell" ? Color.Primary : Color.Default)"
-                     Variant="@(_selectedType == "Sell" ? Variant.Filled : Variant.Outlined)"
-                     OnClick="@(() => ToggleType("Sell"))">Sell</MudChip>
-        </div>
-    </MudPaper>
+    <AssetTransactionFilters
+        AvailableYears="@_availableYears"
+        SelectedYear="@_selectedYear"
+        SelectedYearChanged="@OnYearChanged"
+        AvailableSymbols="@_availableSymbols"
+        SelectedSymbol="@_selectedSymbol"
+        SelectedSymbolChanged="@OnSymbolChanged"
+        Types="@_types"
+        SelectedType="@_selectedType"
+        SelectedTypeChanged="@OnTypeChanged"
+        AvailableCurrencies="@_availableCurrencies"
+        SelectedCurrency="@_selectedCurrency"
+        SelectedCurrencyChanged="@OnCurrencyChanged"
+        SearchText="@_searchText"
+        SearchTextChanged="@OnSearchChanged" />
 
-    <MudPaper Class="pa-4 mb-4" Outlined="true">
-        <MudText Typo="Typo.subtitle1" GutterBottom="true">
-            Filtered totals — @_filteredTransactions.Count transactions
-        </MudText>
-        @if (_summaries.Count == 0)
-        {
-            <MudText Typo="Typo.body2" Class="mud-text-secondary">No transactions match the current filters.</MudText>
-        }
-        else
-        {
-            <MudSimpleTable Dense="true" Hover="false" Bordered="false" Style="background: transparent;">
-                <thead>
-                    <tr>
-                        <th>Currency</th>
-                        <th style="text-align:right">Buys</th>
-                        <th style="text-align:right">Buy cost</th>
-                        <th style="text-align:right">Sells</th>
-                        <th style="text-align:right">Sell proceeds</th>
-                        <th style="text-align:right">Fees</th>
-                        <th style="text-align:right">Net cash flow</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var s in _summaries)
-                    {
-                        <tr>
-                            <td><strong>@s.Currency</strong> <span class="mud-text-secondary">(@s.Count)</span></td>
-                            <td style="text-align:right">@s.BuyCount</td>
-                            <td style="text-align:right">@s.BuyCost.ToString("N2")</td>
-                            <td style="text-align:right">@s.SellCount</td>
-                            <td style="text-align:right">@s.SellProceeds.ToString("N2")</td>
-                            <td style="text-align:right">@s.Fees.ToString("N2")</td>
-                            <td style="text-align:right"><strong class="@(s.NetCashFlow >= 0 ? "green--text" : "red--text")">@s.NetCashFlow.ToString("N2")</strong></td>
-                        </tr>
-                    }
-                </tbody>
-            </MudSimpleTable>
-            <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
-                Buy cost = cost basis on purchases; sell proceeds = cash received on sales; fees = transaction fees (FEE / withholding taxes).
-                Net cash flow = sell proceeds − buy cost: positive means the wallet received more cash than it paid out.
-            </MudText>
-        }
-    </MudPaper>
+    <AssetTransactionTotals Summaries="@_summaries" Count="@_filteredTransactions.Count" />
 
     @if (_selected.Count > 0)
     {
@@ -150,296 +72,46 @@ else
         </MudPaper>
     }
 
-    <MudTable Items="@_filteredTransactions" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true" SortLabel="Sort by"
-              MultiSelection="true" @bind-SelectedItems="_selected">
-        <ToolBarContent>
-            <MudText Typo="Typo.subtitle1">@_filteredTransactions.Count transactions</MudText>
-            <MudSpacer />
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                       OnClick="@OpenCreateDialog" StartIcon="@Icons.Material.Filled.Add">
-                New
-            </MudButton>
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
-                       OnClick="@OpenSplitDialog" StartIcon="@Icons.Material.Filled.CallSplit">
-                Split / reverse split
-            </MudButton>
-            <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@LoadDataAsync" Size="Size.Small" />
-        </ToolBarContent>
-        <ColGroup>
-            <col style="width: 120px" />
-            <col style="width: 80px" />
-            <col />
-            <col style="width: 80px" />
-            <col style="width: 90px" />
-            <col style="width: 100px" />
-            <col style="width: 80px" />
-            <col style="width: 90px" />
-            <col style="width: 150px" />
-            <col style="width: 140px" />
-        </ColGroup>
-        <HeaderContent>
-            <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Transaction.Date)">Date</MudTableSortLabel></MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Symbol)">Symbol</MudTableSortLabel></MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Transaction.Description)">Description</MudTableSortLabel></MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Quantity)">Qty</MudTableSortLabel></MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.UnitaryCost.Amount)">Unit price</MudTableSortLabel></MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Transaction.Money.Amount)">@(_selectedType switch { "Buy" => "Cost", "Sell" => "Proceeds", _ => "Amount" })</MudTableSortLabel></MudTh>
-            <MudTh>Curr.</MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Type)">Type</MudTableSortLabel></MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<AssetTransactionDto, object>(t => t.Transaction.Category)">Category</MudTableSortLabel></MudTh>
-            <MudTh>Source</MudTh>
-            <MudTh>Actions</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="Date">@context.Transaction.Date.ToString("yyyy-MM-dd")</MudTd>
-            <MudTd DataLabel="Symbol">
-                <MudTooltip Placement="Placement.Top">
-                    <ChildContent>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" OnClick="@(() => NavigateToPortfolio(context.Symbol))">@context.Symbol</MudChip>
-                    </ChildContent>
-                    <TooltipContent><span>Open position in Portfolio</span></TooltipContent>
-                </MudTooltip>
-            </MudTd>
-            <MudTd DataLabel="Description">@context.Transaction.Description</MudTd>
-            <MudTd DataLabel="Qty">@context.Quantity.ToString("G")</MudTd>
-            <MudTd DataLabel="Unit price">@context.UnitaryCost.Amount.ToString("N4")</MudTd>
-            <MudTd DataLabel="Amount">@context.Transaction.Money.Amount.ToString("N2")</MudTd>
-            <MudTd DataLabel="Curr.">@context.Transaction.Money.Currency</MudTd>
-            <MudTd DataLabel="Type">@context.Type</MudTd>
-            <MudTd DataLabel="Category">
-                @{
-                    string label = AssetTransactionDisplay.GetCategoryLabel(context.Type, context.Transaction.Category);
-                    string tip = AssetTransactionDisplay.GetCategoryTooltip(context.Type, context.Transaction.Category);
-                }
-                @if (!string.IsNullOrEmpty(tip))
-                {
-                    <MudTooltip Placement="Placement.Top">
-                        <ChildContent>
-                            <MudChip T="string" Size="Size.Small" Color="@(context.Type == "Buy" ? Color.Primary : Color.Info)">@label</MudChip>
-                        </ChildContent>
-                        <TooltipContent><span>@tip · technical category: @context.Transaction.Category</span></TooltipContent>
-                    </MudTooltip>
-                }
-                else
-                {
-                    <MudText Typo="Typo.caption">@context.Transaction.Category</MudText>
-                }
-            </MudTd>
-            <MudTd DataLabel="Source">
-                @if (!string.IsNullOrEmpty(context.Source))
-                {
-                    <MudText Typo="Typo.caption" Class="text-medium-emphasis">@context.Source</MudText>
-                }
-                else
-                {
-                    <MudText Typo="Typo.caption">—</MudText>
-                }
-            </MudTd>
-            <MudTd DataLabel="Actions">
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => OpenEditDialog(context))" />
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => OpenDeleteDialog(context))" />
-            </MudTd>
-        </RowTemplate>
-        <PagerContent>
-            <MudTablePager PageSizeOptions="@(new int[]{25, 50, 100})" />
-        </PagerContent>
-    </MudTable>
-    <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
-        Amount is the cost basis for asset purchases and the proceeds for asset sales. Unit price is the amount per quantity.
-    </MudText>
+    <AssetTransactionList Transactions="@_filteredTransactions"
+                          Selected="@_selected"
+                          SelectedChanged="@OnSelectedChanged"
+                          SelectedType="@_selectedType"
+                          OnNew="@OpenCreateDialog"
+                          OnSplit="@OpenSplitDialog"
+                          OnRefresh="@LoadDataAsync"
+                          OnEdit="@OpenEditDialog"
+                          OnDelete="@OpenDeleteDialog"
+                          OnNavigateToPortfolio="@NavigateToPortfolio" />
 }
 
-<MudDialog @bind-Visible="_showFormDialog">
-    <TitleContent>
-        <MudText Typo="Typo.h6">@(_editingId is null ? "New Asset Transaction" : "Edit Asset Transaction")</MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudGrid>
-            <MudItem xs="12">
-                <MudDatePicker @bind-Date="_formDate" Label="Date" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12">
-                <MudTextField @bind-Value="_formDescription" Label="Description" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_formSymbol" Label="Symbol" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudNumericField T="decimal" @bind-Value="_formQuantity" Label="Quantity" Variant="Variant.Outlined" Min="@(0.01m)" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudNumericField T="decimal" @bind-Value="_formAmount" Label="Amount" Variant="Variant.Outlined" Min="@(0.01m)" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudSelect @bind-Value="_formCurrency" Label="Currency" Variant="Variant.Outlined">
-                    <MudSelectItem Value="@("EUR")">EUR</MudSelectItem>
-                    <MudSelectItem Value="@("USD")">USD</MudSelectItem>
-                    <MudSelectItem Value="@("GBP")">GBP</MudSelectItem>
-                    <MudSelectItem Value="@("CHF")">CHF</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudSelect @bind-Value="_formCategory" Label="Category" Variant="Variant.Outlined">
-                    @foreach (var cat in _categories)
-                    {
-                        <MudSelectItem Value="cat">@cat</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudSelect @bind-Value="_formType" Label="Type" Variant="Variant.Outlined">
-                    @foreach (var type in _types)
-                    {
-                        <MudSelectItem Value="type">@type</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-        </MudGrid>
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@CloseFormDialog">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@SaveAsync"
-                   Disabled="@IsFormInvalid()">
-            Save
-        </MudButton>
-    </DialogActions>
-</MudDialog>
+<AssetTransactionFormDialog @bind-Visible="_showFormDialog"
+                            EditingId="@_editingId"
+                            EditingTransaction="@_editingTransaction"
+                            Categories="@_categories"
+                            Types="@_types"
+                            SaveRequested="@SaveAsync" />
 
-<MudDialog @bind-Visible="_showDeleteDialog">
-    <TitleContent>
-        <MudText Typo="Typo.h6">Delete Asset Transaction</MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudText>Are you sure you want to delete this asset transaction?</MudText>
-        @if (_deletingTx is not null)
-        {
-            <MudText Typo="Typo.body2" Class="mt-2">
-                @_deletingTx.Transaction.Date.ToString("yyyy-MM-dd") — @_deletingTx.Symbol @_deletingTx.Type
-                (@_deletingTx.Transaction.Money.Amount.ToString("N2") @_deletingTx.Transaction.Money.Currency)
-            </MudText>
-        }
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@CloseDeleteDialog">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@ConfirmDeleteAsync">Delete</MudButton>
-    </DialogActions>
-</MudDialog>
+<DeleteAssetTransactionDialog Visible="@_showDeleteDialog"
+                              VisibleChanged="@OnDeleteDialogVisibleChanged"
+                              Transaction="@_deletingTx"
+                              ConfirmRequested="@ConfirmDeleteAsync" />
 
-<MudDialog @bind-Visible="_showBulkSymbolDialog">
-    <TitleContent>
-        <MudText Typo="Typo.h6">Change symbol</MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudText Typo="Typo.body2" Class="mb-4">
-            The new symbol will be applied to <strong>@_selected.Count</strong> selected asset transaction(s).
-            Portfolio positions will be regrouped under the new symbol.
-        </MudText>
-        <MudTextField @bind-Value="_bulkSymbol" Label="New symbol" Variant="Variant.Outlined" FullWidth="true" />
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@CloseBulkSymbolDialog">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@ConfirmBulkSymbolAsync"
-                   Disabled="@(string.IsNullOrWhiteSpace(_bulkSymbol))">
-            Update @_selected.Count
-        </MudButton>
-    </DialogActions>
-</MudDialog>
+<BulkSymbolDialog @bind-Visible="_showBulkSymbolDialog"
+                  SelectedCount="@_selected.Count"
+                  ConfirmRequested="@ConfirmBulkSymbolAsync" />
 
-<MudDialog @bind-Visible="_showSplitDialog">
-    <TitleContent>
-        <MudText Typo="Typo.h6">Apply split / reverse split</MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudText Typo="Typo.body2" Class="mb-4">
-            Adjusts all lots of a symbol on or before a given date by a factor, keeping the total
-            invested amount unchanged. Factor 0.2 = 5:1 consolidation (reverse split), 2 = 2:1 split.
-        </MudText>
-        <MudGrid>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_splitSymbol" Label="Symbol" Variant="Variant.Outlined" FullWidth="true" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudNumericField T="decimal" @bind-Value="_splitFactor" Label="Factor (1/5 = 0.2)" Variant="Variant.Outlined"
-                                 Min="@(0.0001m)" FullWidth="true" />
-            </MudItem>
-            <MudItem xs="12">
-                <MudDatePicker @bind-Date="_splitAsOfDate" Label="Cut-off date (optional — only lots on/before it)"
-                               Variant="Variant.Outlined" Clearable="true" />
-            </MudItem>
-        </MudGrid>
-
-        <div class="d-flex align-center mt-4 mb-2">
-            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@PreviewSplitAsync"
-                       Disabled="@(!SplitInputValid() || _splitPreviewLoading)" StartIcon="@Icons.Material.Filled.Search">
-                @(_splitPreviewLoading ? "Loading…" : "Preview")
-            </MudButton>
-            <MudText Typo="Typo.caption" Class="ml-2 mud-text-secondary">Shows affected lots before confirming</MudText>
-        </div>
-
-        @if (_splitPreviewError is not null)
-        {
-            <MudAlert Severity="Severity.Error" Class="mt-2">@_splitPreviewError</MudAlert>
-        }
-
-        @if (_splitPreview is not null)
-        {
-            if (_splitPreview.Items.Count == 0)
-            {
-                <MudAlert Severity="Severity.Info" Class="mt-2">No lots match this symbol and cut-off date.</MudAlert>
-            }
-            else
-            {
-                <MudAlert Severity="Severity.Warning" Class="mt-2" Dense="true">
-                    <strong>@_splitPreview.Items.Count</strong> lot(s) affected — total amount stays the same
-                    (@_splitPreview.Items.Sum(i => i.Amount).ToString("N2") @_splitPreview.Items.FirstOrDefault()?.Currency).
-                </MudAlert>
-                @if (_splitPreview.Items.Any(i => i.QuantityAfter <= 0))
-                {
-                    <MudAlert Severity="Severity.Error" Class="mt-2" Dense="true">
-                        Some lots would be reduced to zero shares and will be skipped on apply.
-                    </MudAlert>
-                }
-                <MudSimpleTable Dense="true" Class="mt-2">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th style="text-align:right">Qty before</th>
-                            <th style="text-align:right">Qty after</th>
-                            <th style="text-align:right">Unit before</th>
-                            <th style="text-align:right">Unit after</th>
-                            <th style="text-align:right">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in _splitPreview.Items)
-                        {
-                            <tr>
-                                <td>@item.Date.ToString("yyyy-MM-dd")</td>
-                                <td style="text-align:right">@item.QuantityBefore.ToString("G")</td>
-                                <td style="text-align:right"><strong>@item.QuantityAfter.ToString("G")</strong></td>
-                                <td style="text-align:right">@item.UnitaryCostBefore.ToString("N4")</td>
-                                <td style="text-align:right">@item.UnitaryCostAfter.ToString("N4")</td>
-                                <td style="text-align:right">@item.Amount.ToString("N2")</td>
-                            </tr>
-                        }
-                    </tbody>
-                </MudSimpleTable>
-            }
-        }
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@CloseSplitDialog">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@ApplySplitAsync"
-                   Disabled="@(_splitPreview is null || _splitPreview.Items.Count == 0 || _splitPreviewLoading)">
-            Apply
-        </MudButton>
-    </DialogActions>
-</MudDialog>
+<SplitAdjustmentDialog @bind-Visible="_showSplitDialog"
+                       InitialSymbol="@_splitInitialSymbol"
+                       Preview="@_splitPreview"
+                       PreviewError="@_splitPreviewError"
+                       PreviewLoading="@_splitPreviewLoading"
+                       PreviewRequested="@PreviewSplitAsync"
+                       ApplyRequested="@ApplySplitAsync" />
 
 @code {
     private List<AssetTransactionDto> _allTransactions = new();
     private List<AssetTransactionDto> _filteredTransactions = new();
-    private List<AssetSummary> _summaries = new();
+    private List<AssetTransactionSummary> _summaries = new();
     private List<int> _availableYears = new();
     private List<string> _availableSymbols = new();
     private List<string> _availableCurrencies = new();
@@ -451,8 +123,6 @@ else
     private string? _selectedCurrency { get; set; }
     private string? _searchText { get; set; }
 
-    private bool IsFormInvalid() => string.IsNullOrWhiteSpace(_formDescription) || string.IsNullOrWhiteSpace(_formSymbol) || _formAmount <= 0 || _formQuantity <= 0;
-
     private static readonly string[] _categories = { "INCOME", "EXPENSE", "TRANSFER", "DEPOSIT", "DIVIDEND", "FEE", "WITHHOLDING_TAX", "INTEREST", "INVESTMENT", "DIVESTMENT" };
     private static readonly string[] _types = { "Buy", "Sell" };
 
@@ -460,26 +130,15 @@ else
     private bool _showDeleteDialog;
     private bool _showBulkSymbolDialog;
     private Guid? _editingId;
+    private AssetTransactionDto? _editingTransaction;
     private AssetTransactionDto? _deletingTx;
     private HashSet<AssetTransactionDto> _selected = new();
-    private string _bulkSymbol = "";
 
     private bool _showSplitDialog;
-    private string _splitSymbol = "";
-    private decimal _splitFactor;
-    private DateTime? _splitAsOfDate;
+    private string _splitInitialSymbol = "";
     private SplitAdjustmentPreview? _splitPreview;
     private string? _splitPreviewError;
     private bool _splitPreviewLoading;
-
-    private DateTime? _formDate;
-    private string _formDescription = "";
-    private string _formSymbol = "";
-    private decimal _formQuantity;
-    private decimal _formAmount;
-    private string _formCurrency = "EUR";
-    private string _formCategory = "EXPENSE";
-    private string _formType = "Buy";
 
     [SupplyParameterFromQuery(Name = "symbol")]
     public string? SymbolFromQuery { get; set; }
@@ -518,12 +177,6 @@ else
 
         ApplyIssueFilterFromQuery();
         await LoadDataAsync();
-    }
-
-    private void ToggleType(string type)
-    {
-        _selectedType = _selectedType == type ? null : type;
-        ApplyFilters();
     }
 
     private void NavigateToPortfolio(string symbol)
@@ -593,6 +246,36 @@ else
         }
     }
 
+    private void OnYearChanged(int? year)
+    {
+        _selectedYear = year;
+        ApplyFilters();
+    }
+
+    private void OnSymbolChanged(string? symbol)
+    {
+        _selectedSymbol = symbol;
+        ApplyFilters();
+    }
+
+    private void OnTypeChanged(string? type)
+    {
+        _selectedType = type;
+        ApplyFilters();
+    }
+
+    private void OnCurrencyChanged(string? currency)
+    {
+        _selectedCurrency = currency;
+        ApplyFilters();
+    }
+
+    private void OnSearchChanged(string? text)
+    {
+        _searchText = text;
+        ApplyFilters();
+    }
+
     private void ApplyFilters()
     {
         var query = _allTransactions.AsEnumerable();
@@ -642,80 +325,47 @@ else
                 decimal buyCost = buys.Sum(t => t.Transaction.Money.Amount);
                 decimal sellProceeds = sells.Sum(t => t.Transaction.Money.Amount);
                 decimal fees = g.Where(t => t.Transaction.Category is "FEE" or "WITHHOLDING_TAX").Sum(t => t.Transaction.Money.Amount);
-                return new AssetSummary
-                {
-                    Currency = g.Key,
-                    Count = g.Count(),
-                    BuyCount = buys.Count,
-                    BuyCost = buyCost,
-                    SellCount = sells.Count,
-                    SellProceeds = sellProceeds,
-                    Fees = fees,
-                    NetCashFlow = sellProceeds - buyCost,
-                };
+                return new AssetTransactionSummary(
+                    g.Key,
+                    g.Count(),
+                    buys.Count,
+                    buyCost,
+                    sells.Count,
+                    sellProceeds,
+                    fees,
+                    sellProceeds - buyCost);
             })
             .ToList();
-    }
-
-    private sealed class AssetSummary
-    {
-        public string Currency { get; set; } = string.Empty;
-        public int Count { get; set; }
-        public int BuyCount { get; set; }
-        public decimal BuyCost { get; set; }
-        public int SellCount { get; set; }
-        public decimal SellProceeds { get; set; }
-        public decimal Fees { get; set; }
-        public decimal NetCashFlow { get; set; }
     }
 
     private void OpenCreateDialog()
     {
         _editingId = null;
-        _formDate = DateTime.Today;
-        _formDescription = "";
-        _formSymbol = "";
-        _formQuantity = 0;
-        _formAmount = 0;
-        _formCurrency = "EUR";
-        _formCategory = "EXPENSE";
-        _formType = "Buy";
+        _editingTransaction = null;
         _showFormDialog = true;
     }
 
     private void OpenEditDialog(AssetTransactionDto atx)
     {
         _editingId = atx.Transaction.Id;
-        _formDate = atx.Transaction.Date;
-        _formDescription = atx.Transaction.Description;
-        _formSymbol = atx.Symbol;
-        _formQuantity = atx.Quantity;
-        _formAmount = atx.Transaction.Money.Amount;
-        _formCurrency = atx.Transaction.Money.Currency;
-        _formCategory = atx.Transaction.Category;
-        _formType = atx.Type;
+        _editingTransaction = atx;
         _showFormDialog = true;
     }
 
-    private void CloseFormDialog()
-    {
-        _showFormDialog = false;
-    }
-
-    private async Task SaveAsync()
+    private async Task SaveAsync(AssetTransactionFormValue value)
     {
         try
         {
             var payload = new
             {
-                Date = _formDate ?? DateTime.Today,
-                Description = _formDescription,
-                Amount = _formAmount,
-                Currency = _formCurrency,
-                Category = _formCategory,
-                Symbol = _formSymbol,
-                Quantity = _formQuantity,
-                Type = _formType,
+                Date = value.Date,
+                Description = value.Description,
+                Amount = value.Amount,
+                Currency = value.Currency,
+                Category = value.Category,
+                Symbol = value.Symbol,
+                Quantity = value.Quantity,
+                Type = value.Type,
             };
 
             HttpResponseMessage response;
@@ -763,18 +413,12 @@ else
 
     private void OpenBulkSymbolDialog()
     {
-        _bulkSymbol = "";
         _showBulkSymbolDialog = true;
     }
 
-    private void CloseBulkSymbolDialog()
+    private async Task ConfirmBulkSymbolAsync(string symbol)
     {
-        _showBulkSymbolDialog = false;
-    }
-
-    private async Task ConfirmBulkSymbolAsync()
-    {
-        if (_selected.Count == 0 || string.IsNullOrWhiteSpace(_bulkSymbol))
+        if (_selected.Count == 0 || string.IsNullOrWhiteSpace(symbol))
         {
             return;
         }
@@ -789,7 +433,7 @@ else
         var payload = new
         {
             ids = targets.Select(t => t.Transaction.Id).ToList(),
-            patch = new { symbol = _bulkSymbol.Trim() },
+            patch = new { symbol = symbol.Trim() },
         };
 
         try
@@ -830,34 +474,19 @@ else
 
     private void OpenSplitDialog()
     {
-        _splitSymbol = _selectedSymbol ?? string.Empty;
-        _splitFactor = 0;
-        _splitAsOfDate = null;
+        _splitInitialSymbol = _selectedSymbol ?? string.Empty;
         _splitPreview = null;
         _splitPreviewError = null;
         _showSplitDialog = true;
     }
 
-    private void CloseSplitDialog()
+    private async Task PreviewSplitAsync(SplitAdjustmentInput input)
     {
-        _showSplitDialog = false;
-    }
-
-    private bool SplitInputValid() => !string.IsNullOrWhiteSpace(_splitSymbol) && _splitFactor > 0;
-
-    private async Task PreviewSplitAsync()
-    {
-        if (!SplitInputValid())
-        {
-            Snackbar.Add("Enter a symbol and a factor first", Severity.Warning);
-            return;
-        }
-
         _splitPreviewLoading = true;
         _splitPreviewError = null;
         try
         {
-            var payload = new { symbol = _splitSymbol.Trim(), factor = _splitFactor, asOfDate = _splitAsOfDate };
+            var payload = new { symbol = input.Symbol, factor = input.Factor, asOfDate = input.AsOfDate };
             HttpResponseMessage response = await Http.PostAsJsonAsync("/api/asset-transactions/split/preview", payload);
             if (!response.IsSuccessStatusCode)
             {
@@ -880,7 +509,7 @@ else
         }
     }
 
-    private async Task ApplySplitAsync()
+    private async Task ApplySplitAsync(SplitAdjustmentInput input)
     {
         if (_splitPreview is null || _splitPreview.Items.Count == 0)
         {
@@ -889,7 +518,7 @@ else
 
         try
         {
-            var payload = new { symbol = _splitSymbol.Trim(), factor = _splitFactor, asOfDate = _splitAsOfDate };
+            var payload = new { symbol = input.Symbol, factor = input.Factor, asOfDate = input.AsOfDate };
             HttpResponseMessage response = await Http.PostAsJsonAsync("/api/asset-transactions/split", payload);
             if (!response.IsSuccessStatusCode)
             {
@@ -929,10 +558,13 @@ else
         _showDeleteDialog = true;
     }
 
-    private void CloseDeleteDialog()
+    private void OnDeleteDialogVisibleChanged(bool value)
     {
-        _showDeleteDialog = false;
-        _deletingTx = null;
+        _showDeleteDialog = value;
+        if (!value)
+        {
+            _deletingTx = null;
+        }
     }
 
     private async Task ConfirmDeleteAsync()
@@ -960,5 +592,10 @@ else
         {
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
         }
+    }
+
+    private void OnSelectedChanged(HashSet<AssetTransactionDto> value)
+    {
+        _selected = value;
     }
 }
