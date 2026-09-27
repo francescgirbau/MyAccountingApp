@@ -5,6 +5,7 @@ COPY MyAccountingApp.sln ./
 COPY src/MyAccountingApp.Domain/MyAccountingApp.Domain.csproj src/MyAccountingApp.Domain/
 COPY src/MyAccountingApp.Core/MyAccountingApp.Core.csproj src/MyAccountingApp.Core/
 COPY src/MyAccountingApp.Application/MyAccountingApp.Application.csproj src/MyAccountingApp.Application/
+COPY src/MyAccountingApp.Contracts/MyAccountingApp.Contracts.csproj src/MyAccountingApp.Contracts/
 COPY src/MyAccountingApp.Api/MyAccountingApp.Api.csproj src/MyAccountingApp.Api/
 COPY src/MyAccountingApp.Web/MyAccountingApp.Web.csproj src/MyAccountingApp.Web/
 COPY src/MyAccountingApp.ConsoleApp/MyAccountingApp.ConsoleApp.csproj src/MyAccountingApp.ConsoleApp/
