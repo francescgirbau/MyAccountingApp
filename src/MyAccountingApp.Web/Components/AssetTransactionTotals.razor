@@ -1,0 +1,48 @@
+<MudPaper Class="pa-4 mb-4" Outlined="true">
+    <MudText Typo="Typo.subtitle1" GutterBottom="true">
+        Filtered totals — @Count transactions
+    </MudText>
+    @if (Summaries.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">No transactions match the current filters.</MudText>
+    }
+    else
+    {
+        <MudSimpleTable Dense="true" Hover="false" Bordered="false" Style="background: transparent;">
+            <thead>
+                <tr>
+                    <th>Currency</th>
+                    <th style="text-align:right">Buys</th>
+                    <th style="text-align:right">Buy cost</th>
+                    <th style="text-align:right">Sells</th>
+                    <th style="text-align:right">Sell proceeds</th>
+                    <th style="text-align:right">Fees</th>
+                    <th style="text-align:right">Net cash flow</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var s in Summaries)
+                {
+                    <tr>
+                        <td><strong>@s.Currency</strong> <span class="mud-text-secondary">(@s.Count)</span></td>
+                        <td style="text-align:right">@s.BuyCount</td>
+                        <td style="text-align:right">@s.BuyCost.ToString("N2")</td>
+                        <td style="text-align:right">@s.SellCount</td>
+                        <td style="text-align:right">@s.SellProceeds.ToString("N2")</td>
+                        <td style="text-align:right">@s.Fees.ToString("N2")</td>
+                        <td style="text-align:right"><strong class="@(s.NetCashFlow >= 0 ? "green--text" : "red--text")">@s.NetCashFlow.ToString("N2")</strong></td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+        <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
+            Buy cost = cost basis on purchases; sell proceeds = cash received on sales; fees = transaction fees (FEE / withholding taxes).
+            Net cash flow = sell proceeds − buy cost: positive means the wallet received more cash than it paid out.
+        </MudText>
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public IReadOnlyList<AssetTransactionSummary> Summaries { get; set; } = new List<AssetTransactionSummary>();
+    [Parameter] public int Count { get; set; }
+}

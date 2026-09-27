@@ -1,0 +1,144 @@
+<MudTable Items="@Transactions" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true" SortLabel="Sort by"
+          MultiSelection="true" @bind-SelectedItems="_selected">
+    <ToolBarContent>
+        <MudText Typo="Typo.subtitle1">@Transactions.Count transactions</MudText>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   OnClick="@(() => OnNew.InvokeAsync())" StartIcon="@Icons.Material.Filled.Add">
+            New
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" Class="ml-2"
+                   OnClick="@(() => OnFx.InvokeAsync())" StartIcon="@Icons.Material.Filled.SwapHoriz">
+            New FX
+        </MudButton>
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@(() => OnRefresh.InvokeAsync())" Size="Size.Small" aria-label="Refresh" />
+    </ToolBarContent>
+    <ColGroup>
+        <col style="width: 120px" />
+        <col />
+        <col style="width: 100px" />
+        <col style="width: 80px" />
+        <col style="width: 100px" />
+        <col style="width: 140px" />
+        <col style="width: 80px" />
+    </ColGroup>
+    <HeaderContent>
+        <MudTh><MudTableSortLabel SortBy="new Func<TransactionDto, object>(t => t.Date)">Date</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<TransactionDto, object>(t => t.Description)">Description</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<TransactionDto, object>(t => t.Money.Amount)">Amount</MudTableSortLabel></MudTh>
+        <MudTh>Curr.</MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<TransactionDto, object>(t => t.Category)">Category</MudTableSortLabel></MudTh>
+        <MudTh>Source</MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Date">@context.Date.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd DataLabel="Description">@context.Description</MudTd>
+        <MudTd DataLabel="Amount"><span class="@(context.Category == "EXPENSE" || context.Category == "FEE" || context.Category == "WITHHOLDING_TAX" || context.Category == "TRANSFER" || context.Category == "LOAN_OUT" ? "red--text" : "green--text")">@context.Money.Amount.ToString("N2")</span></MudTd>
+        <MudTd DataLabel="Curr.">@context.Money.Currency</MudTd>
+        <MudTd DataLabel="Category">
+            @if (GetCategoryTooltip(context.Category) is string tip)
+            {
+                <MudTooltip Placement="Placement.Top">
+                    <ChildContent>
+                        <MudChip T="string" Size="Size.Small" Color="@GetCategoryColor(context.Category)">@GetCategoryLabel(context.Category)</MudChip>
+                    </ChildContent>
+                    <TooltipContent><span>@tip</span></TooltipContent>
+                </MudTooltip>
+            }
+            else
+            {
+                <MudChip T="string" Size="Size.Small" Color="@GetCategoryColor(context.Category)">@GetCategoryLabel(context.Category)</MudChip>
+            }
+            @if (!string.IsNullOrEmpty(context.FxLeg))
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Class="ml-1">FX @(context.FxLeg == "Out" ? "out" : "in")</MudChip>
+            }
+            @if (context.NeedsReview)
+            {
+                <MudTooltip Placement="Placement.Top">
+                    <ChildContent>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined" Class="ml-1">Revisar</MudChip>
+                    </ChildContent>
+                    <TooltipContent><span>Auto-classificada pel signe sense keyword de confirmació — revisa la categoria</span></TooltipContent>
+                </MudTooltip>
+            }
+        </MudTd>
+        <MudTd DataLabel="Source">
+            @if (!string.IsNullOrEmpty(context.Source))
+            {
+                <MudText Typo="Typo.caption" Class="text-medium-emphasis">@context.Source</MudText>
+            }
+            else
+            {
+                <MudText Typo="Typo.caption">—</MudText>
+            }
+            @if (context.FxPairId is not null)
+            {
+                <MudText Typo="Typo.caption" Class="text-medium-emphasis">@CounterText(context)</MudText>
+            }
+        </MudTd>
+        <MudTd DataLabel="Actions">
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Disabled="@(context.Source == "Loan")" OnClick="@(() => OnEdit.InvokeAsync(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" Disabled="@(context.Source == "Loan")" OnClick="@(() => OnDelete.InvokeAsync(context))" />
+        </MudTd>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="@(new int[]{25, 50, 100})" />
+    </PagerContent>
+</MudTable>
+
+@code {
+    [Parameter] public IReadOnlyList<TransactionDto> Transactions { get; set; } = new List<TransactionDto>();
+    [Parameter] public HashSet<TransactionDto> Selected { get; set; } = new();
+    [Parameter] public EventCallback<HashSet<TransactionDto>> SelectedChanged { get; set; }
+    [Parameter] public Func<TransactionDto, string?> CounterText { get; set; } = static _ => null;
+    [Parameter] public EventCallback OnNew { get; set; }
+    [Parameter] public EventCallback OnFx { get; set; }
+    [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter] public EventCallback<TransactionDto> OnEdit { get; set; }
+    [Parameter] public EventCallback<TransactionDto> OnDelete { get; set; }
+
+    private HashSet<TransactionDto> _selected
+    {
+        get => Selected;
+        set => SelectedChanged.InvokeAsync(value);
+    }
+
+    private static string GetCategoryLabel(string category) => category switch
+    {
+        "INVESTMENT" => "Asset purchase",
+        "DIVESTMENT" => "Asset sale",
+        "TRANSFER" => "Internal transfer out",
+        "DEPOSIT" => "Internal transfer in",
+        "FX_CONVERSION" => "Currency exchange",
+        "LOAN_IN" => "Loan received",
+        "LOAN_OUT" => "Loan repaid",
+        _ => category,
+    };
+
+    private static string? GetCategoryTooltip(string category) => category switch
+    {
+        "INVESTMENT" => "Cash converted into an asset; not an operating expense.",
+        "DIVESTMENT" => "Cash received from an asset sale; not operating income.",
+        "TRANSFER" => "Internal same-currency move out; not P/L.",
+        "DEPOSIT" => "Internal same-currency move in; not P/L.",
+        "FX_CONVERSION" => "Two-leg currency conversion; not P/L.",
+        "LOAN_IN" => "Loan cash in (borrowed funds or lent-loan repayment); real cash, not P/L.",
+        "LOAN_OUT" => "Loan cash out (disbursement or repayment); real cash, not P/L.",
+        _ => null,
+    };
+
+    private static Color GetCategoryColor(string category) => category switch
+    {
+        "INCOME" or "DIVIDEND" or "INTEREST" => Color.Success,
+        "EXPENSE" or "FEE" or "WITHHOLDING_TAX" => Color.Error,
+        "TRANSFER" => Color.Warning,
+        "DEPOSIT" => Color.Warning,
+        "INVESTMENT" or "DIVESTMENT" => Color.Info,
+        "FX_CONVERSION" => Color.Secondary,
+        "LOAN_IN" => Color.Success,
+        "LOAN_OUT" => Color.Warning,
+        _ => Color.Default,
+    };
+}
