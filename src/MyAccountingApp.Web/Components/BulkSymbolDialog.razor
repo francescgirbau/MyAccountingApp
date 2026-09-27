@@ -1,0 +1,52 @@
+<MudDialog @bind-Visible="_dialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Change symbol</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-4">
+            The new symbol will be applied to <strong>@SelectedCount</strong> selected asset transaction(s).
+            Portfolio positions will be regrouped under the new symbol.
+        </MudText>
+        <MudTextField @bind-Value="_symbol" Label="New symbol" Variant="Variant.Outlined" FullWidth="true" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@Close">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@Confirm"
+                   Disabled="@(string.IsNullOrWhiteSpace(_symbol))">
+            Update @SelectedCount
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public int SelectedCount { get; set; }
+    [Parameter] public EventCallback<string> ConfirmRequested { get; set; }
+
+    private bool _snapshotted;
+    private string _symbol = "";
+
+    private bool _dialogVisible
+    {
+        get => Visible;
+        set => VisibleChanged.InvokeAsync(value);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Visible && !_snapshotted)
+        {
+            _snapshotted = true;
+            _symbol = "";
+        }
+        else if (!Visible)
+        {
+            _snapshotted = false;
+        }
+    }
+
+    private void Close() => _dialogVisible = false;
+
+    private async Task Confirm() => await ConfirmRequested.InvokeAsync(_symbol);
+}

@@ -1,0 +1,40 @@
+<MudDialog Visible="@Visible" VisibleChanged="@SetVisibleAsync">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete movement</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (Loan is not null && Movement is not null)
+        {
+            <MudText Typo="Typo.body2" Class="mt-2">
+                Delete the <strong>@Movement.Type</strong> movement of
+                <strong>@Loan.Counterparty</strong> (@Movement.Amount.ToString("N2") @Movement.Currency,
+                @Movement.Date.ToString("yyyy-MM-dd"))?
+            </MudText>
+            <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">The summary (repaid, interest, outstanding) is recalculated. This action cannot be undone.</MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Error" OnClick="@(() => SetVisibleAsync(false))">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="@ConfirmAsync">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public LoanSummaryDto? Loan { get; set; }
+    [Parameter] public LoanMovementDto? Movement { get; set; }
+    [Parameter] public EventCallback<LoanMovementTarget> OnConfirm { get; set; }
+
+    private async Task ConfirmAsync()
+    {
+        if (Loan is null || Movement is null) return;
+        await OnConfirm.InvokeAsync(new LoanMovementTarget(Loan, Movement));
+    }
+
+    private async Task SetVisibleAsync(bool value)
+    {
+        Visible = value;
+        await VisibleChanged.InvokeAsync(value);
+    }
+}

@@ -1,0 +1,101 @@
+<MudPaper Class="pa-4 mb-4" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="3">
+            <MudSelect T="int?" @bind-Value="_selectedYear" Label="Year" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+                @foreach (var year in AvailableYears)
+                {
+                    <MudSelectItem T="int?" Value="@((int?)year)">@year</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudSelect @bind-Value="_selectedSymbol" Label="Symbol" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+                @foreach (var symbol in AvailableSymbols)
+                {
+                    <MudSelectItem Value="symbol">@symbol</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudSelect @bind-Value="_selectedType" Label="Type" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+                @foreach (var type in Types)
+                {
+                    <MudSelectItem Value="type">@type</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudSelect @bind-Value="_selectedCurrency" Label="Currency" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+                @foreach (var currency in AvailableCurrencies)
+                {
+                    <MudSelectItem Value="currency">@currency</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12">
+            <MudTextField @bind-Value="_searchText" Immediate="true"
+                          DebounceInterval="300" Label="Search description" Placeholder="e.g. 'dividend', 'Criterium'…"
+                          Variant="Variant.Outlined" FullWidth="true" Clearable="true" Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" />
+        </MudItem>
+    </MudGrid>
+    <MudText Typo="Typo.subtitle2" Class="mt-3 mb-1">Quick filters</MudText>
+    <div class="d-flex flex-wrap gap-2">
+        <MudChip T="string" Color="@(SelectedType == "Buy" ? Color.Primary : Color.Default)"
+                 Variant="@(SelectedType == "Buy" ? Variant.Filled : Variant.Outlined)"
+                 OnClick="@(() => ToggleType("Buy"))">Buy</MudChip>
+        <MudChip T="string" Color="@(SelectedType == "Sell" ? Color.Primary : Color.Default)"
+                 Variant="@(SelectedType == "Sell" ? Variant.Filled : Variant.Outlined)"
+                 OnClick="@(() => ToggleType("Sell"))">Sell</MudChip>
+    </div>
+</MudPaper>
+
+@code {
+    [Parameter] public IReadOnlyList<int> AvailableYears { get; set; } = Array.Empty<int>();
+    [Parameter] public int? SelectedYear { get; set; }
+    [Parameter] public EventCallback<int?> SelectedYearChanged { get; set; }
+    [Parameter] public IReadOnlyList<string> AvailableSymbols { get; set; } = Array.Empty<string>();
+    [Parameter] public string? SelectedSymbol { get; set; }
+    [Parameter] public EventCallback<string?> SelectedSymbolChanged { get; set; }
+    [Parameter] public IReadOnlyList<string> Types { get; set; } = Array.Empty<string>();
+    [Parameter] public string? SelectedType { get; set; }
+    [Parameter] public EventCallback<string?> SelectedTypeChanged { get; set; }
+    [Parameter] public IReadOnlyList<string> AvailableCurrencies { get; set; } = Array.Empty<string>();
+    [Parameter] public string? SelectedCurrency { get; set; }
+    [Parameter] public EventCallback<string?> SelectedCurrencyChanged { get; set; }
+    [Parameter] public string? SearchText { get; set; }
+    [Parameter] public EventCallback<string?> SearchTextChanged { get; set; }
+
+    private int? _selectedYear
+    {
+        get => SelectedYear;
+        set => SelectedYearChanged.InvokeAsync(value);
+    }
+
+    private string? _selectedSymbol
+    {
+        get => SelectedSymbol;
+        set => SelectedSymbolChanged.InvokeAsync(value);
+    }
+
+    private string? _selectedType
+    {
+        get => SelectedType;
+        set => SelectedTypeChanged.InvokeAsync(value);
+    }
+
+    private string? _selectedCurrency
+    {
+        get => SelectedCurrency;
+        set => SelectedCurrencyChanged.InvokeAsync(value);
+    }
+
+    private string? _searchText
+    {
+        get => SearchText;
+        set => SearchTextChanged.InvokeAsync(value);
+    }
+
+    private void ToggleType(string type) =>
+        SelectedTypeChanged.InvokeAsync(SelectedType == type ? null : type);
+}
