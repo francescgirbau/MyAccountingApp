@@ -152,6 +152,23 @@ public class YahooMarketPriceServiceTests
     }
 
     [Theory]
+    [InlineData(1642, "GBp", null, 16.42, "GBP")]
+    [InlineData(125.8, "GBp", "gb_market", 1.258, "GBP")]
+    [InlineData(870, "gbp", null, 8.70, "GBP")]
+    [InlineData(4664.5, "GBp", null, 46.645, "GBP")]
+    [InlineData(29.44, "USD", "gb_market", 29.44, "USD")]
+    [InlineData(150.25, "USD", "us_market", 150.25, "USD")]
+    [InlineData(4.5, null, "gb_market", 4.5, "GBP")]
+    public void BuildQuote_DividesGbpPenceBy100_AndKeepsOtherCurrencies(
+        decimal amount, string? yahooCurrency, string? market, decimal expectedAmount, string expectedCurrency)
+    {
+        Money quote = YahooMarketPriceService.BuildQuote(amount, yahooCurrency, market);
+
+        Assert.Equal(expectedAmount, quote.Amount);
+        Assert.Equal(expectedCurrency, quote.Currency);
+    }
+
+    [Theory]
     [InlineData("CEQ", "CAD", "CEQ.TO,CEQ.V")]
     [InlineData("FEC", "cad", "FEC.TO,FEC.V")]
     [InlineData("AZJ", "AUD", "AZJ.AX")]
