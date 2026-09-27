@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Exclude>[MyAccountingApp.Web]MyAccountingApp.Web.Pages.*,[MyAccountingApp.Web]MyAccountingApp.Web.Layout.*,[MyAccountingApp.Web]MyAccountingApp.Web.App,[MyAccountingApp.Web]Program</Exclude>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
