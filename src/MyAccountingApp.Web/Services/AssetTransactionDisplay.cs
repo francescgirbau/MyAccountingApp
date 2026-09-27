@@ -1,7 +1,4 @@
-using MyAccountingApp.Domain.Entities;
-using MyAccountingApp.Domain.Enums;
-
-namespace MyAccountingApp.Application.Services;
+namespace MyAccountingApp.Web.Services;
 
 /// <summary>
 /// Presentation helpers for asset transactions: human-facing labels, explanatory tooltips
@@ -51,17 +48,4 @@ public static class AssetTransactionDisplay
     /// </summary>
     public static string BuildInvestmentsLink(int? year) =>
         year.HasValue ? $"/asset-transactions?year={year.Value}" : "/asset-transactions";
-
-    /// <summary>
-    /// Whether an asset transaction belongs to the requested year and flow (purchase or sale).
-    /// Used to apply the year + type filters that come from a drill-down deep link.
-    /// </summary>
-    public static bool MatchesFilter(AssetTransaction transaction, int year, bool purchase)
-    {
-        bool matchesYear = transaction.Transaction.Date.Year == year;
-        bool matchesFlow = purchase
-            ? transaction.Type == AssetTransactionType.Buy
-            : transaction.Type == AssetTransactionType.Sell;
-        return matchesYear && matchesFlow;
-    }
 }

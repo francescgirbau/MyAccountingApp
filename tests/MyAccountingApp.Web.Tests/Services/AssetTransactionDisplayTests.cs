@@ -1,10 +1,6 @@
-namespace MyAccountingApp.Application.Tests.Services;
-using System;
-using MyAccountingApp.Application.Services;
-using MyAccountingApp.Domain.Entities;
-using MyAccountingApp.Domain.Enums;
-using MyAccountingApp.Domain.ValueObjects;
-using Xunit;
+using MyAccountingApp.Web.Services;
+
+namespace MyAccountingApp.Web.Tests.Services;
 
 public class AssetTransactionDisplayTests
 {
@@ -80,30 +76,4 @@ public class AssetTransactionDisplayTests
     {
         Assert.Equal(expected, AssetTransactionDisplay.BuildDeepLink(year));
     }
-
-    [Theory]
-    [InlineData(2024, true)]
-    [InlineData(2023, false)]
-    public void MatchesFilter_AppliesCorrectYearAndType(int year, bool purchase)
-    {
-        AssetTransactionType type = purchase
-            ? AssetTransactionType.Buy
-            : AssetTransactionType.Sell;
-
-        AssetTransaction buy2024 = Tx(2024, AssetTransactionType.Buy);
-        AssetTransaction sell2024 = Tx(2024, AssetTransactionType.Sell);
-        AssetTransaction buy2023 = Tx(2023, AssetTransactionType.Buy);
-        AssetTransaction sell2023 = Tx(2023, AssetTransactionType.Sell);
-
-        Assert.True(AssetTransactionDisplay.MatchesFilter(purchase ? buy2024 : sell2023, year, purchase));
-        Assert.False(AssetTransactionDisplay.MatchesFilter(buy2023, 2024, purchase: true));
-        Assert.False(AssetTransactionDisplay.MatchesFilter(sell2024, 2024, purchase: true));
-        Assert.False(AssetTransactionDisplay.MatchesFilter(buy2024, 2024, purchase: false));
-    }
-
-    private static AssetTransaction Tx(int year, AssetTransactionType type) =>
-        new(new Transaction(Guid.NewGuid(), new DateTime(year, 6, 1), "Test", new Money(100, "EUR"), TransactionCategory.INCOME),
-            "TEST",
-            5,
-            type);
 }

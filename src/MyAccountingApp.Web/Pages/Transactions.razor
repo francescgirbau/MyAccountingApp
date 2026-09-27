@@ -1,5 +1,4 @@
 @page "/transactions"
-@using MyAccountingApp.Application.Services
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
@@ -606,7 +605,7 @@ else
             query = query.Where(t => t.Date.Month == _selectedMonth.Value);
 
         if (_selectedCategories.Count > 0)
-            query = TransactionCategoryFilter.FilterByCategories(query, _selectedCategories, t => t.Category);
+            query = query.Where(t => _selectedCategories.Contains(t.Category));
 
         if (!string.IsNullOrWhiteSpace(_searchText))
             query = query.Where(t => t.Description.Contains(_searchText, StringComparison.OrdinalIgnoreCase));

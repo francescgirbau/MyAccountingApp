@@ -35,14 +35,14 @@ MyAccountingApp
 | **Application** | Orchestration: import service, command/query services, calculations (positions, split adjustments, validation) | Core, Domain, Contracts |
 | **Contracts** | Wire shapes (DTOs, request records): single source of truth for the API/Web payloads, no logic | none |
 | **Api** | Minimal API endpoints, mostly thin; returns `Contracts` shapes | Core, Application, Contracts |
-| **Web** | Blazor WASM + MudBlazor; talks to the API over HTTP; consumes `Contracts` shapes (still references `Application` — PR-2 pending) | Application, Contracts |
+| **Web** | Blazor WASM + MudBlazor; talks to the API over HTTP; consumes `Contracts` shapes only (no `Application`/`Domain` reference) | Contracts |
 | **ConsoleApp** | Ops/maintenance tool | Core, Application |
 
 **Key observations**
 
 1. `Domain` already holds the repository *abstractions* — the dependency direction is healthy.
 2. `Core` is effectively the future `Infrastructure`: persistence, imports and external providers all live behind interfaces already. Splitting/renaming it is mostly mechanical — do it **only when there is a driver** (new storage, new broker kind, or before a big feature that touches several of those areas).
-3. `Web` has depended on `Application` directly since the beginning. **PR-1 (2026-09)** created `Contracts` and moved every wire shape there, ending the hand-duplicated DTOs; **PR-2** will drop the `Web → Application` project reference entirely (the three helpers it still uses move into the Web, `DataQuality.razor` stops touching `Domain`).
+3. `Web` has depended on `Application` directly since the beginning. **PR-1 (2026-09)** created `Contracts` and moved every wire shape there, ending the hand-duplicated DTOs. **PR-2 (2026-09)** dropped the `Web → Application` reference entirely: the presentation helpers moved into the Web (`Web/Services`, `DataQuality.razor` works on `Contracts` DTOs) and the utility `TransactionCategoryFilter` stays in Application because the Api uses it (the Web inlines that one-liner filter locally).
 4. The DTO wire is now single-sourced in `Contracts` and protected by `Api.Tests` (JSON-key assertions); no more drift by hand.
 
 ## Dependency rules (target)
@@ -97,7 +97,7 @@ derived bug is fixed in code, not in data.
 | Step | Value | When to do it |
 |---|---|---|
 | `Contracts` project (end DTO duplication) | **Done — PR-1 (2026-09):** wire shapes live in `Contracts`; Web consumes them; JSON keys enforced by `Api.Tests` | — |
-| Web → contracts-only (drop the `Application` reference; move remaining helpers into the Web) | High | Next structural step — PR-2 after PR-1 |
+| Web → contracts-only (drop the `Application` reference) | **Done — PR-2 (2026-09):** Web depends on `Contracts` only; helpers moved to `Web/Services`; `DataQuality.razor` DTO-based | — |
 | `Core` → `Infrastructure` split (Persistence / Imports / MarketData / Currency / Vault) | Low–medium (mechanical) | Only with a driver: new storage, new broker, or large feature crossing those areas |
 | Api thinning (endpoints that reach into repositories directly behind use cases) | Medium | Opportunistically, per endpoint, as features require |
 | Web component splitting (big `.razor` pages → focused components) | Medium | Behavior-preserving, one page per PR |
