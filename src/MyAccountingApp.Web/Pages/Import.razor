@@ -296,6 +296,14 @@
         </MudText>
     </MudAlert>
 
+    @if (_result.SkippedAssetTransactions > 0)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+            <strong>@_result.SkippedAssetTransactions</strong> asset transaction(s) skipped as duplicates
+            (already imported). No new lots were added for them.
+        </MudAlert>
+    }
+
     @if (_result.AssetTransactions.Count > 0)
     {
         <MudText Typo="Typo.subtitle1" GutterBottom="true">Asset Transactions — verify and correct symbols</MudText>

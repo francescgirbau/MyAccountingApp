@@ -166,4 +166,82 @@ public class AssetTransactionTests
         Assert.Throws<ArgumentException>(() => assetTransaction.ApplySplitFactor(0.2m));
         Assert.Equal(1, assetTransaction.Quantity);
     }
+
+    [Fact]
+    public void GetFingerprint_ShouldBeEqual_ForEquivalentRows()
+    {
+        AssetTransaction first = new(
+            new Transaction(new DateTime(2023, 2, 13), "CEQ", new Money(90, "CAD"), TransactionCategory.EXPENSE),
+            "ceq",
+            1000,
+            AssetTransactionType.Buy);
+        AssetTransaction second = new(
+            new Transaction(new DateTime(2023, 2, 13), "ceq", new Money(90, "CAD"), TransactionCategory.EXPENSE),
+            "CEQ",
+            1000,
+            AssetTransactionType.Buy);
+
+        Assert.Equal(first.GetFingerprint(), second.GetFingerprint());
+    }
+
+    [Fact]
+    public void GetFingerprint_ShouldDiffer_WhenAnyIdentityFieldChanges()
+    {
+        AssetTransactionFingerprint baseline = new AssetTransaction(
+            new Transaction(new DateTime(2023, 2, 13), "CEQ", new Money(90, "CAD"), TransactionCategory.EXPENSE),
+            "CEQ",
+            1000,
+            AssetTransactionType.Buy).GetFingerprint();
+
+        AssetTransactionFingerprint otherSymbol = new AssetTransaction(
+            new Transaction(new DateTime(2023, 2, 13), "CEQ", new Money(90, "CAD"), TransactionCategory.EXPENSE),
+            "AAPL",
+            1000,
+            AssetTransactionType.Buy).GetFingerprint();
+        AssetTransactionFingerprint otherDate = new AssetTransaction(
+            new Transaction(new DateTime(2023, 3, 14), "CEQ", new Money(90, "CAD"), TransactionCategory.EXPENSE),
+            "CEQ",
+            1000,
+            AssetTransactionType.Buy).GetFingerprint();
+        AssetTransactionFingerprint otherQuantity = new AssetTransaction(
+            new Transaction(new DateTime(2023, 2, 13), "CEQ", new Money(90, "CAD"), TransactionCategory.EXPENSE),
+            "CEQ",
+            500,
+            AssetTransactionType.Buy).GetFingerprint();
+        AssetTransactionFingerprint otherAmount = new AssetTransaction(
+            new Transaction(new DateTime(2023, 2, 13), "CEQ", new Money(45, "CAD"), TransactionCategory.EXPENSE),
+            "CEQ",
+            1000,
+            AssetTransactionType.Buy).GetFingerprint();
+        AssetTransactionFingerprint otherCurrency = new AssetTransaction(
+            new Transaction(new DateTime(2023, 2, 13), "CEQ", new Money(90, "USD"), TransactionCategory.EXPENSE),
+            "CEQ",
+            1000,
+            AssetTransactionType.Buy).GetFingerprint();
+        AssetTransactionFingerprint otherType = new AssetTransaction(
+            new Transaction(new DateTime(2023, 2, 13), "CEQ", new Money(90, "CAD"), TransactionCategory.EXPENSE),
+            "CEQ",
+            1000,
+            AssetTransactionType.Sell).GetFingerprint();
+        AssetTransactionFingerprint otherDescription = new AssetTransaction(
+            new Transaction(new DateTime(2023, 2, 13), "Consolidation", new Money(90, "CAD"), TransactionCategory.EXPENSE),
+            "CEQ",
+            1000,
+            AssetTransactionType.Buy).GetFingerprint();
+
+        Assert.NotEqual(baseline, otherSymbol);
+        Assert.NotEqual(baseline, otherDate);
+        Assert.NotEqual(baseline, otherQuantity);
+        Assert.NotEqual(baseline, otherAmount);
+        Assert.NotEqual(baseline, otherCurrency);
+        Assert.NotEqual(baseline, otherType);
+        Assert.NotEqual(baseline, otherDescription);
+        Assert.Equal("CEQ", baseline.Symbol);
+        Assert.Equal(new DateTime(2023, 2, 13), baseline.Date);
+        Assert.Equal(1000, baseline.Quantity);
+        Assert.Equal(90, baseline.Amount);
+        Assert.Equal("CAD", baseline.Currency);
+        Assert.Equal("BUY", baseline.Type);
+        Assert.Equal("CEQ", baseline.Description);
+    }
 }

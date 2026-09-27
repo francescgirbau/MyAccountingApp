@@ -342,6 +342,106 @@ public class ImportServiceTests
         Assert.Equal(2, txRepo.GetAll().Count());
     }
 
+    [Fact]
+    public async Task ImportFromFoldersAsync_ReimportingAssetLots_DoesNotDuplicate()
+    {
+        string dir = CreateTempDir();
+        string file = Path.Combine(dir, "assets.csv");
+        File.WriteAllText(file, "dummy");
+
+        AssetTransaction lot = new(
+            new Transaction(Guid.NewGuid(), new DateTime(2023, 2, 13), "CEQ", new Money(90, "CAD"), TransactionCategory.EXPENSE),
+            "CEQ",
+            1000,
+            AssetTransactionType.Buy);
+
+        FakeBroker broker = new();
+        broker.AssetTransactions = new[] { lot };
+        FakeTxRepo txRepo = new();
+        FakePfRepo pfRepo = new();
+        TransactionValidator validator = new();
+        FakeLogger<ImportService> logger = new();
+        ImportService service = new(broker, txRepo, pfRepo, new FakeOptionRepo(), validator, logger);
+
+        ImportResult first = await service.ImportFromFoldersAsync(new[] { dir });
+        ImportResult second = await service.ImportFromFoldersAsync(new[] { dir });
+
+        Assert.Equal(0, first.SkippedAssetTransactions);
+        Assert.Single(first.AssetTransactions);
+        Assert.Single(pfRepo.GetAllTransactions());
+
+        Assert.Equal(1, second.SkippedAssetTransactions);
+        Assert.Empty(second.AssetTransactions);
+        Assert.Single(pfRepo.GetAllTransactions());
+    }
+
+    [Fact]
+    public async Task ImportFromFoldersAsync_DifferentLotContent_IsNotSkipped()
+    {
+        string dir = CreateTempDir();
+        string file = Path.Combine(dir, "assets.csv");
+        File.WriteAllText(file, "dummy");
+
+        AssetTransaction firstLot = new(
+            new Transaction(Guid.NewGuid(), new DateTime(2023, 2, 13), "CEQ", new Money(90, "CAD"), TransactionCategory.EXPENSE),
+            "CEQ",
+            1000,
+            AssetTransactionType.Buy);
+        AssetTransaction secondLot = new(
+            new Transaction(Guid.NewGuid(), new DateTime(2023, 8, 10), "CEQ", new Money(80, "CAD"), TransactionCategory.EXPENSE),
+            "CEQ",
+            800,
+            AssetTransactionType.Buy);
+
+        FakeBroker broker = new();
+        broker.AssetTransactions = new[] { firstLot };
+        FakeTxRepo txRepo = new();
+        FakePfRepo pfRepo = new();
+        TransactionValidator validator = new();
+        FakeLogger<ImportService> logger = new();
+        ImportService service = new(broker, txRepo, pfRepo, new FakeOptionRepo(), validator, logger);
+
+        ImportResult first = await service.ImportFromFoldersAsync(new[] { dir });
+
+        broker.AssetTransactions = new[] { secondLot };
+        ImportResult second = await service.ImportFromFoldersAsync(new[] { dir });
+
+        Assert.Equal(0, first.SkippedAssetTransactions);
+        Assert.Equal(0, second.SkippedAssetTransactions);
+        Assert.Equal(2, pfRepo.GetAllTransactions().Count());
+        Assert.Equal(1000, pfRepo.GetAllTransactions().First(t => t.Transaction.Date == new DateTime(2023, 2, 13)).Quantity);
+        Assert.Equal(800, pfRepo.GetAllTransactions().First(t => t.Transaction.Date == new DateTime(2023, 8, 10)).Quantity);
+    }
+
+    [Fact]
+    public async Task ImportFromFoldersAsync_ReimportingCorporateActions_DoesNotDuplicate()
+    {
+        string dir = CreateTempDir("CORPORATE");
+        string file = Path.Combine(dir, "corp.csv");
+        File.WriteAllText(file, "dummy");
+
+        AssetTransaction action = new(
+            new Transaction(Guid.NewGuid(), new DateTime(2023, 6, 7), "Consolidation", new Money(90, "CAD"), TransactionCategory.EXPENSE),
+            "CEQ",
+            200,
+            AssetTransactionType.Buy);
+
+        FakeBroker broker = new();
+        broker.AssetTransactions = new[] { action };
+        FakeTxRepo txRepo = new();
+        FakePfRepo pfRepo = new();
+        TransactionValidator validator = new();
+        FakeLogger<ImportService> logger = new();
+        ImportService service = new(broker, txRepo, pfRepo, new FakeOptionRepo(), validator, logger);
+
+        ImportResult first = await service.ImportFromFoldersAsync(new[] { dir });
+        ImportResult second = await service.ImportFromFoldersAsync(new[] { dir });
+
+        Assert.Equal(0, first.SkippedAssetTransactions);
+        Assert.Equal(1, second.SkippedAssetTransactions);
+        Assert.Single(pfRepo.GetAllTransactions());
+    }
+
     private static string CreateTempDir(string suffix = "")
     {
         string dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString(), suffix);

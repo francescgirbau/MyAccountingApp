@@ -9,4 +9,5 @@ public record ImportResultDto(
     List<string> Errors,
     List<ValidationError> ValidationErrors,
     List<ValidationError> ValidationWarnings,
-    int FilesProcessed);
+    int FilesProcessed,
+    int SkippedAssetTransactions);
