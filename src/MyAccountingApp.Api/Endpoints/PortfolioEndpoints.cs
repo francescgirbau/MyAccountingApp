@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using MyAccountingApp.Application.DTOs;
 using MyAccountingApp.Application.Interfaces;
+using MyAccountingApp.Domain.Entities;
 using MyAccountingApp.Domain.Interfaces;
 
 namespace MyAccountingApp.Api.Endpoints;
@@ -13,6 +14,23 @@ public static class PortfolioEndpoints
             .Union(optionRepo.GetAll().Select(o => o.Symbol))
             .Distinct()
             .ToArray();
+    }
+
+    private static IReadOnlyDictionary<string, string> GetCurrencyBySymbol(IPortfolioRepository repo, IOptionTransactionRepository optionRepo)
+    {
+        Dictionary<string, string> currencyBySymbol = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (IGrouping<string, AssetTransaction> group in repo.GetAllTransactions().GroupBy(t => t.Symbol))
+        {
+            currencyBySymbol.TryAdd(group.Key, group.First().Transaction.Money.Currency);
+        }
+
+        foreach (IGrouping<string, OptionTransaction> group in optionRepo.GetAll().GroupBy(o => o.Symbol))
+        {
+            currencyBySymbol.TryAdd(group.Key, group.First().Transaction.Money.Currency);
+        }
+
+        return currencyBySymbol;
     }
 
     public static void MapPortfolioEndpoints(this WebApplication app)
@@ -41,7 +59,8 @@ public static class PortfolioEndpoints
         app.MapPost($"{prefix}/portfolio/refresh-prices", async (IPortfolioRepository repo, IOptionTransactionRepository optionRepo, IPositionEngine positionEngine, IMarketPriceService priceService) =>
         {
             string[] symbols = GetSymbolUnion(repo, optionRepo);
-            await Task.WhenAll(symbols.Select(s => priceService.RefreshPriceAsync(s)));
+            IReadOnlyDictionary<string, string> currencyBySymbol = GetCurrencyBySymbol(repo, optionRepo);
+            await Task.WhenAll(symbols.Select(s => priceService.RefreshPriceAsync(s, currencyBySymbol.TryGetValue(s, out string? currency) ? currency : null)));
             PortfolioPositionDto?[] positions = await Task.WhenAll(symbols.Select(s => positionEngine.GetPosition(s, true)));
             return Results.Ok(positions.Where(p => p is not null).ToList());
         });

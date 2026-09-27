@@ -323,9 +323,9 @@ public class PositionEngineTests
 
     private sealed class ThrowingMarketPriceService : IMarketPriceService
     {
-        public Task<Money?> GetPriceAsync(string symbol) => throw new InvalidOperationException("Price service should not be called");
+        public Task<Money?> GetPriceAsync(string symbol, string? quoteCurrency = null) => throw new InvalidOperationException("Price service should not be called");
 
-        public Task<Money?> RefreshPriceAsync(string symbol) => throw new InvalidOperationException("Price service should not be called");
+        public Task<Money?> RefreshPriceAsync(string symbol, string? quoteCurrency = null) => throw new InvalidOperationException("Price service should not be called");
 
         public Task<Money?> GetCachedPriceAsync(string symbol) => throw new InvalidOperationException("Price service should not be called");
 
