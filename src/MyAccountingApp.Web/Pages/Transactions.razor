@@ -22,76 +22,18 @@
     </MudAlert>
 }
 
-<MudPaper Class="pa-4 mb-4" Outlined="true">
-    <MudGrid>
-        <MudItem xs="12" sm="6" md="3">
-            <MudSelect T="int?" @bind-Value="_selectedYear" @bind-Value:after="OnYearChanged" Label="Year" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
-                @foreach (var year in _availableYears)
-                {
-                    <MudSelectItem T="int?" Value="@((int?)year)">@year</MudSelectItem>
-                }
-            </MudSelect>
-        </MudItem>
-        <MudItem xs="12" sm="6" md="3">
-            <MudSelect T="int?" @bind-Value="_selectedMonth" @bind-Value:after="ApplyFilters" Label="Month" Variant="Variant.Outlined" FullWidth="true" Clearable="true"
-                       Disabled="@(!_selectedYear.HasValue)">
-                @for (int m = 1; m <= 12; m++)
-                {
-                    var month = m;
-                    <MudSelectItem T="int?" Value="@((int?)month)">@_monthNames[month - 1]</MudSelectItem>
-                }
-            </MudSelect>
-        </MudItem>
-        <MudItem xs="12" sm="6" md="3">
-            <MudSelect T="string" Label="Categories" Variant="Variant.Outlined" FullWidth="true"
-                       MultiSelection="true"
-                       SelectedValues="@_selectedCategories"
-                       SelectedValuesChanged="@OnCategoriesChanged"
-                       ToStringFunc="@(value => value ?? string.Empty)"
-                       MultiSelectionTextFunc="@CategoriesSelectionText">
-                @foreach (var cat in _categories)
-                {
-                    <MudSelectItem T="string" Value="@cat">@cat</MudSelectItem>
-                }
-            </MudSelect>
-            @if (_selectedCategories.Count > 0)
-            {
-                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" OnClick="@ClearCategories" Class="mt-1">
-                    Clear categories
-                </MudButton>
-            }
-        </MudItem>
-        <MudItem xs="12" sm="6" md="3">
-            <MudTextField @bind-Value="_searchText" @bind-Value:after="ApplyFilters" Label="Search description" Variant="Variant.Outlined" FullWidth="true" Immediate="true" Placeholder="Type to search..." />
-        </MudItem>
-    </MudGrid>
-    <MudText Typo="Typo.subtitle2" Class="mt-3 mb-1">Quick filters</MudText>
-    <div class="d-flex flex-wrap gap-2">
-        <MudChip T="string" Color="@(IsBucketActive(OperatingBucket, _selectedCategories) ? Color.Primary : Color.Default)"
-                 Variant="@(IsBucketActive(OperatingBucket, _selectedCategories) ? Variant.Filled : Variant.Outlined)"
-                 OnClick="@(() => ToggleBucket(OperatingBucket))">Operating</MudChip>
-        <MudChip T="string" Color="@(IsBucketActive(InternalBucket, _selectedCategories) ? Color.Primary : Color.Default)"
-                 Variant="@(IsBucketActive(InternalBucket, _selectedCategories) ? Variant.Filled : Variant.Outlined)"
-                 OnClick="@(() => ToggleBucket(InternalBucket))">Internal moves</MudChip>
-        <MudChip T="string" Color="@(IsBucketActive(LoanBucket, _selectedCategories) ? Color.Primary : Color.Default)"
-                 Variant="@(IsBucketActive(LoanBucket, _selectedCategories) ? Variant.Filled : Variant.Outlined)"
-                 OnClick="@(() => ToggleBucket(LoanBucket))">Loans</MudChip>
-        <MudChip T="string" Color="@(IsBucketActive(FxBucket, _selectedCategories) ? Color.Primary : Color.Default)"
-                 Variant="@(IsBucketActive(FxBucket, _selectedCategories) ? Variant.Filled : Variant.Outlined)"
-                 OnClick="@(() => ToggleBucket(FxBucket))">FX</MudChip>
-        <MudTooltip Placement="Placement.Top">
-            <ChildContent>
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
-                           StartIcon="@Icons.Material.Filled.TrendingUp"
-                           OnClick="@NavigateToInvestments">View investments</MudButton>
-            </ChildContent>
-            <TooltipContent><span>View asset purchases and sales, quantities and prices.</span></TooltipContent>
-        </MudTooltip>
-    </div>
-    <MudText Typo="Typo.caption" Class="mud-text-secondary mt-2">
-        Quick filters select whole cash-flow buckets. Use the Categories dropdown for finer control.
-    </MudText>
-</MudPaper>
+<TransactionFilters
+    AvailableYears="@_availableYears"
+    SelectedYear="@_selectedYear"
+    SelectedYearChanged="@OnYearChanged"
+    SelectedMonth="@_selectedMonth"
+    SelectedMonthChanged="@OnMonthChanged"
+    SelectedCategories="@_selectedCategories"
+    SelectedCategoriesChanged="@OnCategoriesChanged"
+    Categories="@_categories"
+    SearchText="@_searchText"
+    SearchTextChanged="@OnSearchChanged"
+    OnInvestments="@NavigateToInvestments" />
 
 @if (_loading)
 {
@@ -111,67 +53,7 @@ else if (_allTransactions.Count == 0)
 }
 else
 {
-    <MudPaper Class="pa-4 mb-4" Outlined="true">
-        <MudText Typo="Typo.subtitle1" GutterBottom="true">
-            Filtered totals — @_filteredTransactions.Count transactions
-        </MudText>
-        @if (_filterSummaries.Count == 0)
-        {
-            <MudText Typo="Typo.body2" Class="mud-text-secondary">No transactions match the current filters.</MudText>
-        }
-        else
-        {
-            <MudSimpleTable Dense="true" Hover="false" Bordered="false" Style="background: transparent;">
-                <thead>
-                    <tr>
-                        <th rowspan="2">Currency</th>
-                        <th style="text-align:center" colspan="3">Operating</th>
-                        <th style="text-align:center" colspan="2">Investing</th>
-                        <th style="text-align:center" colspan="2">Internal</th>
-                        <th style="text-align:center" colspan="2">Loans</th>
-                        <th style="text-align:center" colspan="2" class="mud-text-secondary">FX</th>
-                    </tr>
-                    <tr>
-                        <th style="text-align:right">Income</th>
-                        <th style="text-align:right">Expense</th>
-                        <th style="text-align:right">Net</th>
-                        <th style="text-align:right">Purchases</th>
-                        <th style="text-align:right">Sales</th>
-                        <th style="text-align:right">Out</th>
-                        <th style="text-align:right">In</th>
-                        <th style="text-align:right">Out</th>
-                        <th style="text-align:right">In</th>
-                        <th style="text-align:right" class="mud-text-secondary">Out</th>
-                        <th style="text-align:right" class="mud-text-secondary">In</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var s in _filterSummaries)
-                    {
-                        <tr>
-                            <td><strong>@s.Currency</strong> <span class="mud-text-secondary">(@s.Count)</span></td>
-                            <td style="text-align:right" class="green--text">@s.Income.ToString("N2")</td>
-                            <td style="text-align:right" class="red--text">@s.Expense.ToString("N2")</td>
-                            <td style="text-align:right">
-                                <strong class="@(s.OperatingNet >= 0 ? "green--text" : "red--text")">@s.OperatingNet.ToString("N2")</strong>
-                            </td>
-                            <td style="text-align:right">@s.InvestingPurchase.ToString("N2")</td>
-                            <td style="text-align:right">@s.InvestingSale.ToString("N2")</td>
-                            <td style="text-align:right">@s.Transfer.ToString("N2")</td>
-                            <td style="text-align:right">@s.Deposit.ToString("N2")</td>
-                            <td style="text-align:right">@s.LoanOut.ToString("N2")</td>
-                            <td style="text-align:right">@s.LoanIn.ToString("N2")</td>
-                            <td style="text-align:right" class="mud-text-secondary">@s.FxOut.ToString("N2")</td>
-                            <td style="text-align:right" class="mud-text-secondary">@s.FxIn.ToString("N2")</td>
-                        </tr>
-                    }
-                </tbody>
-            </MudSimpleTable>
-            <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
-                Operating net = Income − Expense. Investing (asset purchase/sale), internal transfers/deposits and loan movements are excluded from Operating net; FX legs sit in their own out / in columns (not in Operating net), and loan movements have their own out / in columns.
-            </MudText>
-        }
-    </MudPaper>
+    <TransactionTotals Summaries="@_filterSummaries" Count="@_filteredTransactions.Count" />
 
     @if (_selected.Count > 0)
     {
@@ -191,242 +73,40 @@ else
         </MudPaper>
     }
 
-    <MudTable Items="@_filteredTransactions" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true" SortLabel="Sort by"
-              MultiSelection="true" @bind-SelectedItems="_selected">
-        <ToolBarContent>
-            <MudText Typo="Typo.subtitle1">@_filteredTransactions.Count transactions</MudText>
-            <MudSpacer />
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                       OnClick="@OpenCreateDialog" StartIcon="@Icons.Material.Filled.Add">
-                New
-            </MudButton>
-            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" Class="ml-2"
-                       OnClick="@OpenFxDialog" StartIcon="@Icons.Material.Filled.SwapHoriz">
-                New FX
-            </MudButton>
-            <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@LoadDataAsync" Size="Size.Small" aria-label="Refresh" />
-        </ToolBarContent>
-        <ColGroup>
-            <col style="width: 120px" />
-            <col />
-            <col style="width: 100px" />
-            <col style="width: 80px" />
-            <col style="width: 100px" />
-            <col style="width: 140px" />
-            <col style="width: 80px" />
-        </ColGroup>
-        <HeaderContent>
-            <MudTh><MudTableSortLabel SortBy="new Func<TransactionDto, object>(t => t.Date)">Date</MudTableSortLabel></MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<TransactionDto, object>(t => t.Description)">Description</MudTableSortLabel></MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<TransactionDto, object>(t => t.Money.Amount)">Amount</MudTableSortLabel></MudTh>
-            <MudTh>Curr.</MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<TransactionDto, object>(t => t.Category)">Category</MudTableSortLabel></MudTh>
-            <MudTh>Source</MudTh>
-            <MudTh>Actions</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="Date">@context.Date.ToString("yyyy-MM-dd")</MudTd>
-            <MudTd DataLabel="Description">@context.Description</MudTd>
-            <MudTd DataLabel="Amount"><span class="@(context.Category == "EXPENSE" || context.Category == "FEE" || context.Category == "WITHHOLDING_TAX" || context.Category == "TRANSFER" || context.Category == "LOAN_OUT" ? "red--text" : "green--text")">@context.Money.Amount.ToString("N2")</span></MudTd>
-            <MudTd DataLabel="Curr.">@context.Money.Currency</MudTd>
-            <MudTd DataLabel="Category">
-                @if (GetCategoryTooltip(context.Category) is string tip)
-                {
-                    <MudTooltip Placement="Placement.Top">
-                        <ChildContent>
-                            <MudChip T="string" Size="Size.Small" Color="@GetCategoryColor(context.Category)">@GetCategoryLabel(context.Category)</MudChip>
-                        </ChildContent>
-                        <TooltipContent><span>@tip</span></TooltipContent>
-                    </MudTooltip>
-                }
-                else
-                {
-                    <MudChip T="string" Size="Size.Small" Color="@GetCategoryColor(context.Category)">@GetCategoryLabel(context.Category)</MudChip>
-                }
-                @if (!string.IsNullOrEmpty(context.FxLeg))
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Class="ml-1">FX @(context.FxLeg == "Out" ? "out" : "in")</MudChip>
-                }
-                @if (context.NeedsReview)
-                {
-                    <MudTooltip Placement="Placement.Top">
-                        <ChildContent>
-                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined" Class="ml-1">Revisar</MudChip>
-                        </ChildContent>
-                        <TooltipContent><span>Auto-classificada pel signe sense keyword de confirmació — revisa la categoria</span></TooltipContent>
-                    </MudTooltip>
-                }
-            </MudTd>
-            <MudTd DataLabel="Source">
-                @if (!string.IsNullOrEmpty(context.Source))
-                {
-                    <MudText Typo="Typo.caption" Class="text-medium-emphasis">@context.Source</MudText>
-                }
-                else
-                {
-                    <MudText Typo="Typo.caption">—</MudText>
-                }
-                @if (context.FxPairId is not null)
-                {
-                    <MudText Typo="Typo.caption" Class="text-medium-emphasis">@GetCounterText(context)</MudText>
-                }
-            </MudTd>
-            <MudTd DataLabel="Actions">
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Disabled="@(context.Source == "Loan")" OnClick="@(() => OpenEditDialog(context))" />
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" Disabled="@(context.Source == "Loan")" OnClick="@(() => OpenDeleteDialog(context))" />
-            </MudTd>
-        </RowTemplate>
-        <PagerContent>
-            <MudTablePager PageSizeOptions="@(new int[]{25, 50, 100})" />
-        </PagerContent>
-    </MudTable>
+    <TransactionList Transactions="@_filteredTransactions"
+                     Selected="@_selected"
+                     SelectedChanged="@OnSelectedChanged"
+                     CounterText="@GetCounterText"
+                     OnNew="@OpenCreateDialog"
+                     OnFx="@OpenFxDialog"
+                     OnRefresh="@LoadDataAsync"
+                     OnEdit="@OpenEditDialog"
+                     OnDelete="@OpenDeleteDialog" />
 }
 
-<MudDialog @bind-Visible="_showFormDialog">
-    <TitleContent>
-        <MudText Typo="Typo.h6">@(_editingId is null ? "New Transaction" : "Edit Transaction")</MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudGrid>
-            <MudItem xs="12">
-                <MudDatePicker @bind-Date="_formDate" Label="Date" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12">
-                <MudTextField @bind-Value="_formDescription" Label="Description" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudNumericField T="decimal" @bind-Value="_formAmount" Label="Amount" Variant="Variant.Outlined" Min="@(0.01m)" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudSelect @bind-Value="_formCurrency" Label="Currency" Variant="Variant.Outlined">
-                    <MudSelectItem Value="@("EUR")">EUR</MudSelectItem>
-                    <MudSelectItem Value="@("USD")">USD</MudSelectItem>
-                    <MudSelectItem Value="@("GBP")">GBP</MudSelectItem>
-                    <MudSelectItem Value="@("CHF")">CHF</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12">
-                <MudSelect @bind-Value="_formCategory" Label="Category" Variant="Variant.Outlined">
-                    @foreach (var cat in _categories.Where(c => c != "FX_CONVERSION"))
-                    {
-                        <MudSelectItem Value="cat">@cat</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-        </MudGrid>
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@CloseFormDialog">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@SaveAsync" Disabled="@IsFormInvalid()">
-            Save
-        </MudButton>
-    </DialogActions>
-</MudDialog>
+<TransactionFormDialog @bind-Visible="_showFormDialog"
+                       EditingId="@_editingId"
+                       EditingTransaction="@_editingTransaction"
+                       Categories="@_categories"
+                       SaveRequested="@SaveAsync" />
 
-<MudDialog @bind-Visible="_showBulkCategoryDialog">
-    <TitleContent>
-        <MudText Typo="Typo.h6">Change category</MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudText Typo="Typo.body2" Class="mb-4">
-            The new category will be applied to <strong>@_selected.Count</strong> selected transaction(s).
-        </MudText>
-        <MudSelect @bind-Value="_bulkCategory" Label="New category" Variant="Variant.Outlined">
-            @foreach (var cat in _categories)
-            {
-                <MudSelectItem Value="cat">@cat</MudSelectItem>
-            }
-        </MudSelect>
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@CloseBulkCategoryDialog">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@ConfirmBulkCategoryAsync"
-                   Disabled="@(string.IsNullOrWhiteSpace(_bulkCategory))">
-            Update @_selected.Count
-        </MudButton>
-    </DialogActions>
-</MudDialog>
+<BulkCategoryDialog @bind-Visible="_showBulkCategoryDialog"
+                    SelectedCount="@_selected.Count"
+                    Categories="@_categories"
+                    ConfirmRequested="@ConfirmBulkCategoryAsync" />
 
-<MudDialog @bind-Visible="_showBulkDeleteDialog">
-    <TitleContent>
-        <MudText Typo="Typo.h6">Delete transactions</MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudText Typo="Typo.body2" Class="mb-4">
-            <strong>@_selected.Count</strong> selected transaction(s) will be permanently deleted. This cannot be undone.
-        </MudText>
-        <MudText Typo="Typo.caption" Class="mud-text-secondary">Only visible rows are affected.</MudText>
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@CloseBulkDeleteDialog">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@ConfirmBulkDeleteAsync">
-            Delete @_selected.Count
-        </MudButton>
-    </DialogActions>
-</MudDialog>
+<BulkDeleteDialog @bind-Visible="_showBulkDeleteDialog"
+                  SelectedCount="@_selected.Count"
+                  ConfirmRequested="@ConfirmBulkDeleteAsync" />
 
-<MudDialog @bind-Visible="_showFxDialog">
-    <TitleContent>
-        <MudText Typo="Typo.h6">New FX Conversion</MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudGrid>
-            <MudItem xs="12">
-                <MudDatePicker @bind-Date="_fxDate" Label="Date" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudNumericField T="decimal" @bind-Value="_fxFromAmount" Label="From amount" Variant="Variant.Outlined" Min="@(0.01m)" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudSelect @bind-Value="_fxFromCurrency" Label="From currency" Variant="Variant.Outlined">
-                    <MudSelectItem Value="@("EUR")">EUR</MudSelectItem>
-                    <MudSelectItem Value="@("USD")">USD</MudSelectItem>
-                    <MudSelectItem Value="@("GBP")">GBP</MudSelectItem>
-                    <MudSelectItem Value="@("CHF")">CHF</MudSelectItem>
-                    <MudSelectItem Value="@("CAD")">CAD</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudNumericField T="decimal" @bind-Value="_fxToAmount" Label="To amount" Variant="Variant.Outlined" Min="@(0.01m)" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudSelect @bind-Value="_fxToCurrency" Label="To currency" Variant="Variant.Outlined">
-                    <MudSelectItem Value="@("EUR")">EUR</MudSelectItem>
-                    <MudSelectItem Value="@("USD")">USD</MudSelectItem>
-                    <MudSelectItem Value="@("GBP")">GBP</MudSelectItem>
-                    <MudSelectItem Value="@("CHF")">CHF</MudSelectItem>
-                    <MudSelectItem Value="@("CAD")">CAD</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12">
-                <MudNumericField T="decimal?" @bind-Value="_fxRate" Label="Rate (quote per base, optional)" Variant="Variant.Outlined" Min="@(0.000001m)" />
-            </MudItem>
-        </MudGrid>
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@CloseFxDialog">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@SaveFxAsync" Disabled="@IsFxFormInvalid()">
-            Save
-        </MudButton>
-    </DialogActions>
-</MudDialog>
+<FxConversionDialog @bind-Visible="_showFxDialog"
+                    InitialDate="@_fxInitialDate"
+                    SaveRequested="@SaveFxAsync" />
 
-<MudDialog @bind-Visible="_showDeleteDialog">
-    <TitleContent>
-        <MudText Typo="Typo.h6">Delete Transaction</MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudText>Are you sure you want to delete this transaction?</MudText>
-        @if (_deletingTx is not null)
-        {
-            <MudText Typo="Typo.body2" Class="mt-2">@_deletingTx.Date.ToString("yyyy-MM-dd") — @_deletingTx.Description (@_deletingTx.Money.Amount.ToString("N2") @_deletingTx.Money.Currency)</MudText>
-        }
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@CloseDeleteDialog">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@ConfirmDeleteAsync">Delete</MudButton>
-    </DialogActions>
-</MudDialog>
+<DeleteTransactionDialog Visible="@_showDeleteDialog"
+                         VisibleChanged="@OnDeleteDialogVisibleChanged"
+                         Transaction="@_deletingTx"
+                         ConfirmRequested="@ConfirmDeleteAsync" />
 
 @code {
     private List<TransactionDto> _allTransactions = new();
@@ -441,11 +121,6 @@ else
     private string? _searchText { get; set; }
 
     private static readonly string[] _categories = { "INCOME", "EXPENSE", "TRANSFER", "DEPOSIT", "DIVIDEND", "FEE", "WITHHOLDING_TAX", "INTEREST", "FX_CONVERSION", "LOAN_IN", "LOAN_OUT" };
-    private static readonly string[] _monthNames =
-    {
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December",
-    };
 
     private bool _showFormDialog;
     private bool _showFxDialog;
@@ -453,16 +128,10 @@ else
     private bool _showBulkCategoryDialog;
     private bool _showBulkDeleteDialog;
     private Guid? _editingId;
+    private TransactionDto? _editingTransaction;
     private TransactionDto? _deletingTx;
     private HashSet<TransactionDto> _selected = new();
-    private string _bulkCategory = "";
-
-    private DateTime? _fxDate;
-    private decimal _fxFromAmount;
-    private string _fxFromCurrency = "EUR";
-    private decimal _fxToAmount;
-    private string _fxToCurrency = "USD";
-    private decimal? _fxRate;
+    private DateTime? _fxInitialDate;
 
     [SupplyParameterFromQuery(Name = "ids")]
     public string? IdsFromQuery { get; set; }
@@ -478,12 +147,6 @@ else
 
     private List<Guid> _impactedIds = new();
     private string? _issueContext;
-
-    private DateTime? _formDate;
-    private string _formDescription = "";
-    private decimal _formAmount;
-    private string _formCurrency = "EUR";
-    private string _formCategory = "EXPENSE";
 
     protected override async Task OnInitializedAsync()
     {
@@ -565,11 +228,18 @@ else
         }
     }
 
-    private void OnYearChanged()
+    private void OnYearChanged(int? year)
     {
-        if (!_selectedYear.HasValue)
+        _selectedYear = year;
+        if (!year.HasValue)
             _selectedMonth = null;
 
+        ApplyFilters();
+    }
+
+    private void OnMonthChanged(int? month)
+    {
+        _selectedMonth = month;
         ApplyFilters();
     }
 
@@ -579,19 +249,11 @@ else
         ApplyFilters();
     }
 
-    private void ClearCategories()
+    private void OnSearchChanged(string? text)
     {
-        _selectedCategories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        _searchText = text;
         ApplyFilters();
-        StateHasChanged();
     }
-
-    private static string CategoriesSelectionText(IReadOnlyList<string> values) => values.Count switch
-    {
-        0 => "All categories",
-        1 => "1 category",
-        _ => $"{values.Count} categories",
-    };
 
     private void ApplyFilters()
     {
@@ -644,121 +306,28 @@ else
                 decimal loanIn = g.Where(t => t.Category == "LOAN_IN").Sum(t => t.Money.Amount);
                 decimal fxOut = g.Where(t => t.Category == "FX_CONVERSION" && t.FxLeg == "Out").Sum(t => t.Money.Amount);
                 decimal fxIn = g.Where(t => t.Category == "FX_CONVERSION" && t.FxLeg == "In").Sum(t => t.Money.Amount);
-                return new FilterCurrencySummary
-                {
-                    Currency = g.Key,
-                    Count = g.Count(),
-                    Income = income,
-                    Expense = expense,
-                    InvestingPurchase = investingPurchase,
-                    InvestingSale = investingSale,
-                    Transfer = transfer,
-                    Deposit = deposit,
-                    LoanOut = loanOut,
-                    LoanIn = loanIn,
-                    FxOut = fxOut,
-                    FxIn = fxIn,
-                    OperatingNet = income - expense,
-                };
+                return new FilterCurrencySummary(
+                    g.Key,
+                    g.Count(),
+                    income,
+                    expense,
+                    investingPurchase,
+                    investingSale,
+                    transfer,
+                    deposit,
+                    loanOut,
+                    loanIn,
+                    fxOut,
+                    fxIn,
+                    income - expense);
             })
             .ToList();
-    }
-
-    private bool IsFormInvalid() => string.IsNullOrWhiteSpace(_formDescription) || _formAmount <= 0;
-
-    private sealed class FilterCurrencySummary
-    {
-        public string Currency { get; set; } = string.Empty;
-        public int Count { get; set; }
-        public decimal Income { get; set; }
-        public decimal Expense { get; set; }
-        public decimal InvestingPurchase { get; set; }
-        public decimal InvestingSale { get; set; }
-        public decimal Transfer { get; set; }
-        public decimal Deposit { get; set; }
-        public decimal LoanOut { get; set; }
-        public decimal LoanIn { get; set; }
-        public decimal FxOut { get; set; }
-        public decimal FxIn { get; set; }
-        public decimal OperatingNet { get; set; }
-    }
-
-    private static readonly string[] OperatingBucket = { "INCOME", "EXPENSE", "DIVIDEND", "INTEREST", "FEE", "WITHHOLDING_TAX" };
-    private static readonly string[] InternalBucket = { "TRANSFER", "DEPOSIT" };
-    private static readonly string[] LoanBucket = { "LOAN_IN", "LOAN_OUT" };
-    private static readonly string[] FxBucket = { "FX_CONVERSION" };
-
-    private static bool IsBucketActive(IEnumerable<string> bucket, IReadOnlySet<string> selected) => bucket.All(selected.Contains);
-
-    private void ToggleBucket(IEnumerable<string> bucket)
-    {
-        HashSet<string> updated = new(StringComparer.OrdinalIgnoreCase);
-        foreach (string cat in _selectedCategories)
-        {
-            updated.Add(cat);
-        }
-
-        if (IsBucketActive(bucket, _selectedCategories))
-        {
-            foreach (string cat in bucket)
-            {
-                updated.Remove(cat);
-            }
-        }
-        else
-        {
-            foreach (string cat in bucket)
-            {
-                updated.Add(cat);
-            }
-        }
-
-        _selectedCategories = updated;
-        StateHasChanged();
-        ApplyFilters();
     }
 
     private void NavigateToInvestments()
     {
         Navigation.NavigateTo(AssetTransactionDisplay.BuildInvestmentsLink(_selectedYear));
     }
-
-    private static string GetCategoryLabel(string category) => category switch
-    {
-        "INVESTMENT" => "Asset purchase",
-        "DIVESTMENT" => "Asset sale",
-        "TRANSFER" => "Internal transfer out",
-        "DEPOSIT" => "Internal transfer in",
-        "FX_CONVERSION" => "Currency exchange",
-        "LOAN_IN" => "Loan received",
-        "LOAN_OUT" => "Loan repaid",
-        _ => category,
-    };
-
-    private static string? GetCategoryTooltip(string category) => category switch
-    {
-        "INVESTMENT" => "Cash converted into an asset; not an operating expense.",
-        "DIVESTMENT" => "Cash received from an asset sale; not operating income.",
-        "TRANSFER" => "Internal same-currency move out; not P/L.",
-        "DEPOSIT" => "Internal same-currency move in; not P/L.",
-        "FX_CONVERSION" => "Two-leg currency conversion; not P/L.",
-        "LOAN_IN" => "Loan cash in (borrowed funds or lent-loan repayment); real cash, not P/L.",
-        "LOAN_OUT" => "Loan cash out (disbursement or repayment); real cash, not P/L.",
-        _ => null,
-    };
-
-    private static Color GetCategoryColor(string category) => category switch
-    {
-        "INCOME" or "DIVIDEND" or "INTEREST" => Color.Success,
-        "EXPENSE" or "FEE" or "WITHHOLDING_TAX" => Color.Error,
-        "TRANSFER" => Color.Warning,
-        "DEPOSIT" => Color.Warning,
-        "INVESTMENT" or "DIVESTMENT" => Color.Info,
-        "FX_CONVERSION" => Color.Secondary,
-        "LOAN_IN" => Color.Success,
-        "LOAN_OUT" => Color.Warning,
-        _ => Color.Default,
-    };
 
     private string? GetCounterText(TransactionDto tx)
     {
@@ -779,38 +348,20 @@ else
     private void OpenCreateDialog()
     {
         _editingId = null;
-        _formDate = DateTime.Today;
-        _formDescription = "";
-        _formAmount = 0;
-        _formCurrency = "EUR";
-        _formCategory = "EXPENSE";
+        _editingTransaction = null;
         _showFormDialog = true;
     }
 
     private void OpenEditDialog(TransactionDto tx)
     {
         _editingId = tx.Id;
-        _formDate = tx.Date;
-        _formDescription = tx.Description;
-        _formAmount = tx.Money.Amount;
-        _formCurrency = tx.Money.Currency;
-        _formCategory = tx.Category;
+        _editingTransaction = tx;
         _showFormDialog = true;
-    }
-
-    private void CloseFormDialog()
-    {
-        _showFormDialog = false;
     }
 
     private void OpenFxDialog()
     {
-        _fxDate = GetDefaultFxDate();
-        _fxFromAmount = 0;
-        _fxFromCurrency = "EUR";
-        _fxToAmount = 0;
-        _fxToCurrency = "USD";
-        _fxRate = null;
+        _fxInitialDate = GetDefaultFxDate();
         _showFxDialog = true;
     }
 
@@ -837,31 +388,18 @@ else
         return DateTime.Today;
     }
 
-    private void CloseFxDialog()
-    {
-        _showFxDialog = false;
-    }
-
-    private bool IsFxFormInvalid() =>
-        _fxFromAmount <= 0 ||
-        _fxToAmount <= 0 ||
-        string.IsNullOrWhiteSpace(_fxFromCurrency) ||
-        string.IsNullOrWhiteSpace(_fxToCurrency) ||
-        string.Equals(_fxFromCurrency, _fxToCurrency, StringComparison.OrdinalIgnoreCase) ||
-        _fxRate is <= 0;
-
-    private async Task SaveFxAsync()
+    private async Task SaveFxAsync(FxConversionValue value)
     {
         try
         {
             var payload = new
             {
-                Date = _fxDate ?? DateTime.Today,
-                FromAmount = _fxFromAmount,
-                FromCurrency = _fxFromCurrency,
-                ToAmount = _fxToAmount,
-                ToCurrency = _fxToCurrency,
-                Rate = _fxRate,
+                Date = value.Date,
+                FromAmount = value.FromAmount,
+                FromCurrency = value.FromCurrency,
+                ToAmount = value.ToAmount,
+                ToCurrency = value.ToCurrency,
+                Rate = value.Rate,
             };
 
             HttpResponseMessage response = await Http.PostAsJsonAsync("/api/transactions/fx", payload);
@@ -905,17 +443,17 @@ else
         }
     }
 
-    private async Task SaveAsync()
+    private async Task SaveAsync(TransactionFormValue value)
     {
         try
         {
             var payload = new
             {
-                Date = _formDate ?? DateTime.Today,
-                Description = _formDescription,
-                Amount = _formAmount,
-                Currency = _formCurrency,
-                Category = _formCategory,
+                Date = value.Date,
+                Description = value.Description,
+                Amount = value.Amount,
+                Currency = value.Currency,
+                Category = value.Category,
             };
 
             HttpResponseMessage response;
@@ -963,18 +501,12 @@ else
 
     private void OpenBulkCategoryDialog()
     {
-        _bulkCategory = "";
         _showBulkCategoryDialog = true;
     }
 
-    private void CloseBulkCategoryDialog()
+    private async Task ConfirmBulkCategoryAsync(string category)
     {
-        _showBulkCategoryDialog = false;
-    }
-
-    private async Task ConfirmBulkCategoryAsync()
-    {
-        if (_selected.Count == 0 || string.IsNullOrWhiteSpace(_bulkCategory))
+        if (_selected.Count == 0 || string.IsNullOrWhiteSpace(category))
         {
             return;
         }
@@ -989,7 +521,7 @@ else
         var payload = new
         {
             ids = targets.Select(t => t.Id).ToList(),
-            patch = new { category = _bulkCategory },
+            patch = new { category },
         };
 
         try
@@ -1031,11 +563,6 @@ else
     private void OpenBulkDeleteDialog()
     {
         _showBulkDeleteDialog = true;
-    }
-
-    private void CloseBulkDeleteDialog()
-    {
-        _showBulkDeleteDialog = false;
     }
 
     private async Task ConfirmBulkDeleteAsync()
@@ -1096,10 +623,13 @@ else
         _showDeleteDialog = true;
     }
 
-    private void CloseDeleteDialog()
+    private void OnDeleteDialogVisibleChanged(bool value)
     {
-        _showDeleteDialog = false;
-        _deletingTx = null;
+        _showDeleteDialog = value;
+        if (!value)
+        {
+            _deletingTx = null;
+        }
     }
 
     private async Task ConfirmDeleteAsync()
@@ -1127,5 +657,10 @@ else
         {
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
         }
+    }
+
+    private void OnSelectedChanged(HashSet<TransactionDto> value)
+    {
+        _selected = value;
     }
 }

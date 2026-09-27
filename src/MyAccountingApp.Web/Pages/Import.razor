@@ -6,407 +6,123 @@
 
 <MudText Typo="Typo.h3" GutterBottom="true">Import Data</MudText>
 
-<MudPaper Class="pa-6 mb-4" Outlined="true">
-    <MudText Typo="Typo.h6" GutterBottom="true">Upload a CSV file</MudText>
-    <MudText Typo="Typo.body2" Class="mb-4">
-        Select a CSV file from your computer to import. Supported formats are detected automatically.
-    </MudText>
-    <MudGrid>
-        <MudItem xs="12" sm="8">
-            <InputFile OnChange="@OnFileSelected" accept=".csv" class="mud-input-outlined" />
-        </MudItem>
-        <MudItem xs="12" sm="4" Class="d-flex align-center">
-            <MudButton Variant="Variant.Filled" Color="Color.Secondary" Size="Size.Large"
-                       OnClick="@UploadAndImportAsync" Disabled="@(_selectedFile is null || _loading)"
-                       StartIcon="@Icons.Material.Filled.FileUpload"
-                       FullWidth="true">
-                Upload &amp; Import
-            </MudButton>
-        </MudItem>
-    </MudGrid>
-    @if (_selectedFile is not null)
-    {
-        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">Selected: @_selectedFile.Name</MudText>
-    }
-</MudPaper>
+<ImportSourceCard Title="Upload a CSV file"
+                  Description="Select a CSV file from your computer to import. Supported formats are detected automatically."
+                  ButtonColor="Color.Secondary" ButtonLabel="Upload &amp; Import"
+                  FileName="@(_selectedFile?.Name)" Disabled="@(_selectedFile is null || _loading)"
+                  OnFileSelected="@OnFileSelected" OnUpload="@UploadAndImportAsync" />
 
-<MudPaper Class="pa-6 mb-4" Outlined="true">
-    <MudText Typo="Typo.h6" GutterBottom="true">Import Interactive Brokers (Flex Query Report)</MudText>
-    <MudText Typo="Typo.body2" Class="mb-4">
-        Upload a Flex Query report from Interactive Brokers. Trades, dividends, deposits, corporate actions, fees and interest are detected automatically.
-    </MudText>
-    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+<ImportSourceCard Title="Import Interactive Brokers (Flex Query Report)"
+                  Description="Upload a Flex Query report from Interactive Brokers. Trades, dividends, deposits, corporate actions, fees and interest are detected automatically."
+                  ButtonColor="Color.Info" ButtonLabel="Import IBKR"
+                  FileName="@(_ibkrFile?.Name)" Disabled="@(_ibkrFile is null || _loading)"
+                  OnFileSelected="@OnIbkrFileSelected" OnUpload="@UploadIbkrAsync">
+    <AlertContent>
         <strong>Format detected by filename.</strong> Files starting with <strong>U8997440_</strong> are routed to the IBKR Flex Query parser.<br />
         <strong>Trades</strong> become portfolio/option entries. <strong>Dividends</strong>, <strong>Fees</strong>, <strong>Deposits</strong>, <strong>Interest</strong> and <strong>Withholding Tax</strong> become cash transactions.
-    </MudAlert>
-    <MudGrid>
-        <MudItem xs="12" sm="8">
-            <InputFile OnChange="@OnIbkrFileSelected" accept=".csv" class="mud-input-outlined" />
-        </MudItem>
-        <MudItem xs="12" sm="4" Class="d-flex align-center">
-            <MudButton Variant="Variant.Filled" Color="Color.Info" Size="Size.Large"
-                       OnClick="@UploadIbkrAsync" Disabled="@(_ibkrFile is null || _loading)"
-                       StartIcon="@Icons.Material.Filled.FileUpload"
-                       FullWidth="true">
-                Import IBKR
-            </MudButton>
-        </MudItem>
-    </MudGrid>
-    @if (_ibkrFile is not null)
-    {
-        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">Selected: @_ibkrFile.Name</MudText>
-    }
-</MudPaper>
+    </AlertContent>
+</ImportSourceCard>
 
-<MudPaper Class="pa-6 mb-4" Outlined="true">
-    <MudText Typo="Typo.h6" GutterBottom="true">Import DeGiro / Flatex CSV</MudText>
-    <MudText Typo="Typo.body2" Class="mb-4">
-        Upload a CSV exported from DeGiro or Flatex (Spanish format). Asset transactions, dividends, and fees are detected automatically.
-    </MudText>
-    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+<ImportSourceCard Title="Import DeGiro / Flatex CSV"
+                  Description="Upload a CSV exported from DeGiro or Flatex (Spanish format). Asset transactions, dividends, and fees are detected automatically."
+                  ButtonColor="Color.Success" ButtonLabel="Import DeGiro"
+                  FileName="@(_degiroFile?.Name)" Disabled="@(_degiroFile is null || _loading)"
+                  OnFileSelected="@OnDegiroFileSelected" OnUpload="@UploadDegiroAsync">
+    <AlertContent>
         <strong>Format detected automatically.</strong> Expected columns: Fecha, Hora, Fecha valor, Producto, ISIN, Descripción, Tipo, Variación, (amount), Saldo, (balance), ID Orden.<br />
         <strong>Compra</strong> / <strong>Venta</strong> rows become portfolio entries. <strong>Dividendo</strong>, <strong>Retención</strong> and <strong>Costes</strong> become cash transactions. Internal transfers are skipped.
-    </MudAlert>
-    <MudGrid>
-        <MudItem xs="12" sm="8">
-            <InputFile OnChange="@OnDegiroFileSelected" accept=".csv" class="mud-input-outlined" />
-        </MudItem>
-        <MudItem xs="12" sm="4" Class="d-flex align-center">
-            <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Large"
-                       OnClick="@UploadDegiroAsync" Disabled="@(_degiroFile is null || _loading)"
-                       StartIcon="@Icons.Material.Filled.FileUpload"
-                       FullWidth="true">
-                Import DeGiro
-            </MudButton>
-        </MudItem>
-    </MudGrid>
-    @if (_degiroFile is not null)
-    {
-        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">Selected: @_degiroFile.Name</MudText>
-    }
-</MudPaper>
+    </AlertContent>
+</ImportSourceCard>
 
-<MudPaper Class="pa-6 mb-4" Outlined="true">
-    <MudText Typo="Typo.h6" GutterBottom="true">Import Revolut CSV</MudText>
-    <MudText Typo="Typo.body2" Class="mb-4">
-        Upload a CSV exported from Revolut. Deposits, card payments, ATM withdrawals, and transfers are detected automatically.
-    </MudText>
-    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+<ImportSourceCard Title="Import Revolut CSV"
+                  Description="Upload a CSV exported from Revolut. Deposits, card payments, ATM withdrawals, and transfers are detected automatically."
+                  ButtonColor="Color.Tertiary" ButtonLabel="Import Revolut"
+                  FileName="@(_revolutFile?.Name)" Disabled="@(_revolutFile is null || _loading)"
+                  OnFileSelected="@OnRevolutFileSelected" OnUpload="@UploadRevolutAsync">
+    <AlertContent>
         <strong>Format detected automatically.</strong> Expected columns: Type, Product, Started Date, Completed Date, Description, Amount, Fee, Currency, State, Balance.<br />
         <strong>Deposits</strong> and <strong>transfers</strong> become cash entries. Fees are handled as separate expense transactions.
-    </MudAlert>
-    <MudGrid>
-        <MudItem xs="12" sm="8">
-            <InputFile OnChange="@OnRevolutFileSelected" accept=".csv" class="mud-input-outlined" />
-        </MudItem>
-        <MudItem xs="12" sm="4" Class="d-flex align-center">
-            <MudButton Variant="Variant.Filled" Color="Color.Tertiary" Size="Size.Large"
-                       OnClick="@UploadRevolutAsync" Disabled="@(_revolutFile is null || _loading)"
-                       StartIcon="@Icons.Material.Filled.FileUpload"
-                       FullWidth="true">
-                Import Revolut
-            </MudButton>
-        </MudItem>
-    </MudGrid>
-    @if (_revolutFile is not null)
-    {
-        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">Selected: @_revolutFile.Name</MudText>
-    }
-</MudPaper>
+    </AlertContent>
+</ImportSourceCard>
 
-<MudPaper Class="pa-6 mb-4" Outlined="true">
-    <MudText Typo="Typo.h6" GutterBottom="true">Import ABN AMRO CSV</MudText>
-    <MudText Typo="Typo.body2" Class="mb-4">
-        Upload a CSV exported from ABN AMRO. Card payments, transfers, direct debits, and salary are detected automatically.
-    </MudText>
-    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+<ImportSourceCard Title="Import ABN AMRO CSV"
+                  Description="Upload a CSV exported from ABN AMRO. Card payments, transfers, direct debits, and salary are detected automatically."
+                  ButtonColor="Color.Tertiary" ButtonLabel="Import ABN AMRO"
+                  FileName="@(_abnAmroFile?.Name)" Disabled="@(_abnAmroFile is null || _loading)"
+                  OnFileSelected="@OnAbnAmroFileSelected" OnUpload="@UploadAbnAmroAsync">
+    <AlertContent>
         <strong>Format detected automatically.</strong> Expected columns: accountNumber, mutationcode, transactiondate, valuedate, startsaldo, endsaldo, amount, description.<br />
         <strong>Betaalpas</strong> and <strong>iDEAL</strong> become expenses. <strong>Overboeking</strong> to brokers become transfers. Salary from <strong>Spectral/Tesla</strong> becomes income.
-    </MudAlert>
-    <MudGrid>
-        <MudItem xs="12" sm="8">
-            <InputFile OnChange="@OnAbnAmroFileSelected" accept=".csv" class="mud-input-outlined" />
-        </MudItem>
-        <MudItem xs="12" sm="4" Class="d-flex align-center">
-            <MudButton Variant="Variant.Filled" Color="Color.Tertiary" Size="Size.Large"
-                       OnClick="@UploadAbnAmroAsync" Disabled="@(_abnAmroFile is null || _loading)"
-                       StartIcon="@Icons.Material.Filled.FileUpload"
-                       FullWidth="true">
-                Import ABN AMRO
-            </MudButton>
-        </MudItem>
-    </MudGrid>
-    @if (_abnAmroFile is not null)
-    {
-        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">Selected: @_abnAmroFile.Name</MudText>
-    }
-</MudPaper>
+    </AlertContent>
+</ImportSourceCard>
 
-<MudPaper Class="pa-6 mb-4" Outlined="true">
-    <MudText Typo="Typo.h6" GutterBottom="true">Import Cobas (Investment Funds)</MudText>
-    <MudText Typo="Typo.body2" Class="mb-4">
-        Upload a CSV exported from Cobas. Fund subscriptions and transfers are detected automatically and become portfolio entries.
-    </MudText>
-    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+<ImportSourceCard Title="Import Cobas (Investment Funds)"
+                  Description="Upload a CSV exported from Cobas. Fund subscriptions and transfers are detected automatically and become portfolio entries."
+                  ButtonColor="Color.Warning" ButtonLabel="Import Cobas"
+                  FileName="@(_cobasFile?.Name)" Disabled="@(_cobasFile is null || _loading)"
+                  OnFileSelected="@OnCobasFileSelected" OnUpload="@UploadCobasAsync">
+    <AlertContent>
         <strong>Format detected automatically.</strong> Expected columns: Operacion, Producto, Fecha, Tipo, Estado, Importe, Valor liquidativo, Participaciones.<br />
         <strong>Suscripción</strong> / <strong>Traspaso de entrada</strong> become portfolio entries. <strong>Reembolso</strong> / <strong>Traspaso de salida</strong> become sells. Cancelled (<strong>Anulada</strong>) rows are skipped. Quantity is the fractional <strong>Participaciones</strong> value.
-    </MudAlert>
-    <MudGrid>
-        <MudItem xs="12" sm="8">
-            <InputFile OnChange="@OnCobasFileSelected" accept=".csv" class="mud-input-outlined" />
-        </MudItem>
-        <MudItem xs="12" sm="4" Class="d-flex align-center">
-            <MudButton Variant="Variant.Filled" Color="Color.Warning" Size="Size.Large"
-                       OnClick="@UploadCobasAsync" Disabled="@(_cobasFile is null || _loading)"
-                       StartIcon="@Icons.Material.Filled.FileUpload"
-                       FullWidth="true">
-                Import Cobas
-            </MudButton>
-        </MudItem>
-    </MudGrid>
-    @if (_cobasFile is not null)
-    {
-        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">Selected: @_cobasFile.Name</MudText>
-    }
-</MudPaper>
+    </AlertContent>
+</ImportSourceCard>
 
-<MudPaper Class="pa-6 mb-4" Outlined="true">
-    <MudText Typo="Typo.h6" GutterBottom="true">Import MyInvestor (Account &amp; Funds)</MudText>
-    <MudText Typo="Typo.body2" Class="mb-4">
-        Upload a CSV exported from MyInvestor. Account statements and fund orders are detected automatically.
-    </MudText>
-    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+<ImportSourceCard Title="Import MyInvestor (Account &amp; Funds)"
+                  Description="Upload a CSV exported from MyInvestor. Account statements and fund orders are detected automatically."
+                  ButtonColor="Color.Tertiary" ButtonLabel="Import MyInvestor"
+                  FileName="@(_myInvestorFile?.Name)" Disabled="@(_myInvestorFile is null || _loading)"
+                  OnFileSelected="@OnMyInvestorFileSelected" OnUpload="@UploadMyInvestorAsync">
+    <AlertContent>
         <strong>Format detected automatically.</strong> Account file columns: Fecha de operación; Fecha de valor; Concepto; Importe; Divisa. Fund orders file columns: Fecha de la orden; ISIN; Importe estimado; Nº de participaciones; Estado.<br />
         <strong>Account rows</strong> become cash entries (expenses, income and transfers). <strong>Fund orders</strong> become portfolio entries with the ISIN as symbol and fractional participations as quantity.
-    </MudAlert>
-    <MudGrid>
-        <MudItem xs="12" sm="8">
-            <InputFile OnChange="@OnMyInvestorFileSelected" accept=".csv" class="mud-input-outlined" />
-        </MudItem>
-        <MudItem xs="12" sm="4" Class="d-flex align-center">
-            <MudButton Variant="Variant.Filled" Color="Color.Tertiary" Size="Size.Large"
-                       OnClick="@UploadMyInvestorAsync" Disabled="@(_myInvestorFile is null || _loading)"
-                       StartIcon="@Icons.Material.Filled.FileUpload"
-                       FullWidth="true">
-                Import MyInvestor
-            </MudButton>
-        </MudItem>
-    </MudGrid>
-    @if (_myInvestorFile is not null)
-    {
-        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">Selected: @_myInvestorFile.Name</MudText>
-    }
-</MudPaper>
+    </AlertContent>
+</ImportSourceCard>
 
-<MudPaper Class="pa-6 mb-4" Outlined="true">
-    <MudText Typo="Typo.h6" GutterBottom="true">Import SelfBank (Account &amp; Funds)</MudText>
-    <MudText Typo="Typo.body2" Class="mb-4">
-        Upload a CSV exported from SelfBank. Account statements and fund movements are detected automatically by filename.
-    </MudText>
-    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+<ImportSourceCard Title="Import SelfBank (Account &amp; Funds)"
+                  Description="Upload a CSV exported from SelfBank. Account statements and fund movements are detected automatically by filename."
+                  ButtonColor="Color.Default" ButtonLabel="Import SelfBank"
+                  FileName="@(_selfBankFile?.Name)" Disabled="@(_selfBankFile is null || _loading)"
+                  OnFileSelected="@OnSelfBankFileSelected" OnUpload="@UploadSelfBankAsync">
+    <AlertContent>
         <strong>Format detected by filename.</strong> Files starting with <strong>selfbank_found</strong> are routed to the fund movements parser; other <strong>selfbank</strong> files to the account parser.<br />
         <strong>Account rows</strong> become cash entries (expenses, income and transfers). <strong>Fund movements</strong> (Suscripción / Suscripción traspaso) become portfolio entries with the fund name as symbol; Reembolso rows become sells; cash-only movements are skipped.
-    </MudAlert>
-    <MudGrid>
-        <MudItem xs="12" sm="8">
-            <InputFile OnChange="@OnSelfBankFileSelected" accept=".csv" class="mud-input-outlined" />
-        </MudItem>
-        <MudItem xs="12" sm="4" Class="d-flex align-center">
-            <MudButton Variant="Variant.Filled" Color="Color.Default" Size="Size.Large"
-                       OnClick="@UploadSelfBankAsync" Disabled="@(_selfBankFile is null || _loading)"
-                       StartIcon="@Icons.Material.Filled.FileUpload"
-                       FullWidth="true">
-                Import SelfBank
-            </MudButton>
-        </MudItem>
-    </MudGrid>
-    @if (_selfBankFile is not null)
-    {
-        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">Selected: @_selfBankFile.Name</MudText>
-    }
-</MudPaper>
+    </AlertContent>
+</ImportSourceCard>
 
-<MudPaper Class="pa-6 mb-4" Outlined="true">
-    <MudText Typo="Typo.h6" GutterBottom="true">Import Coinbase CSV</MudText>
-    <MudText Typo="Typo.body2" Class="mb-4">
-        Upload a CSV exported from Coinbase (Transaction History). Crypto buys/sells, deposits and withdrawals are detected automatically.
-    </MudText>
-    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+<ImportSourceCard Title="Import Coinbase CSV"
+                  Description="Upload a CSV exported from Coinbase (Transaction History). Crypto buys/sells, deposits and withdrawals are detected automatically."
+                  ButtonColor="Color.Tertiary" ButtonLabel="Import Coinbase"
+                  FileName="@(_coinbaseFile?.Name)" Disabled="@(_coinbaseFile is null || _loading)"
+                  OnFileSelected="@OnCoinbaseFileSelected" OnUpload="@UploadCoinbaseAsync">
+    <AlertContent>
         <strong>Format detected automatically.</strong> Expected columns: User, ID, Timestamp, Transaction Type, Asset, Quantity Transacted, Price Currency, Price at Transaction, Subtotal, Total (inclusive of fees and/or spread), Fees and/or Spread, Notes, Sender Address, Recipient Address.<br />
         <strong>Buy</strong> / <strong>Sell</strong> rows become portfolio entries with the asset symbol. <strong>Deposit</strong> rows become cash deposits. <strong>Withdrawal</strong> rows become transfers. Convert, Receive, Send and other rows are skipped.
-    </MudAlert>
-    <MudGrid>
-        <MudItem xs="12" sm="8">
-            <InputFile OnChange="@OnCoinbaseFileSelected" accept=".csv" class="mud-input-outlined" />
-        </MudItem>
-        <MudItem xs="12" sm="4" Class="d-flex align-center">
-            <MudButton Variant="Variant.Filled" Color="Color.Tertiary" Size="Size.Large"
-                       OnClick="@UploadCoinbaseAsync" Disabled="@(_coinbaseFile is null || _loading)"
-                       StartIcon="@Icons.Material.Filled.FileUpload"
-                       FullWidth="true">
-                Import Coinbase
-            </MudButton>
-        </MudItem>
-    </MudGrid>
-    @if (_coinbaseFile is not null)
-    {
-        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">Selected: @_coinbaseFile.Name</MudText>
-    }
-</MudPaper>
+    </AlertContent>
+</ImportSourceCard>
 
-<MudPaper Class="pa-6 mb-4" Outlined="true">
-    <MudText Typo="Typo.h6" GutterBottom="true">Import Raw CSV</MudText>
-    <MudText Typo="Typo.body2" Class="mb-4">
-        Upload a CSV with your own format. No transformations applied.
-    </MudText>
-    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+<ImportSourceCard Title="Import Raw CSV"
+                  Description="Upload a CSV with your own format. No transformations applied."
+                  ButtonColor="Color.Primary" ButtonLabel="Import Raw CSV"
+                  FileName="@(_rawFile?.Name)" Disabled="@(_rawFile is null || _loading)"
+                  OnFileSelected="@OnRawFileSelected" OnUpload="@UploadRawCsvAsync">
+    <AlertContent>
         <strong>Format:</strong> Date,Description,Amount,Type,Currency (Type: Income, Expense, Transfer, Deposit; Currency optional, defaults to EUR)
-    </MudAlert>
-    <MudGrid>
-        <MudItem xs="12" sm="8">
-            <InputFile OnChange="@OnRawFileSelected" accept=".csv" class="mud-input-outlined" />
-        </MudItem>
-        <MudItem xs="12" sm="4" Class="d-flex align-center">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large"
-                       OnClick="@UploadRawCsvAsync" Disabled="@(_rawFile is null || _loading)"
-                       StartIcon="@Icons.Material.Filled.FileUpload"
-                       FullWidth="true">
-                Import Raw CSV
-            </MudButton>
-        </MudItem>
-    </MudGrid>
-    @if (_rawFile is not null)
-    {
-        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">Selected: @_rawFile.Name</MudText>
-    }
-</MudPaper>
+    </AlertContent>
+</ImportSourceCard>
 
 @if (_loading)
 {
     <MudProgressLinear Indeterminate="true" Class="mb-4" />
 }
 
-@if (_result is not null)
-{
-    <MudAlert Severity="@(_result.Errors.Count == 0 ? Severity.Success : Severity.Warning)" Class="mb-4">
-        <MudText>Import completed: <strong>@_result.FilesProcessed</strong> files processed,
-            <strong>@_result.Transactions.Count</strong> transactions,
-            <strong>@_result.AssetTransactions.Count</strong> asset transactions.
-            @if (_result.Errors.Count > 0) { <span><strong>@_result.Errors.Count</strong> errors.</span> }
-        </MudText>
-    </MudAlert>
-
-    @if (_result.SkippedAssetTransactions > 0)
-    {
-        <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
-            <strong>@_result.SkippedAssetTransactions</strong> asset transaction(s) skipped as duplicates
-            (already imported). No new lots were added for them.
-        </MudAlert>
-    }
-
-    @if (_result.AssetTransactions.Count > 0)
-    {
-        <MudText Typo="Typo.subtitle1" GutterBottom="true">Asset Transactions — verify and correct symbols</MudText>
-        <MudAlert Severity="Severity.Warning" Class="mb-4" Dense="true">
-            Symbols are extracted from the product name and may not match the exact Yahoo Finance ticker.
-            Edit them below and click "Save Symbol Corrections".
-        </MudAlert>
-        <MudSimpleTable Class="mb-4" Outlined="true" Hover="true">
-            <thead>
-                <tr><th>Symbol</th><th>Description</th><th>Amount</th><th>Currency</th><th>Quantity</th></tr>
-            </thead>
-            <tbody>
-                @foreach (var a in _result.AssetTransactions)
-                {
-                    <tr>
-                        <td>
-                            <div class="d-flex align-center">
-                                <MudTextField @bind-Value="_editableSymbols[a.Transaction.Id]"
-                                              Variant="Variant.Outlined"
-                                              Margin="Margin.Dense"
-                                              Immediate="true"
-                                              Class="flex-grow-1" />
-                                <MudIconButton Icon="@Icons.Material.Filled.Search"
-                                               Size="Size.Small"
-                                               OnClick="@(() => SearchSymbolAsync(a.Transaction.Id, a.Transaction.Description))"
-                                               Disabled="@_symbolSearching.Contains(a.Transaction.Id)" />
-                            </div>
-                            @if (_symbolResults.TryGetValue(a.Transaction.Id, out var symResults) && symResults.Count > 0)
-                            {
-                                <MudPaper Class="pa-2 mt-1" Outlined="true">
-                                    @foreach (var sr in symResults)
-                                    {
-                                        <MudText Typo="Typo.body2" Class="mud-primary-text cursor-pointer"
-                                                 @onclick="@(() => SelectSymbolResult(a.Transaction.Id, sr.Symbol))">
-                                            <strong>@sr.Symbol</strong> — @sr.Name (@sr.Exchange)
-                                        </MudText>
-                                    }
-                                </MudPaper>
-                            }
-                        </td>
-                        <td>@a.Transaction.Description</td>
-                        <td>@a.Transaction.Money.Amount.ToString("N2")</td>
-                        <td>@a.Transaction.Money.Currency</td>
-                        <td>@a.Quantity</td>
-                    </tr>
-                }
-            </tbody>
-        </MudSimpleTable>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                   OnClick="@SaveSymbolCorrectionsAsync"
-                   Disabled="@_savingSymbols"
-                   StartIcon="@Icons.Material.Filled.Save">
-            Save Symbol Corrections
-        </MudButton>
-        @if (_savingSymbols)
-        {
-            <MudProgressLinear Indeterminate="true" Class="mt-2" />
-        }
-    }
-
-    @if (_result.Errors.Count > 0)
-    {
-        <MudText Typo="Typo.subtitle1" GutterBottom="true">Errors</MudText>
-        <MudAlert Severity="Severity.Error" Class="mb-4">
-            @foreach (var error in _result.Errors)
-            {
-                <MudText Typo="Typo.body2">@error</MudText>
-            }
-        </MudAlert>
-    }
-
-    @if (_result.ValidationErrors.Count > 0)
-    {
-        <MudText Typo="Typo.subtitle1" GutterBottom="true">Validation Errors</MudText>
-        <MudSimpleTable Class="mb-4" Outlined="true">
-            <thead>
-                <tr><th>Field</th><th>Message</th></tr>
-            </thead>
-            <tbody>
-                @foreach (var ve in _result.ValidationErrors)
-                {
-                    <tr><td>@ve.Field</td><td>@ve.Message</td></tr>
-                }
-            </tbody>
-        </MudSimpleTable>
-    }
-
-    @if (_result.ValidationWarnings.Count > 0)
-    {
-        <MudText Typo="Typo.subtitle1" GutterBottom="true">Validation Warnings</MudText>
-        <MudSimpleTable Outlined="true">
-            <thead>
-                <tr><th>Field</th><th>Message</th></tr>
-            </thead>
-            <tbody>
-                @foreach (var ve in _result.ValidationWarnings)
-                {
-                    <tr><td>@ve.Field</td><td>@ve.Message</td></tr>
-                }
-            </tbody>
-        </MudSimpleTable>
-    }
-}
+<ImportResultReport Result="@_result"
+                    EditableSymbols="@_editableSymbols"
+                    SymbolResults="@_symbolResults"
+                    SymbolSearching="@_symbolSearching"
+                    SavingSymbols="@_savingSymbols"
+                    OnSearchSymbol="@(r => SearchSymbolAsync(r.AssetId, r.Description))"
+                    OnSelectSymbolResult="@(s => SelectSymbolResult(s.AssetId, s.Symbol))"
+                    OnSave="@SaveSymbolCorrectionsAsync" />
 
 @code {
     private ImportResultDto? _result;
@@ -486,9 +202,9 @@
         _result = null;
     }
 
-    private async Task UploadAndImportAsync()
+    private async Task UploadFileAsync(IBrowserFile? file, Action resetFile, string successMessage, string failMessage)
     {
-        if (_selectedFile is null) return;
+        if (file is null) return;
 
         _loading = true;
         _result = null;
@@ -496,18 +212,18 @@
         try
         {
             using var content = new MultipartFormDataContent();
-            using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-            content.Add(new StreamContent(stream), "file", _selectedFile.Name);
+            using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            content.Add(new StreamContent(stream), "file", file.Name);
 
             var response = await Http.PostAsync("/api/import/upload", content);
             _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
             InitEditableSymbols();
-            Snackbar.Add("Upload import completed.", Severity.Success);
-            _selectedFile = null;
+            Snackbar.Add(successMessage, Severity.Success);
+            resetFile();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Upload failed: {ex.Message}", Severity.Error);
+            Snackbar.Add($"{failMessage}: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -515,237 +231,32 @@
         }
     }
 
-    private async Task UploadDegiroAsync()
-    {
-        if (_degiroFile is null) return;
+    private async Task UploadAndImportAsync() =>
+        await UploadFileAsync(_selectedFile, () => _selectedFile = null, "Upload import completed.", "Upload failed");
 
-        _loading = true;
-        _result = null;
-        _editableSymbols = new();
-        try
-        {
-            using var content = new MultipartFormDataContent();
-            using var stream = _degiroFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-            content.Add(new StreamContent(stream), "file", _degiroFile.Name);
+    private async Task UploadIbkrAsync() =>
+        await UploadFileAsync(_ibkrFile, () => _ibkrFile = null, "IBKR import completed.", "IBKR import failed");
 
-            var response = await Http.PostAsync("/api/import/upload", content);
-            _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
-            InitEditableSymbols();
-            Snackbar.Add("DeGiro import completed.", Severity.Success);
-            _degiroFile = null;
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"DeGiro import failed: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _loading = false;
-        }
-    }
+    private async Task UploadDegiroAsync() =>
+        await UploadFileAsync(_degiroFile, () => _degiroFile = null, "DeGiro import completed.", "DeGiro import failed");
 
-    private async Task UploadRevolutAsync()
-    {
-        if (_revolutFile is null) return;
+    private async Task UploadRevolutAsync() =>
+        await UploadFileAsync(_revolutFile, () => _revolutFile = null, "Revolut import completed.", "Revolut import failed");
 
-        _loading = true;
-        _result = null;
-        _editableSymbols = new();
-        try
-        {
-            using var content = new MultipartFormDataContent();
-            using var stream = _revolutFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-            content.Add(new StreamContent(stream), "file", _revolutFile.Name);
+    private async Task UploadAbnAmroAsync() =>
+        await UploadFileAsync(_abnAmroFile, () => _abnAmroFile = null, "ABN AMRO import completed.", "ABN AMRO import failed");
 
-            var response = await Http.PostAsync("/api/import/upload", content);
-            _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
-            InitEditableSymbols();
-            Snackbar.Add("Revolut import completed.", Severity.Success);
-            _revolutFile = null;
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Revolut import failed: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _loading = false;
-        }
-    }
+    private async Task UploadCobasAsync() =>
+        await UploadFileAsync(_cobasFile, () => _cobasFile = null, "Cobas import completed.", "Cobas import failed");
 
-    private async Task UploadAbnAmroAsync()
-    {
-        if (_abnAmroFile is null) return;
+    private async Task UploadMyInvestorAsync() =>
+        await UploadFileAsync(_myInvestorFile, () => _myInvestorFile = null, "MyInvestor import completed.", "MyInvestor import failed");
 
-        _loading = true;
-        _result = null;
-        _editableSymbols = new();
-        try
-        {
-            using var content = new MultipartFormDataContent();
-            using var stream = _abnAmroFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-            content.Add(new StreamContent(stream), "file", _abnAmroFile.Name);
+    private async Task UploadSelfBankAsync() =>
+        await UploadFileAsync(_selfBankFile, () => _selfBankFile = null, "SelfBank import completed.", "SelfBank import failed");
 
-            var response = await Http.PostAsync("/api/import/upload", content);
-            _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
-            InitEditableSymbols();
-            Snackbar.Add("ABN AMRO import completed.", Severity.Success);
-            _abnAmroFile = null;
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"ABN AMRO import failed: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _loading = false;
-        }
-    }
-
-    private async Task UploadIbkrAsync()
-    {
-        if (_ibkrFile is null) return;
-
-        _loading = true;
-        _result = null;
-        _editableSymbols = new();
-        try
-        {
-            using var content = new MultipartFormDataContent();
-            using var stream = _ibkrFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-            content.Add(new StreamContent(stream), "file", _ibkrFile.Name);
-
-            var response = await Http.PostAsync("/api/import/upload", content);
-            _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
-            InitEditableSymbols();
-            Snackbar.Add("IBKR import completed.", Severity.Success);
-            _ibkrFile = null;
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"IBKR import failed: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _loading = false;
-        }
-    }
-
-    private async Task UploadCobasAsync()
-    {
-        if (_cobasFile is null) return;
-
-        _loading = true;
-        _result = null;
-        _editableSymbols = new();
-        try
-        {
-            using var content = new MultipartFormDataContent();
-            using var stream = _cobasFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-            content.Add(new StreamContent(stream), "file", _cobasFile.Name);
-
-            var response = await Http.PostAsync("/api/import/upload", content);
-            _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
-            InitEditableSymbols();
-            Snackbar.Add("Cobas import completed.", Severity.Success);
-            _cobasFile = null;
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Cobas import failed: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _loading = false;
-        }
-    }
-
-    private async Task UploadMyInvestorAsync()
-    {
-        if (_myInvestorFile is null) return;
-
-        _loading = true;
-        _result = null;
-        _editableSymbols = new();
-        try
-        {
-            using var content = new MultipartFormDataContent();
-            using var stream = _myInvestorFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-            content.Add(new StreamContent(stream), "file", _myInvestorFile.Name);
-
-            var response = await Http.PostAsync("/api/import/upload", content);
-            _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
-            InitEditableSymbols();
-            Snackbar.Add("MyInvestor import completed.", Severity.Success);
-            _myInvestorFile = null;
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"MyInvestor import failed: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _loading = false;
-        }
-    }
-
-    private async Task UploadSelfBankAsync()
-    {
-        if (_selfBankFile is null) return;
-
-        _loading = true;
-        _result = null;
-        _editableSymbols = new();
-        try
-        {
-            using var content = new MultipartFormDataContent();
-            using var stream = _selfBankFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-            content.Add(new StreamContent(stream), "file", _selfBankFile.Name);
-
-            var response = await Http.PostAsync("/api/import/upload", content);
-            _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
-            InitEditableSymbols();
-            Snackbar.Add("SelfBank import completed.", Severity.Success);
-            _selfBankFile = null;
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"SelfBank import failed: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _loading = false;
-        }
-    }
-
-    private async Task UploadCoinbaseAsync()
-    {
-        if (_coinbaseFile is null) return;
-
-        _loading = true;
-        _result = null;
-        _editableSymbols = new();
-        try
-        {
-            using var content = new MultipartFormDataContent();
-            using var stream = _coinbaseFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-            content.Add(new StreamContent(stream), "file", _coinbaseFile.Name);
-
-            var response = await Http.PostAsync("/api/import/upload", content);
-            _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
-            InitEditableSymbols();
-            Snackbar.Add("Coinbase import completed.", Severity.Success);
-            _coinbaseFile = null;
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Coinbase import failed: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _loading = false;
-        }
-    }
+    private async Task UploadCoinbaseAsync() =>
+        await UploadFileAsync(_coinbaseFile, () => _coinbaseFile = null, "Coinbase import completed.", "Coinbase import failed");
 
     private async Task UploadRawCsvAsync()
     {

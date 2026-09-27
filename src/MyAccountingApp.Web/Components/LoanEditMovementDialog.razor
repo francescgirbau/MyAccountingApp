@@ -1,0 +1,74 @@
+<MudDialog Visible="@Visible" VisibleChanged="@SetVisibleAsync">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Edit movement</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (Loan is not null && Movement is not null)
+        {
+            <MudText Typo="Typo.body2" Class="mb-4">
+                Movement for <strong>@Loan.Counterparty</strong> (@Movement.Id.ToString().Substring(0, 8)…).
+            </MudText>
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudDatePicker @bind-Date="_date" Label="Date" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal" @bind-Value="_amount" Label="Amount" Variant="Variant.Outlined" Min="@(0.01m)" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" @bind-Value="_type" Label="Type" Variant="Variant.Outlined" FullWidth="true">
+                        <MudSelectItem T="string" Value="@("Repayment")">Repayment</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Interest")">Interest</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Error" OnClick="@(() => SetVisibleAsync(false))">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@(!_date.HasValue || _amount <= 0)" OnClick="@SubmitAsync">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public LoanSummaryDto? Loan { get; set; }
+    [Parameter] public LoanMovementDto? Movement { get; set; }
+    [Parameter] public EventCallback<LoanMovementEditValue> OnSubmit { get; set; }
+
+    private DateTime? _date;
+    private decimal _amount;
+    private string _type = "Repayment";
+    private bool _snapshotted;
+
+    protected override void OnParametersSet()
+    {
+        if (Visible && !_snapshotted)
+        {
+            if (Movement is not null)
+            {
+                _date = Movement.Date;
+                _amount = Movement.Amount;
+                _type = Movement.Type == "Interest" ? "Interest" : "Repayment";
+            }
+            _snapshotted = true;
+        }
+        else if (!Visible)
+        {
+            _snapshotted = false;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (Loan is null || Movement is null || !_date.HasValue) return;
+        await OnSubmit.InvokeAsync(new LoanMovementEditValue(Loan.LoanId, Movement.Id, _date.Value, _amount, _type));
+    }
+
+    private async Task SetVisibleAsync(bool value)
+    {
+        Visible = value;
+        await VisibleChanged.InvokeAsync(value);
+    }
+}

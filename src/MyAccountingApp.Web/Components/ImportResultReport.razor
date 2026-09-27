@@ -1,0 +1,138 @@
+@if (Result is not null)
+{
+    <MudAlert Severity="@(Result.Errors.Count == 0 ? Severity.Success : Severity.Warning)" Class="mb-4">
+        <MudText>Import completed: <strong>@Result.FilesProcessed</strong> files processed,
+            <strong>@Result.Transactions.Count</strong> transactions,
+            <strong>@Result.AssetTransactions.Count</strong> asset transactions.
+            @if (Result.Errors.Count > 0) { <span><strong>@Result.Errors.Count</strong> errors.</span> }
+        </MudText>
+    </MudAlert>
+
+    @if (Result.SkippedAssetTransactions > 0)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+            <strong>@Result.SkippedAssetTransactions</strong> asset transaction(s) skipped as duplicates
+            (already imported). No new lots were added for them.
+        </MudAlert>
+    }
+
+    @if (Result.AssetTransactions.Count > 0)
+    {
+        <MudText Typo="Typo.subtitle1" GutterBottom="true">Asset Transactions — verify and correct symbols</MudText>
+        <MudAlert Severity="Severity.Warning" Class="mb-4" Dense="true">
+            Symbols are extracted from the product name and may not match the exact Yahoo Finance ticker.
+            Edit them below and click "Save Symbol Corrections".
+        </MudAlert>
+        <MudSimpleTable Class="mb-4" Outlined="true" Hover="true">
+            <thead>
+                <tr><th>Symbol</th><th>Description</th><th>Amount</th><th>Currency</th><th>Quantity</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var a in Result.AssetTransactions)
+                {
+                    <tr>
+                        <td>
+                            <div class="d-flex align-center">
+                                <MudTextField @bind-Value="EditableSymbols[a.Transaction.Id]"
+                                              Variant="Variant.Outlined"
+                                              Margin="Margin.Dense"
+                                              Immediate="true"
+                                              Class="flex-grow-1" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                               Size="Size.Small"
+                                               OnClick="@(() => SearchAsync(a.Transaction.Id, a.Transaction.Description))"
+                                               Disabled="@(SymbolSearching.Contains(a.Transaction.Id))" />
+                            </div>
+                            @if (SymbolResults.TryGetValue(a.Transaction.Id, out var symResults) && symResults.Count > 0)
+                            {
+                                <MudPaper Class="pa-2 mt-1" Outlined="true">
+                                    @foreach (var sr in symResults)
+                                    {
+                                        <MudText Typo="Typo.body2" Class="mud-primary-text cursor-pointer"
+                                                 @onclick="@(() => SelectAsync(a.Transaction.Id, sr.Symbol))">
+                                            <strong>@sr.Symbol</strong> — @sr.Name (@sr.Exchange)
+                                        </MudText>
+                                    }
+                                </MudPaper>
+                            }
+                        </td>
+                        <td>@a.Transaction.Description</td>
+                        <td>@a.Transaction.Money.Amount.ToString("N2")</td>
+                        <td>@a.Transaction.Money.Currency</td>
+                        <td>@a.Quantity</td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   OnClick="@(() => OnSave.InvokeAsync())"
+                   Disabled="@SavingSymbols"
+                   StartIcon="@Icons.Material.Filled.Save">
+            Save Symbol Corrections
+        </MudButton>
+        @if (SavingSymbols)
+        {
+            <MudProgressLinear Indeterminate="true" Class="mt-2" />
+        }
+    }
+
+    @if (Result.Errors.Count > 0)
+    {
+        <MudText Typo="Typo.subtitle1" GutterBottom="true">Errors</MudText>
+        <MudAlert Severity="Severity.Error" Class="mb-4">
+            @foreach (var error in Result.Errors)
+            {
+                <MudText Typo="Typo.body2">@error</MudText>
+            }
+        </MudAlert>
+    }
+
+    @if (Result.ValidationErrors.Count > 0)
+    {
+        <MudText Typo="Typo.subtitle1" GutterBottom="true">Validation Errors</MudText>
+        <MudSimpleTable Class="mb-4" Outlined="true">
+            <thead>
+                <tr><th>Field</th><th>Message</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var ve in Result.ValidationErrors)
+                {
+                    <tr><td>@ve.Field</td><td>@ve.Message</td></tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    }
+
+    @if (Result.ValidationWarnings.Count > 0)
+    {
+        <MudText Typo="Typo.subtitle1" GutterBottom="true">Validation Warnings</MudText>
+        <MudSimpleTable Outlined="true">
+            <thead>
+                <tr><th>Field</th><th>Message</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var ve in Result.ValidationWarnings)
+                {
+                    <tr><td>@ve.Field</td><td>@ve.Message</td></tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    }
+}
+
+@code {
+    [Parameter] public ImportResultDto? Result { get; set; }
+    [Parameter] public Dictionary<Guid, string> EditableSymbols { get; set; } = new();
+    [Parameter] public Dictionary<Guid, List<SymbolLookupResult>> SymbolResults { get; set; } = new();
+    [Parameter] public IReadOnlySet<Guid> SymbolSearching { get; set; } = new HashSet<Guid>();
+    [Parameter] public bool SavingSymbols { get; set; }
+    [Parameter] public EventCallback<SymbolSearchRequest> OnSearchSymbol { get; set; }
+    [Parameter] public EventCallback<SymbolSelection> OnSelectSymbolResult { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+
+    private async Task SearchAsync(Guid assetId, string description) =>
+        await OnSearchSymbol.InvokeAsync(new SymbolSearchRequest(assetId, description));
+
+    private void SelectAsync(Guid assetId, string symbol) =>
+        OnSelectSymbolResult.InvokeAsync(new SymbolSelection(assetId, symbol));
+}
