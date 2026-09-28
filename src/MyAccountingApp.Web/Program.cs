@@ -10,6 +10,9 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddMudServices();
 
+// Theme preference (system / light / dark), persisted in browser local storage.
+builder.Services.AddScoped<ThemeService>();
+
 // Redirects to the unlock screen when the API returns 401 (vault locked).
 builder.Services.AddScoped<VaultUnauthorizedHandler>();
 

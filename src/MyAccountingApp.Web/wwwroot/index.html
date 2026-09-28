@@ -28,6 +28,12 @@
     </div>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script src="js/download.js"></script>
+    <script src="js/theme.js"></script>
+    <script>
+        // Applies the stored (or system) theme to <html> before the WASM runtime loads,
+        // so a dark-mode user never sees a white flash while the app boots.
+        window.themeStore.init();
+    </script>
     <script src="_framework/blazor.webassembly.js"></script>
 </body>
 
