@@ -1,0 +1,33 @@
+<div class="d-flex flex-wrap gap-4 mb-4">
+    <MudPaper Class="pa-4 flex-1" Outlined="true">
+        <MudText Typo="Typo.body2">Market value (EUR)</MudText>
+        <MudText Typo="Typo.h5">@Overview.MarketValueEur.ToString("N2") €</MudText>
+    </MudPaper>
+    <MudPaper Class="pa-4 flex-1" Outlined="true">
+        <MudText Typo="Typo.body2">
+            <MudTooltip Placement="Placement.Top">
+                <ChildContent><span>Open cost basis (EUR)</span></ChildContent>
+                <TooltipContent><span>Cost basis of open (priced) positions — excludes unpriced positions, not "cash invested during the year".</span></TooltipContent>
+            </MudTooltip>
+        </MudText>
+        <MudText Typo="Typo.h5">@Overview.InvestedCostEur.ToString("N2") €</MudText>
+    </MudPaper>
+    <MudPaper Class="pa-4 flex-1" Outlined="true">
+        <MudText Typo="Typo.body2">Unrealized P&amp;L (EUR)</MudText>
+        <MudText Typo="Typo.h5" Class="@(Overview.UnrealizedPnLEur >= 0 ? "green--text" : "red--text")">
+            @(Overview.UnrealizedPnLEur >= 0 ? "+" : "")@Overview.UnrealizedPnLEur.ToString("N2") €
+            @if (Overview.UnrealizedPnLPct is not null)
+            {
+                <span>(@(Overview.UnrealizedPnLPct >= 0 ? "+" : "")@Overview.UnrealizedPnLPct.Value.ToString("P2"))</span>
+            }
+        </MudText>
+        @if (Overview.PricesAsOfUtc is not null)
+        {
+            <MudText Typo="Typo.caption">Prices as of @PortfolioDisplay.FormatAsOf(Overview.PricesAsOfUtc.Value)</MudText>
+        }
+    </MudPaper>
+</div>
+
+@code {
+    [Parameter] public PortfolioOverviewDto Overview { get; set; } = default!;
+}
