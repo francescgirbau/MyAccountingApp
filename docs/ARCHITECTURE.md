@@ -54,6 +54,14 @@ MyAccountingApp
 5. `Web` depends on `Contracts` shapes (and its own local services), never on `Domain` or `Infrastructure`.
 6. `Contracts` contains pure wire shapes — no logic, no Domain references.
 
+### Web UI conventions (since PR-3..PR-10, 2026-09)
+
+- **Page = orchestrator.** It keeps `@page`, `@inject`, the HTTP calls, the state and the filtering. Markup, tables and dialogs live in `Web/Components`.
+- **Dialogs** take `Visible` + `VisibleChanged` (used with `@bind-Visible` from the page), initialize their own inputs on open (snapshot pattern) and emit a **typed payload record**; the page does the HTTP call. A method never shares its name with a parameter (`CS0102`).
+- **Support types** (payloads) are plain records in the `MyAccountingApp.Web.Components` namespace. That whole namespace is **excluded from the coverage gate** (`build/coverlet.runsettings`), like `Pages`/`Layout`.
+- **Names are prefixed per page** (`LoanList`, `OptionTransactionList`, `PortfolioPositionsTable`…) because every page's components share one namespace.
+- The Web has **no UI tests**: only `Web/Services` helpers are covered by `Web.Tests`.
+
 ## Constitution (rules for every future change)
 
 > 1. **No destructive data migration.** A migration that can lose information is not a migration.
@@ -71,6 +79,7 @@ Two rules specific to this project:
 
 > 11. **Imports are idempotent.** Re-importing the same file adds zero new rows (content fingerprint + report, PR #194).
 > 12. **Facts stay, derived gets recomputed.** Adjusting a lot (e.g. split factor) changes `Quantity` while preserving `Amount`; everything derived — `UnitaryCost`, positions, P/L — is recomputed, never edited by hand.
+> 13. **A Blazor page orchestrates; it does not render.** Pages own HTTP, state and filtering; markup and dialogs live in `Web/Components` (rule added with PR-3..PR-10, 2026-09).
 
 ## Facts vs derived state
 
@@ -100,7 +109,7 @@ derived bug is fixed in code, not in data.
 | Web → contracts-only (drop the `Application` reference) | **Done — PR-2 (2026-09):** Web depends on `Contracts` only; helpers moved to `Web/Services`; `DataQuality.razor` DTO-based | — |
 | `Core` → `Infrastructure` split (Persistence / Imports / MarketData / Currency / Vault) | Low–medium (mechanical) | Only with a driver: new storage, new broker, or large feature crossing those areas |
 | Api thinning (endpoints that reach into repositories directly behind use cases) | Medium | Opportunistically, per endpoint, as features require |
-| Web component splitting (big `.razor` pages → focused components) | Medium | Behavior-preserving, one page per PR. **PR-3 (2026-09):** `Transactions` split into `Web/Components` (filters, totals, table, 5 dialogs); page keeps data + HTTP + filtering |
+| Web component splitting (big `.razor` pages → focused components) | **Done — PR-3..PR-10 (2026-09):** the 8 largest pages split into `Web/Components` (`Transactions`, `AssetTransactions`, `Import`, `Loans`, `Options`, `Settings`, `Portfolio`, `DataQuality`); each page keeps its data, HTTP and filtering, and every dialog became a component that emits a typed payload. `Summary`/`Home` were left alone on purpose (no dialogs, no duplicated logic) | — |
 | Golden datasets + persistence compatibility tests | High | Before the next persistence change (`docs/MIGRATION.md`) |
 | SQLite behind the persistence abstraction | — | Only if JSON stops being enough (volume/query/concurrency) — not now |
 | AI-assisted classification | — | Last; deterministic core first (`docs/VISION.md`) |
