@@ -1,0 +1,25 @@
+<MudPaper Class="pa-4 mb-4" Outlined="true">
+    <MudGrid>
+        <MudItem xs="4" md="3">
+            <MudChip T="string" Color="Color.Error" Size="Size.Medium">
+                @ErrorCount errors
+            </MudChip>
+        </MudItem>
+        <MudItem xs="4" md="3">
+            <MudChip T="string" Color="Color.Warning" Size="Size.Medium">
+                @WarningCount warnings
+            </MudChip>
+        </MudItem>
+        <MudItem xs="4" md="3">
+            <MudChip T="string" Color="Color.Info" Size="Size.Medium">
+                @InfoCount info
+            </MudChip>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@code {
+    [Parameter] public int? ErrorCount { get; set; }
+    [Parameter] public int WarningCount { get; set; }
+    [Parameter] public int InfoCount { get; set; }
+}

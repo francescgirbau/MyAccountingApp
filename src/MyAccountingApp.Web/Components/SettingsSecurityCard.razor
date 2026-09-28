@@ -1,0 +1,52 @@
+<MudText Typo="Typo.h6" Class="mb-4">Security</MudText>
+
+<MudPaper Class="pa-4 mb-4" Outlined="true">
+    <MudText Typo="Typo.body2" Class="mb-4">
+        @if (Status.IsInitialized)
+        {
+            <MudChip T="string" Size="Size.Small" Color="@(Status.IsUnlocked ? Color.Success : Color.Warning)" Variant="Variant.Outlined">
+                @(Status.IsUnlocked ? "Unlocked" : "Locked")
+            </MudChip>
+            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">Encrypted at rest</MudChip>
+        }
+        else
+        {
+            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">Vault not set up yet</MudChip>
+        }
+    </MudText>
+
+    @if (Status.IsInitialized)
+    {
+        <MudText Typo="Typo.body2" Class="mb-4">
+            All data is encrypted with your password before being written to disk, and backups downloaded from this page are encrypted too.
+        </MudText>
+
+        @if (Status.IsUnlocked)
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Warning"
+                       OnClick="@(() => OnLock.InvokeAsync())" StartIcon="@Icons.Material.Filled.Lock">
+                Lock vault
+            </MudButton>
+        }
+
+        <MudAlert Severity="Severity.Warning" Class="mt-4">
+            Old plaintext backup files (<code>data/*.bak</code>) are <strong>not encrypted</strong>.
+            Delete them to avoid leaving readable data on disk.
+        </MudAlert>
+    }
+    else
+    {
+        <MudText Typo="Typo.body2" Class="mb-4">
+            The vault is enabled but not initialized yet. Set up a password to start encrypting your data.
+        </MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => OnSetup.InvokeAsync())" StartIcon="@Icons.Material.Filled.Key">
+            Set up vault
+        </MudButton>
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public AuthStatusDto Status { get; set; } = new();
+    [Parameter] public EventCallback OnLock { get; set; }
+    [Parameter] public EventCallback OnSetup { get; set; }
+}

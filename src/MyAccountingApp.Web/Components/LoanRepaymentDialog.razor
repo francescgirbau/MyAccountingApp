@@ -1,0 +1,65 @@
+<MudDialog Visible="@Visible" VisibleChanged="@SetVisibleAsync">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Add repayment</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (Target is not null)
+        {
+            <MudText Typo="Typo.body2" Class="mb-4">
+                Repayment for <strong>@Target.Counterparty</strong>
+                (@@Target.Direction, @Target.Outstanding.ToString("N2") @Target.Currency outstanding).
+            </MudText>
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudDatePicker @bind-Date="_date" Label="Date" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal" @bind-Value="_amount" Label="Capital" Variant="Variant.Outlined" Min="@(0m)" HelperText="Amount applied to the principal" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal" @bind-Value="_interest" Label="Interest" Variant="Variant.Outlined" Min="@(0m)" HelperText="Interest portion of this payment" />
+                </MudItem>
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Error" OnClick="@(() => SetVisibleAsync(false))">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@(_amount <= 0 && _interest <= 0)" OnClick="@SubmitAsync">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public LoanSummaryDto? Target { get; set; }
+    [Parameter] public EventCallback<LoanRepaymentValue> OnSubmit { get; set; }
+
+    private DateTime? _date;
+    private decimal _amount;
+    private decimal _interest;
+    private bool _snapshotted;
+
+    protected override void OnParametersSet()
+    {
+        if (Visible && !_snapshotted)
+        {
+            _date = DateTime.Today;
+            _amount = 0;
+            _interest = 0;
+            _snapshotted = true;
+        }
+        else if (!Visible)
+        {
+            _snapshotted = false;
+        }
+    }
+
+    private async Task SubmitAsync() =>
+        await OnSubmit.InvokeAsync(new LoanRepaymentValue(_date ?? DateTime.Today, _amount, _interest));
+
+    private async Task SetVisibleAsync(bool value)
+    {
+        Visible = value;
+        await VisibleChanged.InvokeAsync(value);
+    }
+}

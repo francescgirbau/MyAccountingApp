@@ -8,167 +8,30 @@
 
 <MudText Typo="Typo.h3" GutterBottom="true">Settings</MudText>
 
-<MudText Typo="Typo.h6" Class="mb-4">Database Backup</MudText>
-
-<MudPaper Class="pa-4 mb-4" Outlined="true">
-    <MudText Typo="Typo.body2" Class="mb-4">
-        Download a full backup of all transactions and asset transactions.
-        Use the restore feature to reload the backup after a hard reset.
-        @if (_status.IsEnabled)
-        {
-            <text>The downloaded file is encrypted and can only be restored while the vault is unlocked.</text>
-        }
-    </MudText>
-
-    <MudButton Variant="Variant.Filled" Color="Color.Primary"
-               OnClick="@DownloadBackup" StartIcon="@Icons.Material.Filled.Download"
-               Class="mr-4">
-        Download Backup
-    </MudButton>
-
-    <MudButton Variant="Variant.Outlined" Color="Color.Warning"
-               OnClick="@TriggerRestore" StartIcon="@Icons.Material.Filled.Upload"
-               Disabled="@_isRestoring">
-        @(_isRestoring ? "Restoring..." : "Restore Backup")
-    </MudButton>
-
-    <div id="restore-upload" style="display:none">
-        <InputFile OnChange="@UploadBackup" />
-    </div>
-</MudPaper>
+<SettingsBackupCard VaultEnabled="@_status.IsEnabled"
+                   IsRestoring="@_isRestoring"
+                   OnDownload="@DownloadBackup"
+                   OnRestore="@TriggerRestore"
+                   OnFileSelected="@UploadBackup" />
 
 @if (_status.IsEnabled)
 {
-    <MudText Typo="Typo.h6" Class="mb-4">Security</MudText>
-
-    <MudPaper Class="pa-4 mb-4" Outlined="true">
-        <MudText Typo="Typo.body2" Class="mb-4">
-            @if (_status.IsInitialized)
-            {
-                <MudChip T="string" Size="Size.Small" Color="@(_status.IsUnlocked ? Color.Success : Color.Warning)" Variant="Variant.Outlined">
-                    @(_status.IsUnlocked ? "Unlocked" : "Locked")
-                </MudChip>
-                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">Encrypted at rest</MudChip>
-            }
-            else
-            {
-                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">Vault not set up yet</MudChip>
-            }
-        </MudText>
-
-        @if (_status.IsInitialized)
-        {
-            <MudText Typo="Typo.body2" Class="mb-4">
-                All data is encrypted with your password before being written to disk, and backups downloaded from this page are encrypted too.
-            </MudText>
-
-            @if (_status.IsUnlocked)
-            {
-                <MudButton Variant="Variant.Outlined" Color="Color.Warning"
-                           OnClick="@LockVaultAsync" StartIcon="@Icons.Material.Filled.Lock">
-                    Lock vault
-                </MudButton>
-            }
-
-            <MudAlert Severity="Severity.Warning" Class="mt-4">
-                Old plaintext backup files (<code>data/*.bak</code>) are <strong>not encrypted</strong>.
-                Delete them to avoid leaving readable data on disk.
-            </MudAlert>
-        }
-        else
-        {
-            <MudText Typo="Typo.body2" Class="mb-4">
-                The vault is enabled but not initialized yet. Set up a password to start encrypting your data.
-            </MudText>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@GoToSetup" StartIcon="@Icons.Material.Filled.Key">
-                Set up vault
-            </MudButton>
-        }
-    </MudPaper>
+    <SettingsSecurityCard Status="@_status" OnLock="@LockVaultAsync" OnSetup="@GoToSetup" />
 }
 
-<MudPaper Class="pa-4 mb-4" Outlined="true" Style="border-color: var(--mud-palette-error);">
-    <MudText Typo="Typo.h6" GutterBottom="true" Color="Color.Error">Danger Zone</MudText>
-    <MudText Typo="Typo.body2" Class="mb-4">
-        Reset the database: deletes <strong>all cash transactions</strong>, <strong>all portfolio / asset transactions</strong>, and <strong>all option transactions</strong>.
-        Currency conversions are kept. This cannot be undone — make a backup first if needed.
-    </MudText>
-    <MudButton Variant="Variant.Filled" Color="Color.Error" Size="Size.Large"
-               OnClick="@OpenResetDialog" Disabled="@_isResetting"
-               StartIcon="@Icons.Material.Filled.DeleteForever">
-        Reset database
-    </MudButton>
-    @if (_resetResult is not null)
-    {
-        <MudAlert Severity="Severity.Info" Class="mt-4">
-            Cleared <strong>@_resetResult.ClearedTransactions</strong> transactions,
-            <strong>@_resetResult.ClearedAssetTransactions</strong> asset transactions, and
-            <strong>@_resetResult.ClearedOptionTransactions</strong> option transactions.
-        </MudAlert>
-    }
-
-    <MudDivider Class="my-4" />
-
-    <MudText Typo="Typo.subtitle1" GutterBottom="true">Delete transactions by year</MudText>
-    <MudText Typo="Typo.body2" Class="mb-4">
-        Delete all cash, asset, and option transactions for a specific year.
-    </MudText>
-    <MudGrid>
-        <MudItem xs="6" sm="3">
-            <MudSelect T="int?" @bind-Value="_deleteYear" Label="Year" Variant="Variant.Outlined"
-                       Disabled="@_isDeletingYear">
-                @foreach (int y in Enumerable.Range(2000, 50))
-                {
-                    <MudSelectItem T="int?" Value="y">@y</MudSelectItem>
-                }
-            </MudSelect>
-        </MudItem>
-        <MudItem xs="6" sm="3" Class="d-flex align-center">
-            <MudButton Variant="Variant.Filled" Color="Color.Warning"
-                       OnClick="@DeleteYearAsync" Disabled="@(_deleteYear is null || _isDeletingYear)">
-                Delete year
-            </MudButton>
-        </MudItem>
-    </MudGrid>
-    @if (_deleteYearResult is not null)
-    {
-        <MudAlert Severity="Severity.Info" Class="mt-2">
-            Deleted <strong>@_deleteYearResult.DeletedTransactions</strong> transactions,
-            <strong>@_deleteYearResult.DeletedAssets</strong> asset transactions, and
-            <strong>@_deleteYearResult.DeletedOptions</strong> option transactions for year @_deleteYear.
-        </MudAlert>
-    }
-
-    <MudDivider Class="my-4" />
-
-    <MudText Typo="Typo.subtitle1" GutterBottom="true">Delete asset transactions by year</MudText>
-    <MudText Typo="Typo.body2" Class="mb-4">
-        Delete only portfolio / asset transactions for a specific year. Cash transactions are kept.
-    </MudText>
-    <MudGrid>
-        <MudItem xs="6" sm="3">
-            <MudSelect T="int?" @bind-Value="_deleteAssetYear" Label="Year" Variant="Variant.Outlined"
-                       Disabled="@_isDeletingAssetYear">
-                @foreach (int y in Enumerable.Range(2000, 50))
-                {
-                    <MudSelectItem T="int?" Value="y">@y</MudSelectItem>
-                }
-            </MudSelect>
-        </MudItem>
-        <MudItem xs="6" sm="3" Class="d-flex align-center">
-            <MudButton Variant="Variant.Filled" Color="Color.Warning"
-                       OnClick="@DeleteAssetYearAsync" Disabled="@(_deleteAssetYear is null || _isDeletingAssetYear)">
-                Delete asset year
-            </MudButton>
-        </MudItem>
-    </MudGrid>
-    @if (_deleteAssetYearResult is not null)
-    {
-        <MudAlert Severity="Severity.Info" Class="mt-2">
-            Deleted <strong>@_deleteAssetYearResult.DeletedAssets</strong> asset transactions for year @_deleteAssetYear.
-        </MudAlert>
-    }
-</MudPaper>
+<SettingsDangerZoneCard IsResetting="@_isResetting"
+                        OnReset="@OpenResetDialog"
+                        ResetResult="@_resetResult"
+                        DeleteYear="@_deleteYear"
+                        DeleteYearChanged="@(v => _deleteYear = v)"
+                        IsDeletingYear="@_isDeletingYear"
+                        OnDeleteYear="@DeleteYearAsync"
+                        DeleteYearResult="@_deleteYearResult"
+                        DeleteAssetYear="@_deleteAssetYear"
+                        DeleteAssetYearChanged="@(v => _deleteAssetYear = v)"
+                        IsDeletingAssetYear="@_isDeletingAssetYear"
+                        OnDeleteAssetYear="@DeleteAssetYearAsync"
+                        DeleteAssetYearResult="@_deleteAssetYearResult" />
 
 @if (_lastRestoreMessage is not null)
 {
@@ -177,60 +40,23 @@
     </MudAlert>
 }
 
-<MudDialog @bind-Visible="_showResetDialog">
-    <TitleContent>
-        <MudText Typo="Typo.h6">Reset database?</MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudText>
-            This will permanently delete all cash transactions, all portfolio / asset transactions, and all option transactions.
-            Currency conversions will not be deleted.
-        </MudText>
-        <MudText Class="mt-2" Typo="Typo.body2">
-            Use <strong>Download Backup</strong> above before continuing.
-        </MudText>
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@CloseResetDialog" Disabled="@_isResetting">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@ConfirmResetAsync" Disabled="@_isResetting">
-            Yes, reset database
-        </MudButton>
-    </DialogActions>
-</MudDialog>
+<SettingsResetDialog @bind-Visible="_showResetDialog"
+                     IsResetting="@_isResetting"
+                     OnConfirm="@ConfirmResetAsync" />
 
-<MudDialog @bind-Visible="_showDeleteYearDialog">
-    <TitleContent>
-        <MudText Typo="Typo.h6">Delete year @_deleteYear?</MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudText>
-            This will remove <strong>@_deleteYearPreviewTransactions</strong> cash,
-            <strong>@_deleteYearPreviewAssets</strong> asset, and
-            <strong>@_deleteYearPreviewOptions</strong> option transactions for year @_deleteYear.
-        </MudText>
-        <MudText Class="mt-2" Typo="Typo.body2">This cannot be undone.</MudText>
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@CloseDeleteYearDialog">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@ConfirmDeleteYearAsync" Disabled="@_isDeletingYear">Yes, delete @_deleteYear</MudButton>
-    </DialogActions>
-</MudDialog>
+<SettingsDeleteYearDialog @bind-Visible="_showDeleteYearDialog"
+                          Year="@_deleteYear"
+                          PreviewTransactions="@_deleteYearPreviewTransactions"
+                          PreviewAssets="@_deleteYearPreviewAssets"
+                          PreviewOptions="@_deleteYearPreviewOptions"
+                          IsDeleting="@_isDeletingYear"
+                          OnConfirm="@ConfirmDeleteYearAsync" />
 
-<MudDialog @bind-Visible="_showDeleteAssetYearDialog">
-    <TitleContent>
-        <MudText Typo="Typo.h6">Delete asset transactions for @_deleteAssetYear?</MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudText>
-            This will remove <strong>@_deleteAssetYearPreviewAssets</strong> asset transactions for year @_deleteAssetYear.
-        </MudText>
-        <MudText Class="mt-2" Typo="Typo.body2">This cannot be undone.</MudText>
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@CloseDeleteAssetYearDialog">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@ConfirmDeleteAssetYearAsync" Disabled="@_isDeletingAssetYear">Yes, delete @_deleteAssetYear</MudButton>
-    </DialogActions>
-</MudDialog>
+<SettingsDeleteAssetYearDialog @bind-Visible="_showDeleteAssetYearDialog"
+                               Year="@_deleteAssetYear"
+                               PreviewAssets="@_deleteAssetYearPreviewAssets"
+                               IsDeleting="@_isDeletingAssetYear"
+                               OnConfirm="@ConfirmDeleteAssetYearAsync" />
 
 @code {
     private AuthStatusDto _status = new();
@@ -341,11 +167,6 @@
         _showResetDialog = true;
     }
 
-    private void CloseResetDialog()
-    {
-        _showResetDialog = false;
-    }
-
     private async Task ConfirmResetAsync()
     {
         _isResetting = true;
@@ -404,11 +225,6 @@
         }
     }
 
-    private void CloseDeleteYearDialog()
-    {
-        _showDeleteYearDialog = false;
-    }
-
     private async Task ConfirmDeleteYearAsync()
     {
         if (_deleteYear is null) return;
@@ -464,11 +280,6 @@
         {
             _isDeletingAssetYear = false;
         }
-    }
-
-    private void CloseDeleteAssetYearDialog()
-    {
-        _showDeleteAssetYearDialog = false;
     }
 
     private async Task ConfirmDeleteAssetYearAsync()

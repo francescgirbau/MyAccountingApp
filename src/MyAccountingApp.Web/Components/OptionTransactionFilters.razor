@@ -1,0 +1,48 @@
+<MudPaper Class="pa-4 mb-4" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12" sm="4">
+            <MudSelect T="int?" @bind-Value="_selectedYear" Label="Year" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+                @foreach (var year in AvailableYears)
+                {
+                    <MudSelectItem T="int?" Value="@((int?)year)">@year</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect @bind-Value="_selectedSymbol" Label="Symbol" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+                @foreach (var symbol in AvailableSymbols)
+                {
+                    <MudSelectItem Value="symbol">@symbol</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteSweep"
+                       OnClick="@(() => OnDeleteYear.InvokeAsync())" Disabled="@(!SelectedYear.HasValue)">
+                Delete Year
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@code {
+    [Parameter] public IReadOnlyList<int> AvailableYears { get; set; } = Array.Empty<int>();
+    [Parameter] public int? SelectedYear { get; set; }
+    [Parameter] public EventCallback<int?> SelectedYearChanged { get; set; }
+    [Parameter] public IReadOnlyList<string> AvailableSymbols { get; set; } = Array.Empty<string>();
+    [Parameter] public string? SelectedSymbol { get; set; }
+    [Parameter] public EventCallback<string?> SelectedSymbolChanged { get; set; }
+    [Parameter] public EventCallback OnDeleteYear { get; set; }
+
+    private int? _selectedYear
+    {
+        get => SelectedYear;
+        set => SelectedYearChanged.InvokeAsync(value);
+    }
+
+    private string? _selectedSymbol
+    {
+        get => SelectedSymbol;
+        set => SelectedSymbolChanged.InvokeAsync(value);
+    }
+}

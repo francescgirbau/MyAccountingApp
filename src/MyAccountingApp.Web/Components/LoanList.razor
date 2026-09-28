@@ -1,0 +1,160 @@
+@if (Loans.Count == 0)
+{
+    <MudPaper Class="pa-8 text-center" Outlined="true">
+        <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Size="Size.Large" Class="mud-text-secondary" />
+        <MudText Typo="Typo.h5" Class="mt-4">No loans yet</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">Track money you borrowed or lent and stay on top of the outstanding balance.</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="@(() => OnNewLoan.InvokeAsync())">
+            New loan
+        </MudButton>
+    </MudPaper>
+}
+else
+{
+    <MudTable Items="@Loans" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true">
+        <ToolBarContent>
+            <MudText Typo="Typo.subtitle1">@Loans.Count loans</MudText>
+            <MudSpacer />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="@(() => OnNewLoan.InvokeAsync())">
+                New loan
+            </MudButton>
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@(() => OnRefresh.InvokeAsync())" Size="Size.Small" />
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh><MudTableSortLabel SortBy="new Func<LoanSummaryDto, object>(l => l.Counterparty)">Counterparty</MudTableSortLabel></MudTh>
+            <MudTh>Direction</MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<LoanSummaryDto, object>(l => l.Principal)">Principal</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<LoanSummaryDto, object>(l => l.Repaid)">Repaid</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<LoanSummaryDto, object>(l => l.InterestPaid)">Interest</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<LoanSummaryDto, object>(l => l.Outstanding)">Outstanding</MudTableSortLabel></MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Last movement</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Counterparty">@context.Counterparty</MudTd>
+            <MudTd DataLabel="Direction">
+                <MudChip T="string" Size="Size.Small" Color="@_DirectionColor(context.Direction)">@context.Direction</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Principal">@context.Principal.ToString("N2") @context.Currency</MudTd>
+            <MudTd DataLabel="Repaid">@context.Repaid.ToString("N2")</MudTd>
+            <MudTd DataLabel="Interest">@context.InterestPaid.ToString("N2")</MudTd>
+            <MudTd DataLabel="Outstanding" Class="@(context.IsOverpaid ? "red--text" : "")">@context.Outstanding.ToString("N2")</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Size="Size.Small" Color="@(context.IsClosed ? Color.Secondary : Color.Primary)"
+                         Variant="Variant.Outlined">
+                    @(context.IsClosed ? "Closed" : "Open")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Last movement">@(context.LastMovementDate?.ToString("yyyy-MM-dd") ?? "—")</MudTd>
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Payment" Size="Size.Small" aria-label="Add repayment"
+                               OnClick="@(() => OnAddRepayment.InvokeAsync(context))" Disabled="@context.IsClosed" />
+                <MudIconButton Icon="@Icons.Material.Filled.Lock" Size="Size.Small" aria-label="Close loan"
+                               OnClick="@(() => OnCloseLoan.InvokeAsync(context))" Disabled="@context.IsClosed" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" aria-label="Delete loan"
+                               OnClick="@(() => OnDeleteLoan.InvokeAsync(context))" />
+            </MudTd>
+        </RowTemplate>
+        <ChildRowContent>
+            @{ LoanSummaryDto loan = context; }
+            <MudText Typo="Typo.subtitle2" Class="py-2">Movements</MudText>
+            @{
+                LoanMovementDto? disbursement = loan.Movements.FirstOrDefault(m => m.Type == "Disbursement");
+                List<LoanMovementDto> repayments = loan.Movements.Where(m => m.Type == "Repayment").ToList();
+                List<LoanMovementDto> interest = loan.Movements.Where(m => m.Type == "Interest").ToList();
+            }
+            @if (loan.Movements.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">No movements yet.</MudText>
+            }
+            else
+            {
+                @if (disbursement is not null)
+                {
+                    <MudText Typo="Typo.body2" Class="mb-3 mud-text-secondary">
+                        Initial disbursement · @disbursement.Amount.ToString("N2") @disbursement.Currency · @disbursement.Date.ToString("yyyy-MM-dd")
+                    </MudText>
+                }
+
+                <MudText Typo="Typo.body2" Class="mb-1">Repayments (@repayments.Count) · @loan.Repaid.ToString("N2") @loan.Currency</MudText>
+                @if (repayments.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">No repayments yet.</MudText>
+                }
+                else
+                {
+                    <MudTable Items="@repayments" Dense="true" Elevation="0" Outlined="false" Hover="true" Class="mb-3">
+                        <HeaderContent>
+                            <MudTh>Date</MudTh>
+                            <MudTh>Description</MudTh>
+                            <MudTh>Amount</MudTh>
+                            <MudTh>Actions</MudTh>
+                        </HeaderContent>
+                        <RowTemplate Context="m">
+                            <MudTd DataLabel="Date">@m.Date.ToString("yyyy-MM-dd")</MudTd>
+                            <MudTd DataLabel="Description">@m.Description</MudTd>
+                            <MudTd DataLabel="Amount" Class="@(IsCashIn(loan, m) ? "green--text" : "red--text")">@m.Amount.ToString("N2") @m.Currency</MudTd>
+                            <MudTd DataLabel="Actions">
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" aria-label="Edit movement"
+                                               OnClick="@(() => OnEditMovement.InvokeAsync(new LoanMovementTarget(loan, m)))" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" aria-label="Delete movement"
+                                               OnClick="@(() => OnDeleteMovement.InvokeAsync(new LoanMovementTarget(loan, m)))" />
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+
+                <MudText Typo="Typo.body2" Class="mb-1">Interest (@interest.Count) · @loan.InterestPaid.ToString("N2") @loan.Currency</MudText>
+                @if (interest.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">No interest yet.</MudText>
+                }
+                else
+                {
+                    <MudTable Items="@interest" Dense="true" Elevation="0" Outlined="false" Hover="true">
+                        <HeaderContent>
+                            <MudTh>Date</MudTh>
+                            <MudTh>Description</MudTh>
+                            <MudTh>Amount</MudTh>
+                            <MudTh>Actions</MudTh>
+                        </HeaderContent>
+                        <RowTemplate Context="m">
+                            <MudTd DataLabel="Date">@m.Date.ToString("yyyy-MM-dd")</MudTd>
+                            <MudTd DataLabel="Description">@m.Description</MudTd>
+                            <MudTd DataLabel="Amount" Class="@(IsCashIn(loan, m) ? "green--text" : "red--text")">@m.Amount.ToString("N2") @m.Currency</MudTd>
+                            <MudTd DataLabel="Actions">
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" aria-label="Edit movement"
+                                               OnClick="@(() => OnEditMovement.InvokeAsync(new LoanMovementTarget(loan, m)))" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" aria-label="Delete movement"
+                                               OnClick="@(() => OnDeleteMovement.InvokeAsync(new LoanMovementTarget(loan, m)))" />
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+            }
+        </ChildRowContent>
+    </MudTable>
+}
+
+@code {
+    [Parameter] public List<LoanSummaryDto> Loans { get; set; } = new();
+    [Parameter] public EventCallback OnNewLoan { get; set; }
+    [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter] public EventCallback<LoanSummaryDto> OnAddRepayment { get; set; }
+    [Parameter] public EventCallback<LoanSummaryDto> OnCloseLoan { get; set; }
+    [Parameter] public EventCallback<LoanSummaryDto> OnDeleteLoan { get; set; }
+    [Parameter] public EventCallback<LoanMovementTarget> OnEditMovement { get; set; }
+    [Parameter] public EventCallback<LoanMovementTarget> OnDeleteMovement { get; set; }
+
+    private static Color _DirectionColor(string direction) =>
+        direction == "Lent" ? Color.Success : Color.Warning;
+
+    // A movement is cash in when money flows towards us: borrowed disbursements and
+    // repayments or interest received on loans we lent out. Everything else is cash out.
+    private static bool IsCashIn(LoanSummaryDto loan, LoanMovementDto movement) =>
+        (loan.Direction == "Borrowed" && movement.Type == "Disbursement") ||
+        (loan.Direction == "Lent" && movement.Type is "Repayment" or "Interest");
+}
