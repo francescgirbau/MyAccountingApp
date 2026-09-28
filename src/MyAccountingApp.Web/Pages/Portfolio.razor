@@ -4,25 +4,13 @@
 
 <PageTitle>Portfolio</PageTitle>
 
-<MudText Typo="Typo.h3" GutterBottom="true">Portfolio</MudText>
-
-@if (_overview is not null && _overview.Positions.Count > 0)
-{
-    <PortfolioSummaryCards Overview="@_overview" />
-
-    <PortfolioStatusNotices Overview="@_overview" OnDataQuality="@NavigateToDataQuality" />
-
-    <PortfolioAllocationCharts PurchasePie="@_purchasePie" CurrentPie="@_currentPie" Legend="@_legend"
-                                OnSelect="@NavigateToSlice" />
-
-    <PortfolioAllocationTable Rows="@SortedRows" HighlightedSymbol="@_highlightedSymbol" Refreshing="@_refreshing"
-                              Disabled="@(_loading || _refreshing)" OnSort="@SortBy" OnSelect="@NavigateToSlice"
-                              OnRefresh="@RefreshPricesAsync" />
-}
-
 @if (_loading)
 {
-    <MudProgressCircular Indeterminate="true" />
+    <div class="d-flex flex-column gap-4">
+        <MudSkeleton Width="100%" Height="96px" />
+        <MudSkeleton Width="100%" Height="88px" />
+        <MudSkeleton Width="100%" Height="232px" />
+    </div>
 }
 else if (_positions.Count == 0)
 {
@@ -30,12 +18,25 @@ else if (_positions.Count == 0)
 }
 else
 {
+    @if (_overview is not null)
+    {
+        <PortfolioHeader Overview="@_overview" TotalRealized="@_totalRealized" Refreshing="@_refreshing"
+                         OnRefresh="@RefreshPricesAsync" />
+
+        <PortfolioStatusNotices Overview="@_overview" OnDataQuality="@NavigateToDataQuality" />
+
+        <PortfolioAllocationCharts PurchasePie="@_purchasePie" CurrentPie="@_currentPie" Legend="@_legend"
+                                   OnSelect="@NavigateToSlice" />
+
+        <PortfolioAllocationTable Rows="@SortedRows" HighlightedSymbol="@_highlightedSymbol"
+                                  OnSort="@SortBy" OnSelect="@NavigateToSlice" />
+    }
+
     <PortfolioPositionsTable Positions="@_positions" HasPrices="@_hasPrices" HasValuations="@_hasValuations"
                              TotalCostBasis="@_totalCostBasis" TotalRealized="@_totalRealized"
                              TotalUnrealized="@_totalUnrealized" TotalValueEur="@_totalValueEur"
                              TotalUnrealizedEur="@_totalUnrealizedEur" ValuationLookup="@GetValuation"
                              ExpandedSymbols="@_expanded" HighlightedSymbol="@_highlightedSymbol"
-                             Refreshing="@_refreshing" Disabled="@(_loading || _refreshing)" OnRefresh="@RefreshPricesAsync"
                              OnViewMovements="@NavigateToMovements" OnToggleExpanded="@ToggleExpanded" />
 }
 

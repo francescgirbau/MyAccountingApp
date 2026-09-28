@@ -1,0 +1,68 @@
+<div class="d-flex flex-wrap align-center gap-4 mb-1">
+    <MudText Typo="Typo.h3">Portfolio</MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+               OnClick="@(() => OnRefresh.InvokeAsync())" Disabled="@Refreshing">
+        @(Refreshing ? "Refreshing..." : "Refresh prices")
+    </MudButton>
+</div>
+
+<div class="d-flex flex-wrap gap-4 my-3">
+    <MudPaper Class="pa-4 flex-1" Outlined="true">
+        <div class="d-flex align-center gap-2 mb-1">
+            <MudIcon Icon="@Icons.Material.Filled.Euro" Size="Size.Small" Class="mud-text-secondary" />
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">Market value (EUR)</MudText>
+        </div>
+        <MudText Typo="Typo.h5">@Overview.MarketValueEur.ToString("N2") €</MudText>
+    </MudPaper>
+
+    <MudPaper Class="pa-4 flex-1" Outlined="true">
+        <div class="d-flex align-center gap-2 mb-1">
+            <MudIcon Icon="@Icons.Material.Filled.Payments" Size="Size.Small" Class="mud-text-secondary" />
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                <MudTooltip Placement="Placement.Top">
+                    <ChildContent><span>Open cost basis (EUR)</span></ChildContent>
+                    <TooltipContent><span>Cost basis of open (priced) positions — excludes unpriced positions, not "cash invested during the year".</span></TooltipContent>
+                </MudTooltip>
+            </MudText>
+        </div>
+        <MudText Typo="Typo.h5">@Overview.InvestedCostEur.ToString("N2") €</MudText>
+    </MudPaper>
+
+    <MudPaper Class="pa-4 flex-1" Outlined="true">
+        <div class="d-flex align-center gap-2 mb-1">
+            <MudIcon Icon="@Icons.Material.Filled.ShowChart" Size="Size.Small"
+                     Color="@(Overview.UnrealizedPnLEur >= 0 ? Color.Success : Color.Error)" />
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">Unrealized P&amp;L (EUR)</MudText>
+        </div>
+        <MudText Typo="Typo.h5" Class="@(Overview.UnrealizedPnLEur >= 0 ? "mud-success-text" : "mud-error-text")">
+            @(Overview.UnrealizedPnLEur >= 0 ? "+" : "")@Overview.UnrealizedPnLEur.ToString("N2") €
+            @if (Overview.UnrealizedPnLPct is not null)
+            {
+                <span>(@(Overview.UnrealizedPnLPct >= 0 ? "+" : "")@Overview.UnrealizedPnLPct.Value.ToString("P2"))</span>
+            }
+        </MudText>
+    </MudPaper>
+
+    <MudPaper Class="pa-4 flex-1" Outlined="true">
+        <div class="d-flex align-center gap-2 mb-1">
+            <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" Size="Size.Small" Class="mud-text-secondary" />
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                <MudTooltip Placement="Placement.Top">
+                    <ChildContent><span>Realized P&amp;L</span></ChildContent>
+                    <TooltipContent><span>Sum of realized results per position, each in its own currency.</span></TooltipContent>
+                </MudTooltip>
+            </MudText>
+        </div>
+        <MudText Typo="Typo.h5" Class="@(TotalRealized >= 0 ? "mud-success-text" : "mud-error-text")">
+            @(TotalRealized >= 0 ? "+" : "")@TotalRealized.ToString("N2")
+        </MudText>
+    </MudPaper>
+</div>
+
+@code {
+    [Parameter] public PortfolioOverviewDto Overview { get; set; } = default!;
+    [Parameter] public decimal TotalRealized { get; set; }
+    [Parameter] public bool Refreshing { get; set; }
+    [Parameter] public EventCallback OnRefresh { get; set; }
+}

@@ -1,48 +1,54 @@
-<div class="d-flex flex-wrap gap-8 mb-4">
-    <div>
-        <MudText Typo="Typo.h6" GutterBottom="true">Allocation at purchase</MudText>
-        <svg viewBox="0 0 200 200" width="220" height="220" aria-label="Allocation at purchase">
-            @foreach (PortfolioPieSlice slice in PurchasePie)
-            {
-                <path d="@slice.Path" fill="@slice.Color" stroke="var(--mud-palette-surface)" stroke-width="2"
-                      class="@(slice.IsNavigable ? "cursor-pointer" : "")" @onclick="() => OnSelect.InvokeAsync(slice.Key)" />
-            }
-        </svg>
-    </div>
-    <div>
-        <MudText Typo="Typo.h6" GutterBottom="true">Current allocation</MudText>
-        <svg viewBox="0 0 200 200" width="220" height="220" aria-label="Current allocation">
-            @foreach (PortfolioPieSlice slice in CurrentPie)
-            {
-                <path d="@slice.Path" fill="@slice.Color" stroke="var(--mud-palette-surface)" stroke-width="2"
-                      class="@(slice.IsNavigable ? "cursor-pointer" : "")" @onclick="() => OnSelect.InvokeAsync(slice.Key)" />
-            }
-        </svg>
-    </div>
-    <div class="flex-1">
-        <MudText Typo="Typo.h6" GutterBottom="true">Legend</MudText>
-        @foreach (PortfolioLegendItem item in Legend)
-        {
-            <div class="d-flex align-center mb-1 @(item.IsNavigable ? "cursor-pointer" : "")" @onclick="() => OnSelect.InvokeAsync(item.Key)">
-                <span class="rounded-lg mr-2" style="width: 14px; height: 14px; background-color: @item.Color; display: inline-block;"></span>
-                <span class="mr-2" style="min-width: 100px">@item.Key</span>
-                <span class="mr-2" style="min-width: 90px">@item.ValueEur.ToString("N2") €</span>
-                <span class="mr-2" style="min-width: 80px">@item.CurrentWeight.ToString("P1")</span>
-                @if (item.PurchaseWeight is not null)
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Class="pa-4 d-flex flex-column align-center" Outlined="true" Height="100%">
+            <MudText Typo="Typo.h6" GutterBottom="true">Allocation at purchase</MudText>
+            <svg viewBox="0 0 200 200" width="220" height="220" aria-label="Allocation at purchase">
+                @foreach (PortfolioPieSlice slice in PurchasePie)
                 {
-                    <span class="mr-2" style="min-width: 80px">
-                        purchase @item.PurchaseWeight.Value.ToString("P1")
-                        (@(item.WeightDelta >= 0 ? "+" : "")@item.WeightDelta.ToString("P1"))
-                    </span>
+                    <path d="@slice.Path" fill="@slice.Color" stroke="var(--mud-palette-surface)" stroke-width="2"
+                          class="@(slice.IsNavigable ? "cursor-pointer" : "")" @onclick="() => OnSelect.InvokeAsync(slice.Key)" />
                 }
-                @if (item.PnLPct is not null)
+            </svg>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Class="pa-4 d-flex flex-column align-center" Outlined="true" Height="100%">
+            <MudText Typo="Typo.h6" GutterBottom="true">Current allocation</MudText>
+            <svg viewBox="0 0 200 200" width="220" height="220" aria-label="Current allocation">
+                @foreach (PortfolioPieSlice slice in CurrentPie)
                 {
-                    <span class="@(item.PnLPct >= 0 ? "mud-success-text" : "mud-error-text")">@(item.PnLPct >= 0 ? "+" : "")@item.PnLPct.Value.ToString("P2")</span>
+                    <path d="@slice.Path" fill="@slice.Color" stroke="var(--mud-palette-surface)" stroke-width="2"
+                          class="@(slice.IsNavigable ? "cursor-pointer" : "")" @onclick="() => OnSelect.InvokeAsync(slice.Key)" />
                 }
-            </div>
-        }
-    </div>
-</div>
+            </svg>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Outlined="true" Height="100%">
+            <MudText Typo="Typo.h6" GutterBottom="true">Legend</MudText>
+            @foreach (PortfolioLegendItem item in Legend)
+            {
+                <div class="d-flex align-center flex-wrap mb-1 @(item.IsNavigable ? "cursor-pointer" : "")" @onclick="() => OnSelect.InvokeAsync(item.Key)">
+                    <span class="rounded-lg mr-2" style="width: 14px; height: 14px; background-color: @item.Color; display: inline-block;"></span>
+                    <span class="mr-2" style="min-width: 100px">@item.Key</span>
+                    <span class="mr-2" style="min-width: 90px">@item.ValueEur.ToString("N2") €</span>
+                    <span class="mr-2" style="min-width: 80px">@item.CurrentWeight.ToString("P1")</span>
+                    @if (item.PurchaseWeight is not null)
+                    {
+                        <span class="mr-2" style="min-width: 80px">
+                            purchase @item.PurchaseWeight.Value.ToString("P1")
+                            (@(item.WeightDelta >= 0 ? "+" : "")@item.WeightDelta.ToString("P1"))
+                        </span>
+                    }
+                    @if (item.PnLPct is not null)
+                    {
+                        <span class="@(item.PnLPct >= 0 ? "mud-success-text" : "mud-error-text")">@(item.PnLPct >= 0 ? "+" : "")@item.PnLPct.Value.ToString("P2")</span>
+                    }
+                </div>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
 
 @code {
     [Parameter] public IReadOnlyList<PortfolioPieSlice> PurchasePie { get; set; } = new List<PortfolioPieSlice>();

@@ -1,12 +1,7 @@
 <MudTable Items="@Positions" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true" SortLabel="Sort by">
     <ToolBarContent>
         <MudText Typo="Typo.subtitle1">@Positions.Count positions</MudText>
-        <MudSpacer />
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
-                   OnClick="@(() => OnRefresh.InvokeAsync())" Disabled="@Disabled">
-            @(Refreshing ? "Refreshing..." : "Refresh prices")
-        </MudButton>
-        <MudText Typo="Typo.body2" Class="ml-2">
+        <MudText Typo="Typo.body2">
             Total invested: <strong>@TotalCostBasis.ToString("N2")</strong>
             &nbsp;|&nbsp; Total realized P&amp;L:
             <strong class="@(TotalRealized >= 0 ? "mud-success-text" : "mud-error-text")">@(TotalRealized >= 0 ? "+" : "")@TotalRealized.ToString("N2")</strong>
@@ -157,9 +152,6 @@
     [Parameter] public Func<string, PositionValuationDto?> ValuationLookup { get; set; } = static _ => null;
     [Parameter] public IReadOnlySet<string> ExpandedSymbols { get; set; } = new HashSet<string>();
     [Parameter] public string? HighlightedSymbol { get; set; }
-    [Parameter] public bool Refreshing { get; set; }
-    [Parameter] public bool Disabled { get; set; }
-    [Parameter] public EventCallback OnRefresh { get; set; }
     [Parameter] public EventCallback<string> OnViewMovements { get; set; }
     [Parameter] public EventCallback<PortfolioPositionDto> OnToggleExpanded { get; set; }
 }
