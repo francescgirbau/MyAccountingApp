@@ -1,0 +1,35 @@
+<MudDialog Visible="@Visible" VisibleChanged="@SetVisibleAsync">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Reset database?</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>
+            This will permanently delete all cash transactions, all portfolio / asset transactions, and all option transactions.
+            Currency conversions will not be deleted.
+        </MudText>
+        <MudText Class="mt-2" Typo="Typo.body2">
+            Use <strong>Download Backup</strong> above before continuing.
+        </MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => SetVisibleAsync(false))" Disabled="@IsResetting">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@ConfirmAsync" Disabled="@IsResetting">
+            Yes, reset database
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public bool IsResetting { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+
+    private async Task ConfirmAsync() => await OnConfirm.InvokeAsync();
+
+    private async Task SetVisibleAsync(bool value)
+    {
+        Visible = value;
+        await VisibleChanged.InvokeAsync(value);
+    }
+}
