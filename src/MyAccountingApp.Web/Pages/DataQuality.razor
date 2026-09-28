@@ -129,6 +129,13 @@ else
             return;
         }
 
+        ResetResolveDialog();
+    }
+
+    // Closing once the request has finished must bypass the _resolving guard, otherwise
+    // the dialog would stay open right after resolving a group.
+    private void ResetResolveDialog()
+    {
         _dialogOpen = false;
         _resolvingIssue = null;
         _duplicateRows = new List<TransactionDto>();
@@ -161,7 +168,7 @@ else
                 Snackbar.Add("No duplicates to delete.", Severity.Info);
             }
 
-            CloseResolveAsync();
+            ResetResolveDialog();
             await LoadDataAsync();
         }
         catch (Exception ex)
