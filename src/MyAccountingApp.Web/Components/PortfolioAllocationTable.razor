@@ -42,14 +42,14 @@
             }
         </MudTd>
         <MudTd DataLabel="P&amp;L">
-            <span class="@(context.UnrealizedPnL >= 0 ? "green--text" : "red--text")">
+            <span class="@(context.UnrealizedPnL >= 0 ? "mud-success-text" : "mud-error-text")">
                 @(context.UnrealizedPnL >= 0 ? "+" : "")@context.UnrealizedPnL?.ToString("N2")
             </span>
         </MudTd>
         <MudTd DataLabel="P&amp;L %">
             @if (context.UnrealizedPnLPct is not null)
             {
-                <span class="@(context.UnrealizedPnLPct >= 0 ? "green--text" : "red--text")">
+                <span class="@(context.UnrealizedPnLPct >= 0 ? "mud-success-text" : "mud-error-text")">
                     @(context.UnrealizedPnLPct >= 0 ? "+" : "")@context.UnrealizedPnLPct.Value.ToString("P2")
                 </span>
             }
@@ -63,7 +63,7 @@
         <MudTd DataLabel="Δ wt">
             @if (context.WeightDelta is not null)
             {
-                <span class="@(context.WeightDelta >= 0 ? "green--text" : "red--text")">
+                <span class="@(context.WeightDelta >= 0 ? "mud-success-text" : "mud-error-text")">
                     @(context.WeightDelta >= 0 ? "+" : "")@context.WeightDelta.Value.ToString("P1")
                 </span>
             }

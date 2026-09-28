@@ -14,7 +14,7 @@
     </MudPaper>
     <MudPaper Class="pa-4 flex-1" Outlined="true">
         <MudText Typo="Typo.body2">Unrealized P&amp;L (EUR)</MudText>
-        <MudText Typo="Typo.h5" Class="@(Overview.UnrealizedPnLEur >= 0 ? "green--text" : "red--text")">
+        <MudText Typo="Typo.h5" Class="@(Overview.UnrealizedPnLEur >= 0 ? "mud-success-text" : "mud-error-text")">
             @(Overview.UnrealizedPnLEur >= 0 ? "+" : "")@Overview.UnrealizedPnLEur.ToString("N2") €
             @if (Overview.UnrealizedPnLPct is not null)
             {

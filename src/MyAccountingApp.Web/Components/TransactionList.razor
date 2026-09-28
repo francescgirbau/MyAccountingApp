@@ -34,7 +34,7 @@
     <RowTemplate>
         <MudTd DataLabel="Date">@context.Date.ToString("yyyy-MM-dd")</MudTd>
         <MudTd DataLabel="Description">@context.Description</MudTd>
-        <MudTd DataLabel="Amount"><span class="@(context.Category == "EXPENSE" || context.Category == "FEE" || context.Category == "WITHHOLDING_TAX" || context.Category == "TRANSFER" || context.Category == "LOAN_OUT" ? "red--text" : "green--text")">@context.Money.Amount.ToString("N2")</span></MudTd>
+        <MudTd DataLabel="Amount"><span class="@(context.Category == "EXPENSE" || context.Category == "FEE" || context.Category == "WITHHOLDING_TAX" || context.Category == "TRANSFER" || context.Category == "LOAN_OUT" ? "mud-error-text" : "mud-success-text")">@context.Money.Amount.ToString("N2")</span></MudTd>
         <MudTd DataLabel="Curr.">@context.Money.Currency</MudTd>
         <MudTd DataLabel="Category">
             @if (GetCategoryTooltip(context.Category) is string tip)

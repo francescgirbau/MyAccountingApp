@@ -9,11 +9,11 @@
         <MudText Typo="Typo.body2" Class="ml-2">
             Total invested: <strong>@TotalCostBasis.ToString("N2")</strong>
             &nbsp;|&nbsp; Total realized P&amp;L:
-            <strong class="@(TotalRealized >= 0 ? "green--text" : "red--text")">@(TotalRealized >= 0 ? "+" : "")@TotalRealized.ToString("N2")</strong>
+            <strong class="@(TotalRealized >= 0 ? "mud-success-text" : "mud-error-text")">@(TotalRealized >= 0 ? "+" : "")@TotalRealized.ToString("N2")</strong>
             &nbsp;|&nbsp; Total unrealized P&amp;L:
             @if (HasPrices)
             {
-                <strong class="@(TotalUnrealized >= 0 ? "green--text" : "red--text")">@(TotalUnrealized >= 0 ? "+" : "")@TotalUnrealized.ToString("N2")</strong>
+                <strong class="@(TotalUnrealized >= 0 ? "mud-success-text" : "mud-error-text")">@(TotalUnrealized >= 0 ? "+" : "")@TotalUnrealized.ToString("N2")</strong>
             }
             else
             {
@@ -23,7 +23,7 @@
             {
                 <text>&nbsp;|&nbsp; Value in EUR: <strong>@TotalValueEur.ToString("N2")</strong></text>
                 <text>&nbsp;|&nbsp; Unrealized P&amp;L EUR:
-                    <strong class="@(TotalUnrealizedEur >= 0 ? "green--text" : "red--text")">@(TotalUnrealizedEur >= 0 ? "+" : "")@TotalUnrealizedEur.ToString("N2")</strong>
+                    <strong class="@(TotalUnrealizedEur >= 0 ? "mud-success-text" : "mud-error-text")">@(TotalUnrealizedEur >= 0 ? "+" : "")@TotalUnrealizedEur.ToString("N2")</strong>
                 </text>
             }
         </MudText>
@@ -84,7 +84,7 @@
         <MudTd DataLabel="Unrealized P&amp;L">
             @if (context.UnrealizedGainLoss is not null)
             {
-                <span class="@(context.UnrealizedGainLoss >= 0 ? "green--text" : "red--text")">
+                <span class="@(context.UnrealizedGainLoss >= 0 ? "mud-success-text" : "mud-error-text")">
                     @(context.UnrealizedGainLoss >= 0 ? "+" : "")@context.UnrealizedGainLoss?.ToString("N2")
                 </span>
             }
@@ -94,7 +94,7 @@
             }
         </MudTd>
         <MudTd DataLabel="Realized P&amp;L">
-            <span class="@(context.RealizedGainLoss >= 0 ? "green--text" : "red--text")">
+            <span class="@(context.RealizedGainLoss >= 0 ? "mud-success-text" : "mud-error-text")">
                 @(context.RealizedGainLoss >= 0 ? "+" : "")@context.RealizedGainLoss.ToString("N2")
             </span>
         </MudTd>

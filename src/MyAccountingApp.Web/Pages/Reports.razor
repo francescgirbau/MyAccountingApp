@@ -34,7 +34,7 @@ else
             <MudSpacer />
             <MudText Typo="Typo.body2">
                 Total realized:
-                <strong class="@(_report?.TotalRealizedGainLoss >= 0 ? "green--text" : "red--text")">
+                <strong class="@(_report?.TotalRealizedGainLoss >= 0 ? "mud-success-text" : "mud-error-text")">
                     @(_report?.TotalRealizedGainLoss >= 0 ? "+" : "")@_report?.TotalRealizedGainLoss.ToString("N2")
                 </strong>
             </MudText>
@@ -55,7 +55,7 @@ else
             <MudTd DataLabel="Proceeds">@context.Proceeds.ToString("N2")</MudTd>
             <MudTd DataLabel="Cost Basis">@context.CostBasis.ToString("N2")</MudTd>
             <MudTd DataLabel="Realized P&amp;L">
-                <span class="@(context.RealizedGainLoss >= 0 ? "green--text" : "red--text")">
+                <span class="@(context.RealizedGainLoss >= 0 ? "mud-success-text" : "mud-error-text")">
                     @(context.RealizedGainLoss >= 0 ? "+" : "")@context.RealizedGainLoss.ToString("N2")
                 </span>
             </MudTd>
@@ -88,7 +88,7 @@ else
                                         <td>@sale.Quantity.ToString("G")</td>
                                         <td>@sale.Proceeds.ToString("N2")</td>
                                         <td>@sale.CostBasis.ToString("N2")</td>
-                                        <td class="@(sale.RealizedGainLoss >= 0 ? "green--text" : "red--text")">@(sale.RealizedGainLoss >= 0 ? "+" : "")@sale.RealizedGainLoss.ToString("N2")</td>
+                                        <td class="@(sale.RealizedGainLoss >= 0 ? "mud-success-text" : "mud-error-text")">@(sale.RealizedGainLoss >= 0 ? "+" : "")@sale.RealizedGainLoss.ToString("N2")</td>
                                     </tr>
                                 }
                             </tbody>
