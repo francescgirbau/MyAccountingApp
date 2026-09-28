@@ -30,7 +30,7 @@
                         <td style="text-align:right">@s.SellCount</td>
                         <td style="text-align:right">@s.SellProceeds.ToString("N2")</td>
                         <td style="text-align:right">@s.Fees.ToString("N2")</td>
-                        <td style="text-align:right"><strong class="@(s.NetCashFlow >= 0 ? "green--text" : "red--text")">@s.NetCashFlow.ToString("N2")</strong></td>
+                        <td style="text-align:right"><strong class="@(s.NetCashFlow >= 0 ? "mud-success-text" : "mud-error-text")">@s.NetCashFlow.ToString("N2")</strong></td>
                     </tr>
                 }
             </tbody>

@@ -41,7 +41,7 @@ else
             <MudTd DataLabel="Principal">@context.Principal.ToString("N2") @context.Currency</MudTd>
             <MudTd DataLabel="Repaid">@context.Repaid.ToString("N2")</MudTd>
             <MudTd DataLabel="Interest">@context.InterestPaid.ToString("N2")</MudTd>
-            <MudTd DataLabel="Outstanding" Class="@(context.IsOverpaid ? "red--text" : "")">@context.Outstanding.ToString("N2")</MudTd>
+            <MudTd DataLabel="Outstanding" Class="@(context.IsOverpaid ? "mud-error-text" : "")">@context.Outstanding.ToString("N2")</MudTd>
             <MudTd DataLabel="Status">
                 <MudChip T="string" Size="Size.Small" Color="@(context.IsClosed ? Color.Secondary : Color.Primary)"
                          Variant="Variant.Outlined">
@@ -96,7 +96,7 @@ else
                         <RowTemplate Context="m">
                             <MudTd DataLabel="Date">@m.Date.ToString("yyyy-MM-dd")</MudTd>
                             <MudTd DataLabel="Description">@m.Description</MudTd>
-                            <MudTd DataLabel="Amount" Class="@(IsCashIn(loan, m) ? "green--text" : "red--text")">@m.Amount.ToString("N2") @m.Currency</MudTd>
+                            <MudTd DataLabel="Amount" Class="@(IsCashIn(loan, m) ? "mud-success-text" : "mud-error-text")">@m.Amount.ToString("N2") @m.Currency</MudTd>
                             <MudTd DataLabel="Actions">
                                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" aria-label="Edit movement"
                                                OnClick="@(() => OnEditMovement.InvokeAsync(new LoanMovementTarget(loan, m)))" />
@@ -124,7 +124,7 @@ else
                         <RowTemplate Context="m">
                             <MudTd DataLabel="Date">@m.Date.ToString("yyyy-MM-dd")</MudTd>
                             <MudTd DataLabel="Description">@m.Description</MudTd>
-                            <MudTd DataLabel="Amount" Class="@(IsCashIn(loan, m) ? "green--text" : "red--text")">@m.Amount.ToString("N2") @m.Currency</MudTd>
+                            <MudTd DataLabel="Amount" Class="@(IsCashIn(loan, m) ? "mud-success-text" : "mud-error-text")">@m.Amount.ToString("N2") @m.Currency</MudTd>
                             <MudTd DataLabel="Actions">
                                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" aria-label="Edit movement"
                                                OnClick="@(() => OnEditMovement.InvokeAsync(new LoanMovementTarget(loan, m)))" />

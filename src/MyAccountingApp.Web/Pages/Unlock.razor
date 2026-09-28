@@ -22,7 +22,7 @@ else
 
             @if (_error != null)
             {
-                <MudText Class="red--text mt-2" role="alert">@_error</MudText>
+                <MudText Class="mud-error-text mt-2" role="alert">@_error</MudText>
             }
 
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" Disabled="_busy" OnClick="@UnlockAsync">

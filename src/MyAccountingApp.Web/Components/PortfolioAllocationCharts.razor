@@ -4,7 +4,7 @@
         <svg viewBox="0 0 200 200" width="220" height="220" aria-label="Allocation at purchase">
             @foreach (PortfolioPieSlice slice in PurchasePie)
             {
-                <path d="@slice.Path" fill="@slice.Color" stroke="white" stroke-width="2"
+                <path d="@slice.Path" fill="@slice.Color" stroke="var(--mud-palette-surface)" stroke-width="2"
                       class="@(slice.IsNavigable ? "cursor-pointer" : "")" @onclick="() => OnSelect.InvokeAsync(slice.Key)" />
             }
         </svg>
@@ -14,7 +14,7 @@
         <svg viewBox="0 0 200 200" width="220" height="220" aria-label="Current allocation">
             @foreach (PortfolioPieSlice slice in CurrentPie)
             {
-                <path d="@slice.Path" fill="@slice.Color" stroke="white" stroke-width="2"
+                <path d="@slice.Path" fill="@slice.Color" stroke="var(--mud-palette-surface)" stroke-width="2"
                       class="@(slice.IsNavigable ? "cursor-pointer" : "")" @onclick="() => OnSelect.InvokeAsync(slice.Key)" />
             }
         </svg>
@@ -37,7 +37,7 @@
                 }
                 @if (item.PnLPct is not null)
                 {
-                    <span class="@(item.PnLPct >= 0 ? "green--text" : "red--text")">@(item.PnLPct >= 0 ? "+" : "")@item.PnLPct.Value.ToString("P2")</span>
+                    <span class="@(item.PnLPct >= 0 ? "mud-success-text" : "mud-error-text")">@(item.PnLPct >= 0 ? "+" : "")@item.PnLPct.Value.ToString("P2")</span>
                 }
             </div>
         }

@@ -37,10 +37,10 @@
                 {
                     <tr>
                         <td><strong>@s.Currency</strong> <span class="mud-text-secondary">(@s.Count)</span></td>
-                        <td style="text-align:right" class="green--text">@s.Income.ToString("N2")</td>
-                        <td style="text-align:right" class="red--text">@s.Expense.ToString("N2")</td>
+                        <td style="text-align:right" class="mud-success-text">@s.Income.ToString("N2")</td>
+                        <td style="text-align:right" class="mud-error-text">@s.Expense.ToString("N2")</td>
                         <td style="text-align:right">
-                            <strong class="@(s.OperatingNet >= 0 ? "green--text" : "red--text")">@s.OperatingNet.ToString("N2")</strong>
+                            <strong class="@(s.OperatingNet >= 0 ? "mud-success-text" : "mud-error-text")">@s.OperatingNet.ToString("N2")</strong>
                         </td>
                         <td style="text-align:right">@s.InvestingPurchase.ToString("N2")</td>
                         <td style="text-align:right">@s.InvestingSale.ToString("N2")</td>
