@@ -3,24 +3,24 @@
         <MudText Typo="Typo.subtitle1">Allocation by position</MudText>
     </ToolBarContent>
     <Columns>
-        <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => OnSort.InvokeAsync("Symbol"))">Symbol</MudButton></MudTh>
-        <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => OnSort.InvokeAsync("Quantity"))">Qty</MudButton></MudTh>
-        <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => OnSort.InvokeAsync("Cost"))">Cost</MudButton></MudTh>
-        <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => OnSort.InvokeAsync("MarketValue"))">Mkt value</MudButton></MudTh>
-        <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => OnSort.InvokeAsync("PnL"))">P&amp;L</MudButton></MudTh>
-        <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => OnSort.InvokeAsync("PnLPct"))">P&amp;L %</MudButton></MudTh>
-        <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => OnSort.InvokeAsync("PurchaseWeight"))">Purchase wt</MudButton></MudTh>
-        <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => OnSort.InvokeAsync("CurrentWeight"))">Current wt</MudButton></MudTh>
-        <MudTh><MudButton Variant="Variant.Text" Color="Color.Inherit" Class="px-1" OnClick="@(() => OnSort.InvokeAsync("WeightDelta"))">Δ wt</MudButton></MudTh>
-        <MudTh>Last price</MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionRowDto, object>(p => p.Symbol)">Symbol</MudTableSortLabel></MudTh>
+        <MudTh Style="text-align: right"><MudTableSortLabel SortBy="new Func<PortfolioPositionRowDto, object>(p => p.Quantity)">Qty</MudTableSortLabel></MudTh>
+        <MudTh Style="text-align: right"><MudTableSortLabel SortBy="new Func<PortfolioPositionRowDto, object>(p => p.Cost)">Cost</MudTableSortLabel></MudTh>
+        <MudTh Style="text-align: right"><MudTableSortLabel SortBy="new Func<PortfolioPositionRowDto, object>(p => p.MarketValue ?? 0)">Mkt value</MudTableSortLabel></MudTh>
+        <MudTh Style="text-align: right"><MudTableSortLabel SortBy="new Func<PortfolioPositionRowDto, object>(p => p.UnrealizedPnL ?? 0)">P&amp;L</MudTableSortLabel></MudTh>
+        <MudTh Style="text-align: right"><MudTableSortLabel SortBy="new Func<PortfolioPositionRowDto, object>(p => p.UnrealizedPnLPct ?? 0)">P&amp;L %</MudTableSortLabel></MudTh>
+        <MudTh Style="text-align: right"><MudTableSortLabel SortBy="new Func<PortfolioPositionRowDto, object>(p => p.PurchaseWeight ?? 0)">Purchase wt</MudTableSortLabel></MudTh>
+        <MudTh Style="text-align: right"><MudTableSortLabel SortBy="new Func<PortfolioPositionRowDto, object>(p => p.CurrentWeight ?? 0)" InitialSortDirection="SortDirection.Descending">Current wt</MudTableSortLabel></MudTh>
+        <MudTh Style="text-align: right"><MudTableSortLabel SortBy="new Func<PortfolioPositionRowDto, object>(p => p.WeightDelta ?? 0)">Δ wt</MudTableSortLabel></MudTh>
+        <MudTh Style="text-align: right">Last price</MudTh>
     </Columns>
     <RowTemplate>
         <MudTd DataLabel="Symbol" Style="@PortfolioDisplay.HighlightStyle(HighlightedSymbol, context.Symbol)">
             <span class="cursor-pointer" @onclick="() => OnSelect.InvokeAsync(context.Symbol)">@context.Symbol</span>
         </MudTd>
-        <MudTd DataLabel="Qty">@context.Quantity.ToString("G")</MudTd>
-        <MudTd DataLabel="Cost">@context.Cost.ToString("N2") @context.Currency</MudTd>
-        <MudTd DataLabel="Mkt value">
+        <MudTd DataLabel="Qty" Style="text-align: right">@context.Quantity.ToString("G")</MudTd>
+        <MudTd DataLabel="Cost" Style="text-align: right">@context.Cost.ToString("N2") @context.Currency</MudTd>
+        <MudTd DataLabel="Mkt value" Style="text-align: right">
             @if (context.MarketValue is not null)
             {
                 <MudTooltip Placement="Placement.Top">
@@ -36,12 +36,12 @@
                 <span>—</span>
             }
         </MudTd>
-        <MudTd DataLabel="P&amp;L">
+        <MudTd DataLabel="P&amp;L" Style="text-align: right">
             <span class="@(context.UnrealizedPnL >= 0 ? "mud-success-text" : "mud-error-text")">
                 @(context.UnrealizedPnL >= 0 ? "+" : "")@context.UnrealizedPnL?.ToString("N2")
             </span>
         </MudTd>
-        <MudTd DataLabel="P&amp;L %">
+        <MudTd DataLabel="P&amp;L %" Style="text-align: right">
             @if (context.UnrealizedPnLPct is not null)
             {
                 <span class="@(context.UnrealizedPnLPct >= 0 ? "mud-success-text" : "mud-error-text")">
@@ -53,9 +53,9 @@
                 <span>—</span>
             }
         </MudTd>
-        <MudTd DataLabel="Purchase wt">@(context.PurchaseWeight?.ToString("P1") ?? "—")</MudTd>
-        <MudTd DataLabel="Current wt">@(context.CurrentWeight?.ToString("P1") ?? "—")</MudTd>
-        <MudTd DataLabel="Δ wt">
+        <MudTd DataLabel="Purchase wt" Style="text-align: right">@(context.PurchaseWeight?.ToString("P1") ?? "—")</MudTd>
+        <MudTd DataLabel="Current wt" Style="text-align: right">@(context.CurrentWeight?.ToString("P1") ?? "—")</MudTd>
+        <MudTd DataLabel="Δ wt" Style="text-align: right">
             @if (context.WeightDelta is not null)
             {
                 <span class="@(context.WeightDelta >= 0 ? "mud-success-text" : "mud-error-text")">
@@ -67,7 +67,7 @@
                 <span>—</span>
             }
         </MudTd>
-        <MudTd DataLabel="Last price">
+        <MudTd DataLabel="Last price" Style="text-align: right">
             @(context.LastPrice?.ToString("N4") ?? "—")
             @if (context.IsStale)
             {
@@ -85,6 +85,5 @@
 @code {
     [Parameter] public IEnumerable<PortfolioPositionRowDto> Rows { get; set; } = Enumerable.Empty<PortfolioPositionRowDto>();
     [Parameter] public string? HighlightedSymbol { get; set; }
-    [Parameter] public EventCallback<string> OnSort { get; set; }
     [Parameter] public EventCallback<string> OnSelect { get; set; }
 }
