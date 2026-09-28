@@ -1,30 +1,8 @@
 <MudTable Items="@Positions" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true" SortLabel="Sort by">
     <ToolBarContent>
         <MudText Typo="Typo.subtitle1">@Positions.Count positions</MudText>
-        <MudText Typo="Typo.body2">
-            Total invested: <strong>@TotalCostBasis.ToString("N2")</strong>
-            &nbsp;|&nbsp; Total realized P&amp;L:
-            <strong class="@(TotalRealized >= 0 ? "mud-success-text" : "mud-error-text")">@(TotalRealized >= 0 ? "+" : "")@TotalRealized.ToString("N2")</strong>
-            &nbsp;|&nbsp; Total unrealized P&amp;L:
-            @if (HasPrices)
-            {
-                <strong class="@(TotalUnrealized >= 0 ? "mud-success-text" : "mud-error-text")">@(TotalUnrealized >= 0 ? "+" : "")@TotalUnrealized.ToString("N2")</strong>
-            }
-            else
-            {
-                <strong>—</strong>
-            }
-            @if (HasValuations)
-            {
-                <text>&nbsp;|&nbsp; Value in EUR: <strong>@TotalValueEur.ToString("N2")</strong></text>
-                <text>&nbsp;|&nbsp; Unrealized P&amp;L EUR:
-                    <strong class="@(TotalUnrealizedEur >= 0 ? "mud-success-text" : "mud-error-text")">@(TotalUnrealizedEur >= 0 ? "+" : "")@TotalUnrealizedEur.ToString("N2")</strong>
-                </text>
-            }
-        </MudText>
     </ToolBarContent>
     <ColGroup>
-        <col style="width: 90px" />
         <col style="width: 90px" />
         <col style="width: 100px" />
         <col style="width: 110px" />
@@ -36,16 +14,16 @@
     </ColGroup>
     <HeaderContent>
         <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.Symbol)">Symbol</MudTableSortLabel></MudTh>
-        <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.NetQuantity)">Net Qty</MudTableSortLabel></MudTh>
-        <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.AverageUnitaryCost)">Avg Cost</MudTableSortLabel></MudTh>
-        <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.TotalCostBasis)">Total Cost</MudTableSortLabel></MudTh>
+        <MudTh Style="text-align: right"><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.NetQuantity)">Net Qty</MudTableSortLabel></MudTh>
+        <MudTh Style="text-align: right"><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.AverageUnitaryCost)">Avg Cost</MudTableSortLabel></MudTh>
+        <MudTh Style="text-align: right"><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.TotalCostBasis)">Total Cost</MudTableSortLabel></MudTh>
         <MudTh>Curr.</MudTh>
-        <MudTh>Mkt Price</MudTh>
-        <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.UnrealizedGainLoss ?? 0)">Unrealized P&amp;L</MudTableSortLabel></MudTh>
-        <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.RealizedGainLoss)">Realized P&amp;L</MudTableSortLabel></MudTh>
+        <MudTh Style="text-align: right">Mkt Price</MudTh>
+        <MudTh Style="text-align: right"><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.UnrealizedGainLoss ?? 0)">Unrealized P&amp;L</MudTableSortLabel></MudTh>
+        <MudTh Style="text-align: right"><MudTableSortLabel SortBy="new Func<PortfolioPositionDto, object>(p => p.RealizedGainLoss)">Realized P&amp;L</MudTableSortLabel></MudTh>
         @if (HasValuations)
         {
-            <MudTh>
+            <MudTh Style="text-align: right">
                 <MudTooltip Placement="Placement.Top">
                     <ChildContent><span>Value in EUR (FX rate date in tooltip)</span></ChildContent>
                     <TooltipContent><span>Market value converted to EUR using the rate for the selected date</span></TooltipContent>
@@ -71,12 +49,12 @@
             <MudIconButton Icon="@Icons.Material.Filled.ListAlt" Size="Size.Small" aria-label="View movements"
                            OnClick="@(() => OnViewMovements.InvokeAsync(context.Symbol))" />
         </MudTd>
-        <MudTd DataLabel="Net Qty">@context.NetQuantity.ToString("G")</MudTd>
-        <MudTd DataLabel="Avg Cost">@context.AverageUnitaryCost.ToString("N4")</MudTd>
-        <MudTd DataLabel="Total Cost">@context.TotalCostBasis.ToString("N2")</MudTd>
+        <MudTd DataLabel="Net Qty" Style="text-align: right">@context.NetQuantity.ToString("G")</MudTd>
+        <MudTd DataLabel="Avg Cost" Style="text-align: right">@context.AverageUnitaryCost.ToString("N4")</MudTd>
+        <MudTd DataLabel="Total Cost" Style="text-align: right">@context.TotalCostBasis.ToString("N2")</MudTd>
         <MudTd DataLabel="Curr.">@context.Currency</MudTd>
-        <MudTd DataLabel="Mkt Price">@(context.MarketPrice?.ToString("N4") ?? "—")</MudTd>
-        <MudTd DataLabel="Unrealized P&amp;L">
+        <MudTd DataLabel="Mkt Price" Style="text-align: right">@(context.MarketPrice?.ToString("N4") ?? "—")</MudTd>
+        <MudTd DataLabel="Unrealized P&amp;L" Style="text-align: right">
             @if (context.UnrealizedGainLoss is not null)
             {
                 <span class="@(context.UnrealizedGainLoss >= 0 ? "mud-success-text" : "mud-error-text")">
@@ -88,14 +66,14 @@
                 <span>—</span>
             }
         </MudTd>
-        <MudTd DataLabel="Realized P&amp;L">
+        <MudTd DataLabel="Realized P&amp;L" Style="text-align: right">
             <span class="@(context.RealizedGainLoss >= 0 ? "mud-success-text" : "mud-error-text")">
                 @(context.RealizedGainLoss >= 0 ? "+" : "")@context.RealizedGainLoss.ToString("N2")
             </span>
         </MudTd>
         @if (HasValuations)
         {
-            <MudTd DataLabel="Value EUR">
+            <MudTd DataLabel="Value EUR" Style="text-align: right">
                 @{ PositionValuationDto? val = ValuationLookup(context.Symbol); }
                 @if (val?.ValueEur is not null)
                 {
@@ -133,11 +111,42 @@
     <ChildRowContent>
         @if (ExpandedSymbols.Contains(context.Symbol))
         {
-            <MudTd colspan="9">
+            <MudTd colspan="@(HasValuations ? 10 : 9)">
                 <PortfolioOpenLots Lots="@context.OpenLots" />
             </MudTd>
         }
     </ChildRowContent>
+    <FooterContent>
+        <MudTFootRow>
+            <MudTd>Totals</MudTd>
+            <MudTd></MudTd>
+            <MudTd></MudTd>
+            <MudTd Style="text-align: right"><strong>@TotalCostBasis.ToString("N2")</strong></MudTd>
+            <MudTd></MudTd>
+            <MudTd></MudTd>
+            <MudTd Style="text-align: right">
+                @if (HasPrices)
+                {
+                    <strong class="@(TotalUnrealized >= 0 ? "mud-success-text" : "mud-error-text")">@(TotalUnrealized >= 0 ? "+" : "")@TotalUnrealized.ToString("N2")</strong>
+                }
+                else
+                {
+                    <strong>—</strong>
+                }
+            </MudTd>
+            <MudTd Style="text-align: right">
+                <strong class="@(TotalRealized >= 0 ? "mud-success-text" : "mud-error-text")">@(TotalRealized >= 0 ? "+" : "")@TotalRealized.ToString("N2")</strong>
+            </MudTd>
+            @if (HasValuations)
+            {
+                <MudTd Style="text-align: right">
+                    <div><strong>@TotalValueEur.ToString("N2") €</strong></div>
+                    <div class="mud-text-secondary">unrealized @(TotalUnrealizedEur >= 0 ? "+" : "")@TotalUnrealizedEur.ToString("N2") €</div>
+                </MudTd>
+            }
+            <MudTd></MudTd>
+        </MudTFootRow>
+    </FooterContent>
 </MudTable>
 
 @code {
