@@ -21,7 +21,7 @@ else
     @if (_overview is not null)
     {
         <PortfolioHeader Overview="@_overview" TotalRealized="@_totalRealized" Refreshing="@_refreshing"
-                         OnRefresh="@RefreshPricesAsync" />
+                         PortfolioReturn="@_portfolioReturn" OnRefresh="@RefreshPricesAsync" />
 
         <PortfolioStatusNotices Overview="@_overview" OnDataQuality="@NavigateToDataQuality" />
 
@@ -56,6 +56,7 @@ else
     private decimal _totalUnrealizedEur;
 
     private PortfolioOverviewDto? _overview;
+    private PortfolioReturnDto? _portfolioReturn;
     private List<PortfolioPieSlice> _purchasePie = new();
     private List<PortfolioPieSlice> _currentPie = new();
     private List<PortfolioLegendItem> _legend = new();
@@ -83,6 +84,7 @@ else
             _positions = await Http.GetFromJsonAsync<List<PortfolioPositionDto>>("/api/portfolio") ?? new();
             _hasPrices = false;
             _overview = await Http.GetFromJsonAsync<PortfolioOverviewDto>("/api/portfolio/overview");
+            _portfolioReturn = await TryGetPortfolioReturnAsync();
             BuildPies();
             BuildLegend();
             ComputeTotals();
@@ -109,6 +111,7 @@ else
             _hasPrices = true;
             await LoadValuationsAsync();
             _overview = await Http.GetFromJsonAsync<PortfolioOverviewDto>("/api/portfolio/overview");
+            _portfolioReturn = await TryGetPortfolioReturnAsync();
             BuildPies();
             BuildLegend();
             ComputeTotals();
@@ -127,6 +130,19 @@ else
     }
 
     private PositionValuationDto? GetValuation(string symbol) => _valuations.GetValueOrDefault(symbol);
+
+    private async Task<PortfolioReturnDto?> TryGetPortfolioReturnAsync()
+    {
+        try
+        {
+            return await Http.GetFromJsonAsync<PortfolioReturnDto>("/api/portfolio/return");
+        }
+        catch
+        {
+            // The return KPI is optional: never block the whole page when it fails.
+            return null;
+        }
+    }
 
     private void ComputeTotals()
     {

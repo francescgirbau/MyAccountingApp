@@ -8,7 +8,7 @@
 </div>
 
 <div class="d-flex flex-wrap gap-4 my-3">
-    <MudPaper Class="pa-4 flex-1" Outlined="true">
+    <MudPaper Class="pa-4" Style="flex: 1 1 220px" Outlined="true">
         <div class="d-flex align-center gap-2 mb-1">
             <MudIcon Icon="@Icons.Material.Filled.Euro" Size="Size.Small" Class="mud-text-secondary" />
             <MudText Typo="Typo.body2" Class="mud-text-secondary">Market value (EUR)</MudText>
@@ -16,7 +16,7 @@
         <MudText Typo="Typo.h5">@Overview.MarketValueEur.ToString("N2") €</MudText>
     </MudPaper>
 
-    <MudPaper Class="pa-4 flex-1" Outlined="true">
+    <MudPaper Class="pa-4" Style="flex: 1 1 220px" Outlined="true">
         <div class="d-flex align-center gap-2 mb-1">
             <MudIcon Icon="@Icons.Material.Filled.Payments" Size="Size.Small" Class="mud-text-secondary" />
             <MudText Typo="Typo.body2" Class="mud-text-secondary">
@@ -29,7 +29,7 @@
         <MudText Typo="Typo.h5">@Overview.InvestedCostEur.ToString("N2") €</MudText>
     </MudPaper>
 
-    <MudPaper Class="pa-4 flex-1" Outlined="true">
+    <MudPaper Class="pa-4" Style="flex: 1 1 220px" Outlined="true">
         <div class="d-flex align-center gap-2 mb-1">
             <MudIcon Icon="@Icons.Material.Filled.ShowChart" Size="Size.Small"
                      Color="@(Overview.UnrealizedPnLEur >= 0 ? Color.Success : Color.Error)" />
@@ -44,7 +44,7 @@
         </MudText>
     </MudPaper>
 
-    <MudPaper Class="pa-4 flex-1" Outlined="true">
+    <MudPaper Class="pa-4" Style="flex: 1 1 220px" Outlined="true">
         <div class="d-flex align-center gap-2 mb-1">
             <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" Size="Size.Small" Class="mud-text-secondary" />
             <MudText Typo="Typo.body2" Class="mud-text-secondary">
@@ -58,11 +58,38 @@
             @(TotalRealized >= 0 ? "+" : "")@TotalRealized.ToString("N2")
         </MudText>
     </MudPaper>
+
+    <MudPaper Class="pa-4" Style="flex: 1 1 220px" Outlined="true">
+        <div class="d-flex align-center gap-2 mb-1">
+            <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" Class="mud-text-secondary" />
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                <MudTooltip Placement="Placement.Top">
+                    <ChildContent><span>Money-weighted return</span></ChildContent>
+                    <TooltipContent><span>@PortfolioReturnDisplay.Tooltip(PortfolioReturn)</span></TooltipContent>
+                </MudTooltip>
+            </MudText>
+        </div>
+        @if (PortfolioReturnDisplay.MainRate(PortfolioReturn) is { } rate)
+        {
+            <MudText Typo="Typo.h5" Class="@(rate >= 0 ? "mud-success-text" : "mud-error-text")">
+                @(rate >= 0 ? "+" : "")@rate.ToString("P2")
+                @if (PortfolioReturnDisplay.IsAnnualized(PortfolioReturn))
+                {
+                    <span class="mud-text-secondary">per year</span>
+                }
+            </MudText>
+        }
+        else
+        {
+            <MudText Typo="Typo.h5" Class="mud-text-secondary">—</MudText>
+        }
+    </MudPaper>
 </div>
 
 @code {
     [Parameter] public PortfolioOverviewDto Overview { get; set; } = default!;
     [Parameter] public decimal TotalRealized { get; set; }
+    [Parameter] public PortfolioReturnDto? PortfolioReturn { get; set; }
     [Parameter] public bool Refreshing { get; set; }
     [Parameter] public EventCallback OnRefresh { get; set; }
 }
