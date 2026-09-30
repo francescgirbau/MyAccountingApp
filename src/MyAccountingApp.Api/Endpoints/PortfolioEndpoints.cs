@@ -72,6 +72,12 @@ public static class PortfolioEndpoints
             return Results.Ok(new PositionValuationResponse(valuationDate, valuations));
         });
 
+        app.MapGet($"{prefix}/portfolio/return", async (IPortfolioReturnService returnService) =>
+        {
+            PortfolioReturnDto result = await returnService.GetReturnAsync(DateOnly.FromDateTime(DateTime.UtcNow));
+            return Results.Ok(result);
+        });
+
         app.MapGet($"{prefix}/validate", (IValidationQuery validationQuery) =>
         {
             ValidationResult result = validationQuery.ValidateAll();

@@ -245,6 +245,44 @@ public class PortfolioEndpointsTests
         Assert.Equal(1m, position.GetProperty("rate").GetDecimal());
     }
 
+    [Fact]
+    public async Task Return_ComputesMoneyWeightedReturn_FromSeededBuy()
+    {
+        CountingMarketPriceService.Reset();
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        await SeedBuyAsync(client);
+
+        HttpResponseMessage response = await client.GetAsync("/api/portfolio/return");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        JsonElement root = document.RootElement;
+        Assert.Equal(150m, root.GetProperty("capitalInvestedEur").GetDecimal());
+        Assert.Equal(0m, root.GetProperty("totalProceedsEur").GetDecimal());
+        Assert.Equal(200m, root.GetProperty("terminalValueEur").GetDecimal());
+        Assert.Equal(0.3333m, root.GetProperty("totalReturn").GetDecimal(), 4);
+        Assert.Equal(JsonValueKind.Null, root.GetProperty("annualizedReturn").ValueKind);
+        Assert.InRange(root.GetProperty("ayiYears").GetDecimal(), 0m, 1m);
+        Assert.Equal(0, root.GetProperty("excludedFlowCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task Return_ReturnsNulls_WhenNoPositions()
+    {
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        HttpResponseMessage response = await client.GetAsync("/api/portfolio/return");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("totalReturn").ValueKind);
+        Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("annualizedReturn").ValueKind);
+        Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("ayiYears").ValueKind);
+        Assert.Equal(0m, document.RootElement.GetProperty("terminalValueEur").GetDecimal());
+    }
+
     private static async Task SeedBuyAsync(HttpClient client, string currency = "EUR")
     {
         HttpResponseMessage response = await client.PostAsJsonAsync("/api/asset-transactions", new
