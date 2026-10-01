@@ -2,7 +2,7 @@
     <ToolBarContent>
         <MudText Typo="Typo.subtitle1">Allocation by position</MudText>
     </ToolBarContent>
-    <Columns>
+    <HeaderContent>
         <MudTh><MudTableSortLabel SortBy="new Func<PortfolioPositionRowDto, object>(p => p.Symbol)">Symbol</MudTableSortLabel></MudTh>
         <MudTh Style="text-align: right"><MudTableSortLabel SortBy="new Func<PortfolioPositionRowDto, object>(p => p.Quantity)">Qty</MudTableSortLabel></MudTh>
         <MudTh Style="text-align: right"><MudTableSortLabel SortBy="new Func<PortfolioPositionRowDto, object>(p => p.Cost)">Cost</MudTableSortLabel></MudTh>
@@ -13,7 +13,7 @@
         <MudTh Style="text-align: right"><MudTableSortLabel SortBy="new Func<PortfolioPositionRowDto, object>(p => p.CurrentWeight ?? 0)" InitialSortDirection="SortDirection.Descending">Current wt</MudTableSortLabel></MudTh>
         <MudTh Style="text-align: right"><MudTableSortLabel SortBy="new Func<PortfolioPositionRowDto, object>(p => p.WeightDelta ?? 0)">Δ wt</MudTableSortLabel></MudTh>
         <MudTh Style="text-align: right">Last price</MudTh>
-    </Columns>
+    </HeaderContent>
     <RowTemplate>
         <MudTd DataLabel="Symbol" Style="@PortfolioDisplay.HighlightStyle(HighlightedSymbol, context.Symbol)">
             <span class="cursor-pointer" @onclick="() => OnSelect.InvokeAsync(context.Symbol)">@context.Symbol</span>
