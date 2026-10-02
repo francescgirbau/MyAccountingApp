@@ -34,7 +34,7 @@ public class PositionEngineTests
     }
 
     private static PositionEngine CreateEngine(FakePortfolioRepo repo, IMarketPriceService priceService) =>
-        new(repo, new FakeOptionRepository(), priceService);
+        new(repo, priceService);
 
     [Fact]
     public async Task GetPosition_ReturnsNull_WhenNoTransactions()
@@ -234,81 +234,36 @@ public class PositionEngineTests
     }
 
     [Fact]
-    public async Task GetPosition_WithLongOption_ReturnsOptionPosition()
+    public async Task GetPosition_ReturnsNull_ForOptionOnlySymbol()
     {
+        // Option positions are tracked on their own page: without stock transactions the
+        // portfolio position engine must not report a position.
         FakePortfolioRepo repo = new();
         FakeOptionRepository optionRepo = new();
         optionRepo.Add(Opt("VET", 30, 2, AssetTransactionType.Buy, "EUR"));
-        PositionEngine engine = new(repo, optionRepo, new FakeMarketPriceService(new Dictionary<string, Money> { { "VET", new Money(35m, "EUR") } }));
+        PositionEngine engine = new(repo, new FakeMarketPriceService(new Dictionary<string, Money> { { "VET", new Money(35m, "EUR") } }));
 
         var result = await engine.GetPosition("VET");
 
-        Assert.NotNull(result);
-        Assert.Equal("Option", result.AssetClass);
-        Assert.Equal(2, result.NetQuantity);
-        Assert.Equal(60m, result.TotalCostBasis);
-        Assert.Equal(30m, result.AverageUnitaryCost);
-        Assert.Equal(35m, result.MarketPrice);
-        Assert.Equal(10m, result.UnrealizedGainLoss);
-        Assert.False(result.HasShortfall);
+        Assert.Null(result);
     }
 
     [Fact]
-    public async Task GetPosition_WithShortOption_ReturnsNegativeCostAndUnrealized()
-    {
-        FakePortfolioRepo repo = new();
-        FakeOptionRepository optionRepo = new();
-
-        // Open short: sell 3 @100 premium, current price 80 -> gain 60, market value -240.
-        optionRepo.Add(Opt("SPX", 100, 3, AssetTransactionType.Sell, "EUR"));
-        PositionEngine engine = new(repo, optionRepo, new FakeMarketPriceService(new Dictionary<string, Money> { { "SPX", new Money(80m, "EUR") } }));
-
-        var result = await engine.GetPosition("SPX");
-
-        Assert.NotNull(result);
-        Assert.Equal("Option", result.AssetClass);
-        Assert.Equal(-3, result.NetQuantity);
-        Assert.Equal(-300m, result.TotalCostBasis);
-        Assert.Equal(100m, result.AverageUnitaryCost);
-        Assert.Equal(80m, result.MarketPrice);
-        Assert.Equal(60m, result.UnrealizedGainLoss);
-        Assert.False(result.HasShortfall);
-        Assert.Equal(0, result.UnmatchedSellQuantity);
-    }
-
-    [Fact]
-    public async Task GetPosition_WithShortOptionClosed_ComputesRealizedGain()
-    {
-        FakePortfolioRepo repo = new();
-        FakeOptionRepository optionRepo = new();
-        optionRepo.Add(Opt("SPX", 100, 3, AssetTransactionType.Sell, "EUR", new DateTime(2024, 1, 10)));
-        optionRepo.Add(Opt("SPX", 80, 3, AssetTransactionType.Buy, "EUR", new DateTime(2024, 3, 10)));
-        PositionEngine engine = new(repo, optionRepo, new FakeMarketPriceService(new Dictionary<string, Money> { { "SPX", new Money(80m, "EUR") } }));
-
-        var result = await engine.GetPosition("SPX");
-
-        Assert.NotNull(result);
-        Assert.Equal(0, result.NetQuantity);
-        Assert.Equal(60m, result.RealizedGainLoss);
-        Assert.False(result.HasShortfall);
-    }
-
-    [Fact]
-    public async Task GetPosition_MergesStockAndOptionForSameSymbol_AsMixed()
+    public async Task GetPosition_IgnoresOptions_WhenSymbolHasStockAndOptions()
     {
         FakePortfolioRepo repo = new();
         repo.AddOrUpdate(Buy("VET", 50, 10, new DateTime(2024, 1, 10)));
         FakeOptionRepository optionRepo = new();
         optionRepo.Add(Opt("VET", 100, 3, AssetTransactionType.Sell, "EUR", new DateTime(2024, 2, 10)));
-        PositionEngine engine = new(repo, optionRepo, new FakeMarketPriceService(new Dictionary<string, Money> { { "VET", new Money(60m, "EUR") } }));
+        PositionEngine engine = new(repo, new FakeMarketPriceService(new Dictionary<string, Money> { { "VET", new Money(60m, "EUR") } }));
 
         var result = await engine.GetPosition("VET");
 
         Assert.NotNull(result);
-        Assert.Equal("Mixed", result.AssetClass);
-        Assert.Equal(7, result.NetQuantity); // 10 stock - 3 short options
-        Assert.Equal(200m, result.TotalCostBasis); // 500 - 300 credit
-        Assert.Equal(2, result.OpenLots.Count);
+        Assert.Equal("Stock", result.AssetClass);
+        Assert.Equal(10, result.NetQuantity); // option contracts are not merged
+        Assert.Equal(500m, result.TotalCostBasis);
+        Assert.Single(result.OpenLots);
     }
 
     private static OptionTransaction Opt(string symbol, decimal premium, decimal quantity, AssetTransactionType type, string currency, DateTime? date = null)

@@ -12,18 +12,15 @@ public class PortfolioOverviewQuery : IPortfolioOverviewQuery
     private const int MaxNamedSlices = 8;
 
     private readonly IPortfolioRepository _portfolioRepo;
-    private readonly IOptionTransactionRepository _optionRepo;
     private readonly IMarketPriceService _marketPriceService;
     private readonly IConversionRepository _conversionRepo;
 
     public PortfolioOverviewQuery(
         IPortfolioRepository portfolioRepo,
-        IOptionTransactionRepository optionRepo,
         IMarketPriceService marketPriceService,
         IConversionRepository conversionRepo)
     {
         this._portfolioRepo = portfolioRepo;
-        this._optionRepo = optionRepo;
         this._marketPriceService = marketPriceService;
         this._conversionRepo = conversionRepo;
     }
@@ -34,33 +31,23 @@ public class PortfolioOverviewQuery : IPortfolioOverviewQuery
         DateTimeOffset? latestAsOfUtc = null;
         bool isMarketClosed = false;
         int unpricedCount = 0;
-        int optionSymbolCount = 0;
 
         List<IGrouping<string, AssetTransaction>> stockGroups = this._portfolioRepo.GetAllTransactions().GroupBy(t => t.Symbol).ToList();
-        List<IGrouping<string, OptionTransaction>> optionGroups = this._optionRepo.GetAll().GroupBy(o => o.Symbol).ToList();
-        List<string> symbols = stockGroups.Select(g => g.Key).Union(optionGroups.Select(g => g.Key)).ToList();
 
-        foreach (string symbol in symbols)
+        foreach (IGrouping<string, AssetTransaction> stockGroup in stockGroups)
         {
-            IGrouping<string, AssetTransaction>? stockGroup = stockGroups.FirstOrDefault(g => g.Key == symbol);
-            IGrouping<string, OptionTransaction>? optionGroup = optionGroups.FirstOrDefault(g => g.Key == symbol);
+            FifoPosition position = FifoCalculator.Compute(stockGroup);
 
-            FifoPosition? stockPosition = stockGroup is not null ? FifoCalculator.Compute(stockGroup) : null;
-            FifoPosition? optionPosition = optionGroup is not null ? FifoCalculator.ComputeOptions(optionGroup) : null;
-            FifoPosition position = stockPosition is not null && optionPosition is not null
-                ? FifoCalculator.Merge(stockPosition, optionPosition)
-                : stockPosition ?? optionPosition!;
-
-            // Include open positions: long (quantity > 0) and short options (quantity < 0).
-            // Purely short stock positions (oversold) remain excluded.
-            if (position.NetQuantity == 0 || (stockPosition is not null && optionPosition is null && position.NetQuantity < 0))
+            // Include open stock positions: long (quantity > 0). Closed positions (net zero)
+            // and purely short stock positions (oversold) remain excluded. Option positions are
+            // tracked on their own page and never enter this portfolio.
+            if (position.NetQuantity <= 0)
             {
                 continue;
             }
 
-            string currency = stockGroup is not null
-                ? stockGroup.First().Transaction.Money.Currency
-                : optionGroup!.First().Transaction.Money.Currency;
+            string symbol = stockGroup.Key;
+            string currency = stockGroup.First().Transaction.Money.Currency;
             decimal cost = Math.Round(position.TotalCostBasis, 2);
 
             CachedQuote? lastQuote = await this._marketPriceService.GetLastQuoteAsync(symbol);
@@ -80,11 +67,6 @@ public class PortfolioOverviewQuery : IPortfolioOverviewQuery
                 ? null
                 : Math.Round((marketValue.Value / cost) - 1, 4);
 
-            if (optionGroup is not null)
-            {
-                optionSymbolCount++;
-            }
-
             working.Add(new WorkingRow
             {
                 Symbol = symbol,
@@ -98,7 +80,7 @@ public class PortfolioOverviewQuery : IPortfolioOverviewQuery
                 PriceAsOfUtc = lastQuote?.AsOfUtc,
                 IsPriced = isPriced,
                 IsStale = isStale,
-                AssetClass = optionGroup is not null ? (stockGroup is not null ? "Mixed" : "Option") : "Stock",
+                AssetClass = "Stock",
             });
 
             if (lastQuote is not null && (latestAsOfUtc is null || lastQuote.AsOfUtc > latestAsOfUtc))
@@ -154,7 +136,6 @@ public class PortfolioOverviewQuery : IPortfolioOverviewQuery
             rows.Where(r => r.MarketValueEur is not null && r.PriceAsOfUtc is not null).Max(r => r.PriceAsOfUtc),
             isMarketClosed,
             unpricedCount,
-            optionSymbolCount,
             rows,
             BuildSlices(rows, investedEurLong, current: false),
             BuildSlices(rows, marketEurLong, current: true));

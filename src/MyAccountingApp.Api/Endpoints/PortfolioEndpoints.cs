@@ -8,24 +8,16 @@ namespace MyAccountingApp.Api.Endpoints;
 
 public static class PortfolioEndpoints
 {
-    private static string[] GetSymbolUnion(IPortfolioRepository repo, IOptionTransactionRepository optionRepo)
+    private static string[] GetSymbolUnion(IPortfolioRepository repo)
     {
-        return repo.GetAllTransactions().Select(t => t.Symbol)
-            .Union(optionRepo.GetAll().Select(o => o.Symbol))
-            .Distinct()
-            .ToArray();
+        return repo.GetAllTransactions().Select(t => t.Symbol).Distinct().ToArray();
     }
 
-    private static IReadOnlyDictionary<string, string> GetCurrencyBySymbol(IPortfolioRepository repo, IOptionTransactionRepository optionRepo)
+    private static IReadOnlyDictionary<string, string> GetCurrencyBySymbol(IPortfolioRepository repo)
     {
         Dictionary<string, string> currencyBySymbol = new(StringComparer.OrdinalIgnoreCase);
 
         foreach (IGrouping<string, AssetTransaction> group in repo.GetAllTransactions().GroupBy(t => t.Symbol))
-        {
-            currencyBySymbol.TryAdd(group.Key, group.First().Transaction.Money.Currency);
-        }
-
-        foreach (IGrouping<string, OptionTransaction> group in optionRepo.GetAll().GroupBy(o => o.Symbol))
         {
             currencyBySymbol.TryAdd(group.Key, group.First().Transaction.Money.Currency);
         }
@@ -37,9 +29,9 @@ public static class PortfolioEndpoints
     {
         const string prefix = ApiEndpoints.ApiPrefix;
 
-        app.MapGet($"{prefix}/portfolio", async (IPortfolioRepository repo, IOptionTransactionRepository optionRepo, IPositionEngine positionEngine, bool includePrices = false) =>
+        app.MapGet($"{prefix}/portfolio", async (IPortfolioRepository repo, IPositionEngine positionEngine, bool includePrices = false) =>
         {
-            string[] symbols = GetSymbolUnion(repo, optionRepo);
+            string[] symbols = GetSymbolUnion(repo);
             PortfolioPositionDto?[] positions = await Task.WhenAll(symbols.Select(s => positionEngine.GetPosition(s, includePrices)));
             return Results.Ok(positions.Where(p => p is not null).ToList());
         });
@@ -56,10 +48,10 @@ public static class PortfolioEndpoints
             return position is not null ? Results.Ok(position) : Results.NotFound(new { symbol, message = "No transactions found for this symbol" });
         });
 
-        app.MapPost($"{prefix}/portfolio/refresh-prices", async (IPortfolioRepository repo, IOptionTransactionRepository optionRepo, IPositionEngine positionEngine, IMarketPriceService priceService) =>
+        app.MapPost($"{prefix}/portfolio/refresh-prices", async (IPortfolioRepository repo, IPositionEngine positionEngine, IMarketPriceService priceService) =>
         {
-            string[] symbols = GetSymbolUnion(repo, optionRepo);
-            IReadOnlyDictionary<string, string> currencyBySymbol = GetCurrencyBySymbol(repo, optionRepo);
+            string[] symbols = GetSymbolUnion(repo);
+            IReadOnlyDictionary<string, string> currencyBySymbol = GetCurrencyBySymbol(repo);
             await Task.WhenAll(symbols.Select(s => priceService.RefreshPriceAsync(s, currencyBySymbol.TryGetValue(s, out string? currency) ? currency : null)));
             PortfolioPositionDto?[] positions = await Task.WhenAll(symbols.Select(s => positionEngine.GetPosition(s, true)));
             return Results.Ok(positions.Where(p => p is not null).ToList());
