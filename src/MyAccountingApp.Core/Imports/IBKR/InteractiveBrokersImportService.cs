@@ -186,8 +186,14 @@ public class InteractiveBrokersImportService : IBrokerImportService
 
         if (hasSymbol)
         {
-            AssetTransaction assetTransaction = this.MapToAssetTransaction(record);
-            return Task.FromResult<(bool, Transaction?, AssetTransaction?)>((true, null, assetTransaction));
+            // Only real trades move the asset; cash movements (dividends, fees, interest) that
+            // happen to carry a symbol with an empty quantity must not become phantom shares.
+            decimal quantity = this.ParseAmount(record.Quantity ?? "0");
+            if (quantity != 0)
+            {
+                AssetTransaction assetTransaction = this.MapToAssetTransaction(record);
+                return Task.FromResult<(bool, Transaction?, AssetTransaction?)>((true, null, assetTransaction));
+            }
         }
 
         Transaction transaction2 = this.MapToTransaction(record);
@@ -434,23 +440,23 @@ public class InteractiveBrokersImportService : IBrokerImportService
 
         if (isAssignment || isExercise)
         {
-            bool isCall = description.Contains(" C ", StringComparison.OrdinalIgnoreCase) ||
-                          description.EndsWith(" C", StringComparison.OrdinalIgnoreCase);
-            isBuy = isCall;
-            type = isBuy ? AssetTransactionType.Buy : AssetTransactionType.Sell;
-        }
-        else if (quantity == 0)
-        {
-            if (amount > 0)
+            // IBKR states the direction in the description ("Buy 1,000 DIAGEO PLC (Assignment)").
+            // The contract side (" C ") is NOT the direction: an assigned put buys the shares.
+            string normalizedDescription = description.TrimStart();
+            if (normalizedDescription.StartsWith("Buy", StringComparison.OrdinalIgnoreCase))
+            {
+                isBuy = true;
+            }
+            else if (normalizedDescription.StartsWith("Sell", StringComparison.OrdinalIgnoreCase))
             {
                 isBuy = false;
-                type = AssetTransactionType.Sell;
             }
             else
             {
-                isBuy = true;
-                type = AssetTransactionType.Buy;
+                isBuy = quantity > 0;
             }
+
+            type = isBuy ? AssetTransactionType.Buy : AssetTransactionType.Sell;
         }
         else
         {
@@ -472,7 +478,7 @@ public class InteractiveBrokersImportService : IBrokerImportService
         return new AssetTransaction(
             transaction,
             symbol,
-            absQuantity > 0 ? absQuantity : 1,
+            absQuantity,
             type);
     }
 

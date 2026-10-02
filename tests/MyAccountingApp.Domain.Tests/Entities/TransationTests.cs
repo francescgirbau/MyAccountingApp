@@ -45,6 +45,21 @@ public class TransactionTests
         Assert.Contains("cannot be zero", ex.Message);
     }
 
+    [Theory]
+    [InlineData(TransactionCategory.INVESTMENT)]
+    [InlineData(TransactionCategory.DIVESTMENT)]
+    public void Constructor_AllowsZeroAmount_ForInstrumentLegs(TransactionCategory category)
+    {
+        // IBKR reports option closing/allocation legs with zero proceeds: the leg moves the
+        // position quantity even though no cash is exchanged (assignment or expiry close).
+        DateTime date = new DateTime(2025, 8, 27);
+        Money money = new Money(amount: 0, currency: Currencies.EUR.ToString());
+
+        Transaction transaction = new Transaction(date, "Zero premium leg", money, category);
+
+        Assert.Equal(0m, transaction.Money.Amount);
+    }
+
     [Fact]
     public void Constructor_ShouldAdjustSign_WhenCategoryIsIncome()
     {

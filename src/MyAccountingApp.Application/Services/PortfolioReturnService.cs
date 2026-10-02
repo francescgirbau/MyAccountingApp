@@ -13,7 +13,6 @@ namespace MyAccountingApp.Application.Services;
 public class PortfolioReturnService : IPortfolioReturnService
 {
     private readonly IPortfolioRepository _portfolioRepo;
-    private readonly IOptionTransactionRepository _optionRepo;
     private readonly ITransactionRepository _transactionRepo;
     private readonly IToEurConverter _toEurConverter;
     private readonly IPositionValuationService _valuationService;
@@ -22,19 +21,16 @@ public class PortfolioReturnService : IPortfolioReturnService
     /// Initializes a new instance of the <see cref="PortfolioReturnService"/> class.
     /// </summary>
     /// <param name="portfolioRepo">Repository holding the asset transactions.</param>
-    /// <param name="optionRepo">Repository holding the option transactions.</param>
     /// <param name="transactionRepo">Repository holding the cash transactions (dividends, withholding taxes).</param>
     /// <param name="toEurConverter">Converter used to express every flow in EUR at its own date.</param>
     /// <param name="valuationService">Service providing the current market value of the portfolio.</param>
     public PortfolioReturnService(
         IPortfolioRepository portfolioRepo,
-        IOptionTransactionRepository optionRepo,
         ITransactionRepository transactionRepo,
         IToEurConverter toEurConverter,
         IPositionValuationService valuationService)
     {
         this._portfolioRepo = portfolioRepo;
-        this._optionRepo = optionRepo;
         this._transactionRepo = transactionRepo;
         this._toEurConverter = toEurConverter;
         this._valuationService = valuationService;
@@ -48,18 +44,6 @@ public class PortfolioReturnService : IPortfolioReturnService
         int excluded = 0;
 
         foreach (AssetTransaction tx in this._portfolioRepo.GetAllTransactions())
-        {
-            await this.AddInstrumentFlowAsync(
-                tx.Type == AssetTransactionType.Buy ? capitalFlows : proceedsFlows,
-                tx.Transaction.Money,
-                DateOnly.FromDateTime(tx.Transaction.Date),
-                asOf,
-                tx.Type,
-                cancellationToken,
-                () => excluded++);
-        }
-
-        foreach (OptionTransaction tx in this._optionRepo.GetAll())
         {
             await this.AddInstrumentFlowAsync(
                 tx.Type == AssetTransactionType.Buy ? capitalFlows : proceedsFlows,

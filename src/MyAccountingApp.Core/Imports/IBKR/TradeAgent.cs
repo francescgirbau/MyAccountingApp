@@ -43,12 +43,20 @@ public class TradeAgent : IIBKRStatementAgent
                 continue;
             }
 
-            if (!TryParseDecimal(proceedsStr, out decimal proceeds) || proceeds == 0)
+            if (!TryParseDecimal(proceedsStr, out decimal proceeds))
             {
                 continue;
             }
 
-            bool isBuy = proceeds < 0;
+            bool isOption = assetCategory == "Equity and Index Options";
+            if (!isOption && proceeds == 0)
+            {
+                continue;
+            }
+
+            // For options the direction comes from the signed quantity: a closing/allocation
+            // leg has zero proceeds but still moves the position, so it must not be skipped.
+            bool isBuy = isOption ? rawQuantity > 0 : proceeds < 0;
             int quantity = (int)Math.Abs(rawQuantity);
 
             if (assetCategory == "Equity and Index Options")

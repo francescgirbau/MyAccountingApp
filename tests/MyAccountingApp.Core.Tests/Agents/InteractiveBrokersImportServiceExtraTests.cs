@@ -100,12 +100,64 @@ public class InteractiveBrokersImportServiceExtraTests
     }
 
     [Fact]
-    public async Task ParseAllAsync_AssetWithZeroQuantity_InfersDirectionFromAmount()
+    public async Task ParseAllAsync_CashMovementWithSymbol_DoesNotCreateAssetTransaction()
+    {
+        // Dividends, fees and interest carry the instrument symbol but an empty quantity:
+        // they are cash movements and must never become phantom ±1 share transactions.
+        List<IBKRTransactionRecord> records = new()
+        {
+            Record("Dividend", "DIAGEO PLC DIVIDEND", "DGE", "-", "GBP", "25.00"),
+            Record("Fee", "Commission", "AAPL", "-", "USD", "-2.50"),
+        };
+        this.Setup(records);
+
+        (IEnumerable<Transaction> tx, IEnumerable<AssetTransaction> assets, _) = await this.agent.ParseAllAsync("test.csv");
+
+        Assert.Empty(assets);
+        Assert.Equal(2, tx.Count());
+        Assert.Equal(TransactionCategory.DIVIDEND, tx.First().Category);
+        Assert.Equal(TransactionCategory.FEE, tx.Last().Category);
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_PutAssignment_IsBuy()
     {
         List<IBKRTransactionRecord> records = new()
         {
-            Record("Buy", "Buy AAPL", "AAPL", "0", "USD", "15000.00"),
-            Record("Sell", "Sell MSFT", "MSFT", "0", "USD", "-15000.00"),
+            Record("Assignment", "Buy 1,000 DIAGEO PLC (Assignment)", "DGE", "1000", "GBP", "-31930.00"),
+        };
+        this.Setup(records);
+
+        (_, IEnumerable<AssetTransaction> assets, _) = await this.agent.ParseAllAsync("test.csv");
+
+        AssetTransaction asset = Assert.Single(assets);
+        Assert.Equal(AssetTransactionType.Buy, asset.Type);
+        Assert.Equal(1000, asset.Quantity);
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_CallAssignment_IsSell()
+    {
+        List<IBKRTransactionRecord> records = new()
+        {
+            Record("Assignment", "Sell -1,000 DIAGEO PLC (Assignment)", "DGE", "-1000", "GBP", "22581.00"),
+        };
+        this.Setup(records);
+
+        (_, IEnumerable<AssetTransaction> assets, _) = await this.agent.ParseAllAsync("test.csv");
+
+        AssetTransaction asset = Assert.Single(assets);
+        Assert.Equal(AssetTransactionType.Sell, asset.Type);
+        Assert.Equal(1000, asset.Quantity);
+    }
+
+    [Fact]
+    public async Task ParseAllAsync_AssignmentWithoutDirection_FallsBackToQuantitySign()
+    {
+        List<IBKRTransactionRecord> records = new()
+        {
+            Record("Assignment", "Assignment of AAPL shares", "AAPL", "10", "USD", "-15000.00"),
+            Record("Exercise", "Exercise of MSFT shares", "MSFT", "-10", "USD", "15000.00"),
         };
         this.Setup(records);
 
@@ -113,40 +165,8 @@ public class InteractiveBrokersImportServiceExtraTests
 
         List<AssetTransaction> list = assets.ToList();
         Assert.Equal(2, list.Count);
-        Assert.Equal(AssetTransactionType.Sell, list[0].Type);
-        Assert.Equal(TransactionCategory.DIVESTMENT, list[0].Transaction.Category);
-        Assert.Equal(AssetTransactionType.Buy, list[1].Type);
-        Assert.Equal(TransactionCategory.INVESTMENT, list[1].Transaction.Category);
-    }
-
-    [Fact]
-    public async Task ParseAllAsync_Assignment_IsSell()
-    {
-        List<IBKRTransactionRecord> records = new()
-        {
-            Record("Assignment", "Assignment of AAPL shares", "AAPL", "10", "USD", "-15000.00"),
-        };
-        this.Setup(records);
-
-        (_, IEnumerable<AssetTransaction> assets, _) = await this.agent.ParseAllAsync("test.csv");
-
-        AssetTransaction asset = Assert.Single(assets);
-        Assert.Equal(AssetTransactionType.Sell, asset.Type);
-    }
-
-    [Fact]
-    public async Task ParseAllAsync_Exercise_IsSell()
-    {
-        List<IBKRTransactionRecord> records = new()
-        {
-            Record("Exercise", "Exercise of MSFT shares", "MSFT", "10", "USD", "15000.00"),
-        };
-        this.Setup(records);
-
-        (_, IEnumerable<AssetTransaction> assets, _) = await this.agent.ParseAllAsync("test.csv");
-
-        AssetTransaction asset = Assert.Single(assets);
-        Assert.Equal(AssetTransactionType.Sell, asset.Type);
+        Assert.Equal(AssetTransactionType.Buy, list[0].Type);
+        Assert.Equal(AssetTransactionType.Sell, list[1].Type);
     }
 
     [Fact]

@@ -109,8 +109,9 @@ public class PortfolioReturnServiceTests
     }
 
     [Fact]
-    public async Task GetReturnAsync_CountsOptionBuys_AsCapital()
+    public async Task GetReturnAsync_ExcludesOptions_FromPortfolioReturn()
     {
+        // Option positions live on their own page and do not contribute to the portfolio return.
         FakePortfolioRepo repo = new();
         FakeOptionRepository optionRepo = new();
         optionRepo.Add(new OptionTransaction(
@@ -120,13 +121,12 @@ public class PortfolioReturnServiceTests
             2,
             AssetTransactionType.Buy));
         FakeMarketPriceService priceService = new(new Dictionary<string, Money> { { "SPX", new Money(300m, "EUR") } });
-        PortfolioReturnService service = CreateService(repo, optionRepo, priceService: priceService);
+        PortfolioReturnService service = CreateService(repo, priceService: priceService);
 
         PortfolioReturnDto result = await service.GetReturnAsync(new DateOnly(2026, 1, 1));
 
-        Assert.Equal(500m, result.CapitalInvestedEur);
-        Assert.Equal(600m, result.TerminalValueEur);                   // 2 * 300
-        Assert.Equal(0.20m, result.TotalReturn);                       // (600 - 500) / 500
+        Assert.Equal(0m, result.CapitalInvestedEur);
+        Assert.Equal(0m, result.TerminalValueEur);
     }
 
     private static AssetTransaction Buy(string symbol, string currency, decimal price, decimal quantity, DateTime date)
@@ -154,21 +154,19 @@ public class PortfolioReturnServiceTests
 
     private static PortfolioReturnService CreateService(
         FakePortfolioRepo repo,
-        FakeOptionRepository? optionRepo = null,
         FakeTxRepo? txRepo = null,
         FakeMarketPriceService? priceService = null)
     {
-        optionRepo ??= new FakeOptionRepository();
         txRepo ??= new FakeTxRepo();
         priceService ??= new FakeMarketPriceService();
-        PositionEngine engine = new(repo, optionRepo, priceService);
+        PositionEngine engine = new(repo, priceService);
         FakeConversionRepository conversions = new();
         FakeApiQuotaManager quota = new();
         FakePendingWorkQueue queue = new();
         CurrencyRateService rateService = new(conversions, new FakeCurrencyConverter(), Currencies.EUR, quota, queue);
         ToEurConverter converter = new(rateService);
-        PositionValuationService valuationService = new(repo, optionRepo, engine, converter);
-        return new PortfolioReturnService(repo, optionRepo, txRepo, converter, valuationService);
+        PositionValuationService valuationService = new(repo, engine, converter);
+        return new PortfolioReturnService(repo, txRepo, converter, valuationService);
     }
 
     private sealed class FakePortfolioRepo : IPortfolioRepository

@@ -8,7 +8,6 @@ public sealed record PortfolioOverviewDto(
     DateTimeOffset? PricesAsOfUtc,
     bool IsMarketClosed,
     int UnpricedPositionCount,
-    int OptionSymbolCount,
     IReadOnlyList<PortfolioPositionRowDto> Positions,
     IReadOnlyList<AllocationSliceDto> PurchaseAllocation,
     IReadOnlyList<AllocationSliceDto> CurrentAllocation);

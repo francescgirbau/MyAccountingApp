@@ -139,7 +139,12 @@ public class Transaction
     {
         string parentType = nameof(Transaction);
 
-        if (this.Money.Amount == 0)
+        // Instrument legs (INVESTMENT/DIVESTMENT) may legitimately carry a zero amount: IBKR
+        // reports option closing/allocation legs with zero proceeds. The leg still moves the
+        // position quantity even though no cash is exchanged (assignment or expiry close).
+        bool isInstrumentLeg = this.Category is TransactionCategory.INVESTMENT or TransactionCategory.DIVESTMENT;
+
+        if (this.Money.Amount == 0 && !isInstrumentLeg)
         {
             string message = $"The {nameof(this.Money.Amount)} cannot be zero, you provided {this.Money.Amount} {this.Money.Currency}";
 

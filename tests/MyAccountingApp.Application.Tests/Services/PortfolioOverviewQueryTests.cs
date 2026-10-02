@@ -22,7 +22,7 @@ public class PortfolioOverviewQueryTests
             { "A", new Money(1m, "EUR") },
             { "B", new Money(1m, "EUR") },
         });
-        PortfolioOverviewQuery query = new(pfRepo, new FakeOptionRepo(), prices, new FakeConversionRepository());
+        PortfolioOverviewQuery query = new(pfRepo, prices, new FakeConversionRepository());
 
         // Act
         PortfolioOverviewDto result = await query.GetOverviewAsync(AsOf);
@@ -60,7 +60,7 @@ public class PortfolioOverviewQueryTests
         // Arrange: C has no cached quote, so it must not enter the totals nor the weight denominators.
         FakePfRepo pfRepo = new(new[] { Buy("A", 10, 70), Buy("C", 5, 50) });
         FakeMarketPriceService prices = new(new Dictionary<string, Money> { { "A", new Money(1m, "EUR") } });
-        PortfolioOverviewQuery query = new(pfRepo, new FakeOptionRepo(), prices, new FakeConversionRepository());
+        PortfolioOverviewQuery query = new(pfRepo, prices, new FakeConversionRepository());
 
         // Act
         PortfolioOverviewDto result = await query.GetOverviewAsync(AsOf);
@@ -86,7 +86,7 @@ public class PortfolioOverviewQueryTests
         // Arrange: CLOSED was fully sold, so its net quantity is zero and it must not appear.
         FakePfRepo pfRepo = new(new[] { Buy("A", 10, 70), Buy("CLOSED", 5, 10), Sell("CLOSED", 5, 10) });
         FakeMarketPriceService prices = new(new Dictionary<string, Money> { { "A", new Money(1m, "EUR") } });
-        PortfolioOverviewQuery query = new(pfRepo, new FakeOptionRepo(), prices, new FakeConversionRepository());
+        PortfolioOverviewQuery query = new(pfRepo, prices, new FakeConversionRepository());
 
         // Act
         PortfolioOverviewDto result = await query.GetOverviewAsync(AsOf);
@@ -102,7 +102,7 @@ public class PortfolioOverviewQueryTests
         // Arrange: free stock (cost 0) must not throw nor produce a P/L percentage.
         FakePfRepo pfRepo = new(new[] { Buy("FREE", 5, 0) });
         FakeMarketPriceService prices = new(new Dictionary<string, Money> { { "FREE", new Money(2m, "EUR") } });
-        PortfolioOverviewQuery query = new(pfRepo, new FakeOptionRepo(), prices, new FakeConversionRepository());
+        PortfolioOverviewQuery query = new(pfRepo, prices, new FakeConversionRepository());
 
         // Act
         PortfolioOverviewDto result = await query.GetOverviewAsync(AsOf);
@@ -125,7 +125,7 @@ public class PortfolioOverviewQueryTests
         List<AssetTransaction> txs = Enumerable.Range(1, 9).Select(i => Buy($"T{i}", 1, 10)).ToList();
         Dictionary<string, Money> prices = Enumerable.Range(1, 9).ToDictionary(i => $"T{i}", _ => new Money(2m, "EUR"));
         FakePfRepo pfRepo = new(txs);
-        PortfolioOverviewQuery query = new(pfRepo, new FakeOptionRepo(), new FakeMarketPriceService(prices), new FakeConversionRepository());
+        PortfolioOverviewQuery query = new(pfRepo, new FakeMarketPriceService(prices), new FakeConversionRepository());
 
         // Act
         PortfolioOverviewDto result = await query.GetOverviewAsync(AsOf);
@@ -146,7 +146,7 @@ public class PortfolioOverviewQueryTests
         List<AssetTransaction> txs = Enumerable.Range(1, 9).Select(i => Buy($"T{i}", 1, i * 5)).ToList();
         Dictionary<string, Money> prices = Enumerable.Range(1, 9).ToDictionary(i => $"T{i}", _ => new Money(2m, "EUR"));
         FakePfRepo pfRepo = new(txs);
-        PortfolioOverviewQuery query = new(pfRepo, new FakeOptionRepo(), new FakeMarketPriceService(prices), new FakeConversionRepository());
+        PortfolioOverviewQuery query = new(pfRepo, new FakeMarketPriceService(prices), new FakeConversionRepository());
 
         // Act
         PortfolioOverviewDto result = await query.GetOverviewAsync(AsOf);
@@ -167,7 +167,7 @@ public class PortfolioOverviewQueryTests
             { "B", new Money(2m, "EUR") },
             { "C", new Money(3m, "EUR") },
         });
-        PortfolioOverviewQuery query = new(pfRepo, new FakeOptionRepo(), prices, new FakeConversionRepository());
+        PortfolioOverviewQuery query = new(pfRepo, prices, new FakeConversionRepository());
 
         // Act
         PortfolioOverviewDto result = await query.GetOverviewAsync(AsOf);
@@ -185,7 +185,7 @@ public class PortfolioOverviewQueryTests
         // Arrange: USD position converted with the default rate of 1.1 EUR per USD at 2025-01-01.
         FakePfRepo pfRepo = new(new[] { Buy("USD.X", 10, 110, "USD") });
         FakeMarketPriceService prices = new(new Dictionary<string, Money> { { "USD.X", new Money(1m, "USD") } });
-        PortfolioOverviewQuery query = new(pfRepo, new FakeOptionRepo(), prices, new FakeConversionRepository());
+        PortfolioOverviewQuery query = new(pfRepo, prices, new FakeConversionRepository());
 
         // Act
         PortfolioOverviewDto result = await query.GetOverviewAsync(AsOf);
@@ -200,132 +200,57 @@ public class PortfolioOverviewQueryTests
     }
 
     [Fact]
-    public async Task GetOverviewAsync_ReportsOptionSymbols_AsUnsupported()
+    public async Task GetOverviewAsync_ExcludesOptionOnlySymbols()
     {
-        // Arrange
+        // Option positions live on their own independent page; they must not enter the portfolio.
         FakePfRepo pfRepo = new(new[] { Buy("A", 10, 70) });
         FakeOptionRepo optionRepo = new();
-        optionRepo.Add(new OptionTransaction(
-            new Transaction(Guid.NewGuid(), DateTime.UtcNow.AddDays(-30), "Option", new Money(50, "EUR"), TransactionCategory.INCOME),
-            "AAPL",
-            "US0378331005",
-            2,
-            AssetTransactionType.Buy));
-        FakeMarketPriceService prices = new(new Dictionary<string, Money> { { "A", new Money(1m, "EUR") } });
-        PortfolioOverviewQuery query = new(pfRepo, optionRepo, prices, new FakeConversionRepository());
-
-        // Act
-        PortfolioOverviewDto result = await query.GetOverviewAsync(AsOf);
-
-        // Assert
-        Assert.Equal(1, result.OptionSymbolCount);
-    }
-
-    [Fact]
-    public async Task GetOverviewAsync_IncludesLongOptionPosition()
-    {
-        FakePfRepo pfRepo = new();
-        FakeOptionRepo optionRepo = new();
         optionRepo.Add(Option("VET", "EUR", 2, 30m, AssetTransactionType.Buy));
-        FakeMarketPriceService prices = new(new Dictionary<string, Money> { { "VET", new Money(35m, "EUR") } });
-        PortfolioOverviewQuery query = new(pfRepo, optionRepo, prices, new FakeConversionRepository());
+        FakeMarketPriceService prices = new(new Dictionary<string, Money> { { "A", new Money(1m, "EUR") } });
+        PortfolioOverviewQuery query = new(pfRepo, prices, new FakeConversionRepository());
 
         PortfolioOverviewDto result = await query.GetOverviewAsync(AsOf);
 
         PortfolioPositionRowDto row = Assert.Single(result.Positions);
-        Assert.Equal("Option", row.AssetClass);
-        Assert.Equal(2m, row.Quantity);
-        Assert.Equal(60m, row.Cost);
-        Assert.Equal(70m, row.MarketValue);
-        Assert.Equal(10m, row.UnrealizedPnL);
-        Assert.True(row.IsPriced);
-        Assert.Equal(70m, result.MarketValueEur);
-        Assert.Equal(60m, result.InvestedCostEur);
-        Assert.Equal(10m, result.UnrealizedPnLEur);
-        Assert.Equal(1, result.OptionSymbolCount);
+        Assert.Equal("A", row.Symbol);
+        Assert.Equal("Stock", row.AssetClass);
+        Assert.DoesNotContain(result.Positions, p => p.Symbol == "VET");
     }
 
     [Fact]
-    public async Task GetOverviewAsync_IncludesShortOptionPosition_ExcludesFromPies()
-    {
-        FakePfRepo pfRepo = new();
-        FakeOptionRepo optionRepo = new();
-
-        // Open short 3 options at 100 premium each (credit 300), current price 80 (gain).
-        optionRepo.Add(Option("SPX", "EUR", 3, 100m, AssetTransactionType.Sell));
-        FakeMarketPriceService prices = new(new Dictionary<string, Money> { { "SPX", new Money(80m, "EUR") } });
-        PortfolioOverviewQuery query = new(pfRepo, optionRepo, prices, new FakeConversionRepository());
-
-        PortfolioOverviewDto result = await query.GetOverviewAsync(AsOf);
-
-        PortfolioPositionRowDto row = Assert.Single(result.Positions);
-        Assert.Equal("Option", row.AssetClass);
-        Assert.Equal(-3m, row.Quantity);
-        Assert.Equal(-300m, row.Cost);
-        Assert.Equal(-240m, row.MarketValue);
-        Assert.Equal(60m, row.UnrealizedPnL);
-        Assert.True(row.IsPriced);
-        Assert.Equal(-240m, result.MarketValueEur);
-        Assert.Equal(-300m, result.InvestedCostEur);
-        Assert.Equal(60m, result.UnrealizedPnLEur);
-        Assert.Empty(result.PurchaseAllocation);
-        Assert.Empty(result.CurrentAllocation);
-    }
-
-    [Fact]
-    public async Task GetOverviewAsync_UnpricedOption_CountedButNotInTotalsOrPies()
+    public async Task GetOverviewAsync_OptionOnlyPosition_IsNotCountedAsUnpriced()
     {
         FakePfRepo pfRepo = new();
         FakeOptionRepo optionRepo = new();
         optionRepo.Add(Option("VET", "EUR", 2, 30m, AssetTransactionType.Buy));
         FakeMarketPriceService prices = new();
-        PortfolioOverviewQuery query = new(pfRepo, optionRepo, prices, new FakeConversionRepository());
-
-        PortfolioOverviewDto result = await query.GetOverviewAsync(AsOf);
-
-        Assert.Equal(1, result.UnpricedPositionCount);
-        PortfolioPositionRowDto row = Assert.Single(result.Positions);
-        Assert.False(row.IsPriced);
-        Assert.Null(row.MarketValue);
-        Assert.Null(row.PurchaseWeight);
-        Assert.Null(row.CurrentWeight);
-        Assert.Empty(result.PurchaseAllocation);
-        Assert.Empty(result.CurrentAllocation);
-    }
-
-    [Fact]
-    public async Task GetOverviewAsync_ExcludesClosedOptionPosition()
-    {
-        FakePfRepo pfRepo = new();
-        FakeOptionRepo optionRepo = new();
-        optionRepo.Add(Option("VET", "EUR", 2, 30m, AssetTransactionType.Buy));
-        optionRepo.Add(Option("VET", "EUR", 2, 40m, AssetTransactionType.Sell));
-        PortfolioOverviewQuery query = new(pfRepo, optionRepo, new FakeMarketPriceService(new Dictionary<string, Money> { { "VET", new Money(35m, "EUR") } }), new FakeConversionRepository());
+        PortfolioOverviewQuery query = new(pfRepo, prices, new FakeConversionRepository());
 
         PortfolioOverviewDto result = await query.GetOverviewAsync(AsOf);
 
         Assert.Empty(result.Positions);
-        Assert.Equal(0, result.OptionSymbolCount);
+        Assert.Equal(0, result.UnpricedPositionCount);
     }
 
     [Fact]
-    public async Task GetOverviewAsync_MergesStockAndOptionSameSymbol_AsMixed()
+    public async Task GetOverviewAsync_DoesNotMergeOptionsIntoStockQuantity()
     {
+        // A stock and an option sharing the same underlying are separate instruments: the
+        // position row keeps the stock quantity and cost, option contracts are never added.
         FakePfRepo pfRepo = new(new[] { Buy("VET", 10, 500) });
         FakeOptionRepo optionRepo = new();
         optionRepo.Add(Option("VET", "EUR", 3, 100m, AssetTransactionType.Sell));
         FakeMarketPriceService prices = new(new Dictionary<string, Money> { { "VET", new Money(60m, "EUR") } });
-        PortfolioOverviewQuery query = new(pfRepo, optionRepo, prices, new FakeConversionRepository());
+        PortfolioOverviewQuery query = new(pfRepo, prices, new FakeConversionRepository());
 
         PortfolioOverviewDto result = await query.GetOverviewAsync(AsOf);
 
         PortfolioPositionRowDto row = Assert.Single(result.Positions);
-        Assert.Equal("Mixed", row.AssetClass);
-        Assert.Equal(7m, row.Quantity); // 10 stock - 3 short options
-        Assert.Equal(200m, row.Cost); // 500 stock - 300 option credit
-        Assert.Equal(420m, row.MarketValue);
-        Assert.Equal(220m, row.UnrealizedPnL);
-        Assert.Equal(1, result.OptionSymbolCount);
+        Assert.Equal("Stock", row.AssetClass);
+        Assert.Equal(10m, row.Quantity);
+        Assert.Equal(500m, row.Cost);
+        Assert.Equal(600m, row.MarketValue);
+        Assert.Equal(100m, row.UnrealizedPnL);
     }
 
     private static OptionTransaction Option(string symbol, string currency, decimal quantity, decimal premium, AssetTransactionType type)

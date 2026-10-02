@@ -31,10 +31,6 @@
 {
     <MudAlert Severity="Severity.Info" Class="mb-4">Market closed — using last close prices as of @PortfolioDisplay.FormatAsOf(Overview.PricesAsOfUtc.Value).</MudAlert>
 }
-@if (Overview.OptionSymbolCount > 0)
-{
-    <MudAlert Severity="Severity.Warning" Class="mb-4">@Overview.OptionSymbolCount option symbol(s) not included in allocation.</MudAlert>
-}
 
 @code {
     [Parameter] public PortfolioOverviewDto Overview { get; set; } = default!;

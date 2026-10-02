@@ -54,6 +54,31 @@ public class IBKRStatementAgentsTests
     }
 
     [Fact]
+    public void TradeAgent_ParsesOptionClosings_WithZeroProceeds()
+    {
+        // Closing/allocation legs have zero proceeds but a signed quantity: they move the
+        // position and must be parsed (the direction comes from the quantity sign), not skipped.
+        TradeAgent agent = new();
+        List<Transaction> tx = new();
+        List<AssetTransaction> assets = new();
+        List<OptionTransaction> options = new();
+        List<string> errors = new();
+
+        List<string[]> rows = new()
+        {
+            new[] { "Trades", "Data", "Order", "Equity and Index Options", "USD", "DGE 18SEP26 27 C", "2024-05-22, 12:00:00", "-1.0", string.Empty, string.Empty, "500.00", string.Empty, string.Empty, string.Empty, string.Empty },
+            new[] { "Trades", "Data", "Order", "Equity and Index Options", "USD", "DGE 18SEP26 27 C", "2025-09-22, 12:00:00", "1.0", string.Empty, string.Empty, "0", string.Empty, string.Empty, string.Empty, string.Empty },
+        };
+
+        agent.Parse(rows, tx, assets, options, errors);
+
+        Assert.Equal(2, options.Count);
+        Assert.Equal(AssetTransactionType.Sell, options[0].Type); // opening short
+        Assert.Equal(AssetTransactionType.Buy, options[1].Type); // closing
+        Assert.Empty(assets);
+    }
+
+    [Fact]
     public void TradeAgent_SkipsInvalidRows()
     {
         TradeAgent agent = new();
