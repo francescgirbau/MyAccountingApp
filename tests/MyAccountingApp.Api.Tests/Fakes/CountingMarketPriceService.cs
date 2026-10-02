@@ -6,21 +6,21 @@ namespace MyAccountingApp.Api.Tests.Fakes;
 
 public class CountingMarketPriceService : IMarketPriceService
 {
-    private static int _calls;
+    private int _calls;
 
-    public static int Calls => Volatile.Read(ref _calls);
+    public int Calls => Volatile.Read(ref this._calls);
 
-    public static void Reset() => Interlocked.Exchange(ref _calls, 0);
+    public void Reset() => Interlocked.Exchange(ref this._calls, 0);
 
     public Task<Money?> GetPriceAsync(string symbol, string? quoteCurrency = null)
     {
-        Interlocked.Increment(ref _calls);
+        Interlocked.Increment(ref this._calls);
         return Task.FromResult<Money?>(new Money(100m, "USD"));
     }
 
     public Task<Money?> RefreshPriceAsync(string symbol, string? quoteCurrency = null)
     {
-        Interlocked.Increment(ref _calls);
+        Interlocked.Increment(ref this._calls);
         return Task.FromResult<Money?>(new Money(100m, "USD"));
     }
 
