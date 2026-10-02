@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using MyAccountingApp.Api.Tests.Fakes;
+using MyAccountingApp.Domain.Interfaces;
 
 namespace MyAccountingApp.Api.Tests;
 
@@ -87,8 +89,8 @@ public class PortfolioEndpointsTests
     public async Task Portfolio_ByDefault_DoesNotFetchMarketPrices()
     {
         // Arrange
-        CountingMarketPriceService.Reset();
         using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        CountingMarketPriceService priceService = GetPriceService(factory);
         HttpClient client = factory.CreateClient();
         await SeedBuyAsync(client);
 
@@ -97,7 +99,7 @@ public class PortfolioEndpointsTests
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(0, CountingMarketPriceService.Calls);
+        Assert.Equal(0, priceService.Calls);
         using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         JsonElement position = Assert.Single(document.RootElement.EnumerateArray());
         Assert.Equal(JsonValueKind.Null, position.GetProperty("marketPrice").ValueKind);
@@ -129,8 +131,8 @@ public class PortfolioEndpointsTests
     public async Task Portfolio_WithIncludePrices_FetchesMarketPrices()
     {
         // Arrange
-        CountingMarketPriceService.Reset();
         using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        CountingMarketPriceService priceService = GetPriceService(factory);
         HttpClient client = factory.CreateClient();
         await SeedBuyAsync(client);
 
@@ -139,7 +141,7 @@ public class PortfolioEndpointsTests
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(1, CountingMarketPriceService.Calls);
+        Assert.Equal(1, priceService.Calls);
         using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         JsonElement position = Assert.Single(document.RootElement.EnumerateArray());
         Assert.Equal(100m, position.GetProperty("marketPrice").GetDecimal());
@@ -150,8 +152,8 @@ public class PortfolioEndpointsTests
     public async Task Portfolio_SingleSymbol_FetchesMarketPriceByDefault()
     {
         // Arrange
-        CountingMarketPriceService.Reset();
         using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        CountingMarketPriceService priceService = GetPriceService(factory);
         HttpClient client = factory.CreateClient();
         await SeedBuyAsync(client);
 
@@ -160,7 +162,7 @@ public class PortfolioEndpointsTests
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(1, CountingMarketPriceService.Calls);
+        Assert.Equal(1, priceService.Calls);
         using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal(100m, document.RootElement.GetProperty("marketPrice").GetDecimal());
     }
@@ -169,8 +171,8 @@ public class PortfolioEndpointsTests
     public async Task Portfolio_SingleSymbol_WithoutPrices_DoesNotFetch()
     {
         // Arrange
-        CountingMarketPriceService.Reset();
         using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        CountingMarketPriceService priceService = GetPriceService(factory);
         HttpClient client = factory.CreateClient();
         await SeedBuyAsync(client);
 
@@ -179,7 +181,7 @@ public class PortfolioEndpointsTests
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(0, CountingMarketPriceService.Calls);
+        Assert.Equal(0, priceService.Calls);
         using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("marketPrice").ValueKind);
     }
@@ -188,8 +190,8 @@ public class PortfolioEndpointsTests
     public async Task RefreshPrices_ShouldWarmPricesAndReturnPositions()
     {
         // Arrange
-        CountingMarketPriceService.Reset();
         using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        CountingMarketPriceService priceService = GetPriceService(factory);
         HttpClient client = factory.CreateClient();
         await SeedBuyAsync(client);
 
@@ -198,7 +200,7 @@ public class PortfolioEndpointsTests
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(2, CountingMarketPriceService.Calls);
+        Assert.Equal(2, priceService.Calls);
         using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         JsonElement position = Assert.Single(document.RootElement.EnumerateArray());
         Assert.Equal(100m, position.GetProperty("marketPrice").GetDecimal());
@@ -207,7 +209,6 @@ public class PortfolioEndpointsTests
     [Fact]
     public async Task Valuation_ShouldConvertNonEurPosition_WithRateAndRateDate()
     {
-        CountingMarketPriceService.Reset();
         using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
         HttpClient client = factory.CreateClient();
         await SeedBuyAsync(client, currency: "USD");
@@ -230,7 +231,6 @@ public class PortfolioEndpointsTests
     [Fact]
     public async Task Valuation_ShouldUseIdentityRate_ForEurPosition()
     {
-        CountingMarketPriceService.Reset();
         using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
         HttpClient client = factory.CreateClient();
         await SeedBuyAsync(client);
@@ -248,7 +248,6 @@ public class PortfolioEndpointsTests
     [Fact]
     public async Task Return_ComputesMoneyWeightedReturn_FromSeededBuy()
     {
-        CountingMarketPriceService.Reset();
         using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
         HttpClient client = factory.CreateClient();
         await SeedBuyAsync(client);
@@ -282,6 +281,9 @@ public class PortfolioEndpointsTests
         Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("ayiYears").ValueKind);
         Assert.Equal(0m, document.RootElement.GetProperty("terminalValueEur").GetDecimal());
     }
+
+    private static CountingMarketPriceService GetPriceService(ApiWebApplicationFactory factory) =>
+        Assert.IsType<CountingMarketPriceService>(factory.Services.GetRequiredService<IMarketPriceService>());
 
     private static async Task SeedBuyAsync(HttpClient client, string currency = "EUR")
     {
