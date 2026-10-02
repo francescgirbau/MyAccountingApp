@@ -166,3 +166,11 @@ html[data-theme='dark'] .loading-progress circle:last-child {
 html[data-theme='dark'] code {
     color: #ff8ac2;
 }
+
+/* Portfolio tables (positions + allocation): reduce horizontal cell padding so the
+   tables with valuations fit without horizontal scroll on 1280px windows. Scoped via
+   TableClass so no other table in the app is affected. */
+.portfolio-table-compact tr > :is(td, th).mud-table-cell {
+    padding-inline-start: 10px;
+    padding-inline-end: 16px;
+}
