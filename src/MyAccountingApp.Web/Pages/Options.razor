@@ -26,35 +26,42 @@ else if (_allTransactions.Count == 0)
 }
 else
 {
-    <OptionTransactionFilters
-        AvailableYears="@_availableYears"
-        SelectedYear="@_selectedYear"
-        SelectedYearChanged="@OnYearChanged"
-        AvailableSymbols="@_availableSymbols"
-        SelectedSymbol="@_selectedSymbol"
-        SelectedSymbolChanged="@OnSymbolChanged"
-        OnDeleteYear="@OpenDeleteYearDialog" />
+    <MudTabs Class="mt-0">
+        <MudTabPanel Text="Positions">
+            <OptionPositionTable Positions="@_positions" OnRefresh="@LoadDataAsync" />
+        </MudTabPanel>
+        <MudTabPanel Text="Transactions">
+            <OptionTransactionFilters
+                AvailableYears="@_availableYears"
+                SelectedYear="@_selectedYear"
+                SelectedYearChanged="@OnYearChanged"
+                AvailableSymbols="@_availableSymbols"
+                SelectedSymbol="@_selectedSymbol"
+                SelectedSymbolChanged="@OnSymbolChanged"
+                OnDeleteYear="@OpenDeleteYearDialog" />
 
-    @if (_selected.Count > 0)
-    {
-        <MudPaper Class="pa-2 mb-2 d-flex align-center" Outlined="true">
-            <MudChip T="int" Color="Color.Primary" Size="Size.Small">@_selected.Count selected</MudChip>
-            <MudText Typo="Typo.body2" Class="ml-2 mud-text-secondary">visible rows selected — bulk actions apply only to these</MudText>
-            <MudSpacer />
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                       OnClick="@OpenBulkSymbolDialog" StartIcon="@Icons.Material.Filled.Edit">
-                Change symbol
-            </MudButton>
-            <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="@ClearSelection" Size="Size.Small" />
-        </MudPaper>
-    }
+            @if (_selected.Count > 0)
+            {
+                <MudPaper Class="pa-2 mb-2 d-flex align-center" Outlined="true">
+                    <MudChip T="int" Color="Color.Primary" Size="Size.Small">@_selected.Count selected</MudChip>
+                    <MudText Typo="Typo.body2" Class="ml-2 mud-text-secondary">visible rows selected — bulk actions apply only to these</MudText>
+                    <MudSpacer />
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                               OnClick="@OpenBulkSymbolDialog" StartIcon="@Icons.Material.Filled.Edit">
+                        Change symbol
+                    </MudButton>
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="@ClearSelection" Size="Size.Small" />
+                </MudPaper>
+            }
 
-    <OptionTransactionList Transactions="@_filteredTransactions"
-                            Selected="@_selected"
-                            SelectedChanged="@OnSelectedChanged"
-                            OnRefresh="@LoadDataAsync"
-                            OnEdit="@OpenEditDialog"
-                            OnDelete="@OpenDeleteDialog" />
+            <OptionTransactionList Transactions="@_filteredTransactions"
+                                    Selected="@_selected"
+                                    SelectedChanged="@OnSelectedChanged"
+                                    OnRefresh="@LoadDataAsync"
+                                    OnEdit="@OpenEditDialog"
+                                    OnDelete="@OpenDeleteDialog" />
+        </MudTabPanel>
+    </MudTabs>
 }
 
 <OptionTransactionFormDialog @bind-Visible="_showFormDialog"
@@ -79,6 +86,7 @@ else
 @code {
     private List<OptionTransactionDto> _allTransactions = new();
     private List<OptionTransactionDto> _filteredTransactions = new();
+    private List<OptionPositionDto> _positions = new();
     private List<int> _availableYears = new();
     private List<string> _availableSymbols = new();
     private bool _loading = true;
@@ -110,6 +118,7 @@ else
         try
         {
             _allTransactions = await Http.GetFromJsonAsync<List<OptionTransactionDto>>("/api/option-transactions") ?? new();
+            _positions = await Http.GetFromJsonAsync<List<OptionPositionDto>>("/api/option-positions") ?? new();
             _availableYears = _allTransactions
                 .Select(t => t.Transaction.Date.Year)
                 .Distinct()
