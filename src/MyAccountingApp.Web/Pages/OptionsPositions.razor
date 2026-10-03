@@ -1,0 +1,51 @@
+@page "/options-positions"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Options Positions</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Options Positions</MudText>
+
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (_positions.Count == 0)
+{
+    <MudPaper Class="pa-8 text-center" Outlined="true">
+        <MudIcon Icon="@Icons.Material.Filled.ShowChart" Size="Size.Large" Class="mud-text-secondary" />
+        <MudText Typo="Typo.h5" Class="mt-4">No option positions yet</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">Import your first CSV to get started.</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FileUpload"
+                   OnClick="@(() => Navigation.NavigateTo("import"))">
+            Go to Import
+        </MudButton>
+    </MudPaper>
+}
+else
+{
+    <OptionPositionTable Positions="@_positions" OnRefresh="@LoadDataAsync" />
+}
+
+@code {
+    private List<OptionPositionDto> _positions = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            _positions = await Http.GetFromJsonAsync<List<OptionPositionDto>>("/api/option-positions") ?? new();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}
