@@ -1,5 +1,4 @@
 @page "/options"
-@using System.Text.Json
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
@@ -32,8 +31,7 @@ else
         SelectedYearChanged="@OnYearChanged"
         AvailableSymbols="@_availableSymbols"
         SelectedSymbol="@_selectedSymbol"
-        SelectedSymbolChanged="@OnSymbolChanged"
-        OnDeleteYear="@OpenDeleteYearDialog" />
+        SelectedSymbolChanged="@OnSymbolChanged" />
 
     @if (_selected.Count > 0)
     {
@@ -52,6 +50,7 @@ else
     <OptionTransactionList Transactions="@_filteredTransactions"
                             Selected="@_selected"
                             SelectedChanged="@OnSelectedChanged"
+                            OnNew="@OpenCreateDialog"
                             OnRefresh="@LoadDataAsync"
                             OnEdit="@OpenEditDialog"
                             OnDelete="@OpenDeleteDialog" />
@@ -69,12 +68,6 @@ else
 <BulkOptionSymbolDialog @bind-Visible="_showBulkSymbolDialog"
                         SelectedCount="@_selected.Count"
                         ConfirmRequested="@ConfirmBulkSymbolAsync" />
-
-<DeleteOptionYearDialog Visible="@_showDeleteYearDialog"
-                        VisibleChanged="@OnDeleteYearDialogVisibleChanged"
-                        Year="@_selectedYear"
-                        Count="@_deleteYearCount"
-                        ConfirmRequested="@ConfirmDeleteYearAsync" />
 
 @code {
     private List<OptionTransactionDto> _allTransactions = new();
@@ -95,9 +88,6 @@ else
 
     private bool _showBulkSymbolDialog;
     private HashSet<OptionTransactionDto> _selected = new();
-
-    private bool _showDeleteYearDialog;
-    private int? _deleteYearCount;
 
     protected override async Task OnInitializedAsync()
     {
@@ -163,6 +153,13 @@ else
         _showFormDialog = true;
     }
 
+    private void OpenCreateDialog()
+    {
+        _editingId = null;
+        _editingTx = null;
+        _showFormDialog = true;
+    }
+
     private async Task SaveAsync(OptionTransactionFormValue value)
     {
         try
@@ -180,11 +177,13 @@ else
                 Type = value.Type,
             };
 
-            HttpResponseMessage response = await Http.PutAsJsonAsync($"/api/option-transactions/{_editingId}", payload);
+            HttpResponseMessage response = _editingId is null
+                ? await Http.PostAsJsonAsync("/api/option-transactions", payload)
+                : await Http.PutAsJsonAsync($"/api/option-transactions/{_editingId}", payload);
             if (response.IsSuccessStatusCode)
             {
                 _showFormDialog = false;
-                Snackbar.Add("Option transaction updated", Severity.Success);
+                Snackbar.Add(_editingId is null ? "Option transaction created" : "Option transaction updated", Severity.Success);
                 await LoadDataAsync();
             }
             else
@@ -303,60 +302,6 @@ else
             if (response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NoContent)
             {
                 Snackbar.Add("Option transaction deleted", Severity.Success);
-                await LoadDataAsync();
-            }
-            else
-            {
-                string error = await response.Content.ReadAsStringAsync();
-                Snackbar.Add($"Failed to delete: {error}", Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async Task OpenDeleteYearDialog()
-    {
-        if (!_selectedYear.HasValue) return;
-
-        _deleteYearCount = null;
-        _showDeleteYearDialog = true;
-
-        try
-        {
-            var countResult = await Http.GetFromJsonAsync<Dictionary<string, object>>($"/api/option-transactions/year/{_selectedYear}/count");
-            _deleteYearCount = countResult?.GetValueOrDefault("options") is JsonElement je ? je.GetInt32() : 0;
-        }
-        catch
-        {
-            _deleteYearCount = 0;
-        }
-    }
-
-    private void OnDeleteYearDialogVisibleChanged(bool value)
-    {
-        _showDeleteYearDialog = value;
-        if (!value)
-        {
-            _deleteYearCount = null;
-        }
-    }
-
-    private async Task ConfirmDeleteYearAsync()
-    {
-        if (!_selectedYear.HasValue) return;
-
-        try
-        {
-            HttpResponseMessage response = await Http.DeleteAsync($"/api/option-transactions/year/{_selectedYear}");
-            _showDeleteYearDialog = false;
-            _deleteYearCount = null;
-
-            if (response.IsSuccessStatusCode)
-            {
-                Snackbar.Add($"Deleted option transactions for {_selectedYear}", Severity.Success);
                 await LoadDataAsync();
             }
             else

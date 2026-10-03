@@ -79,6 +79,26 @@ public class OptionTransactionsEndpointsTests
     }
 
     [Fact]
+    public async Task OptionTransactions_Create_ShouldPersist()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/option-transactions", CreateOptionTransactionBody(new DateTime(2026, 8, 1)));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        HttpResponseMessage list = await client.GetAsync("/api/option-transactions");
+        Assert.Equal(HttpStatusCode.OK, list.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await list.Content.ReadAsStringAsync());
+        JsonElement created = Assert.Single(document.RootElement.EnumerateArray());
+        Assert.Equal("AAPL", created.GetProperty("symbol").GetString());
+    }
+
+    [Fact]
     public async Task OptionTransactions_YearDelete_ShouldReturnCount()
     {
         // Arrange

@@ -1,6 +1,6 @@
 <MudPaper Class="pa-4 mb-4" Outlined="true">
     <MudGrid>
-        <MudItem xs="12" sm="4">
+        <MudItem xs="12" sm="6">
             <MudSelect T="int?" @bind-Value="_selectedYear" Label="Year" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
                 @foreach (var year in AvailableYears)
                 {
@@ -8,19 +8,13 @@
                 }
             </MudSelect>
         </MudItem>
-        <MudItem xs="12" sm="4">
+        <MudItem xs="12" sm="6">
             <MudSelect @bind-Value="_selectedSymbol" Label="Symbol" Variant="Variant.Outlined" FullWidth="true" Clearable="true">
                 @foreach (var symbol in AvailableSymbols)
                 {
                     <MudSelectItem Value="symbol">@symbol</MudSelectItem>
                 }
             </MudSelect>
-        </MudItem>
-        <MudItem xs="12" sm="4">
-            <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteSweep"
-                       OnClick="@(() => OnDeleteYear.InvokeAsync())" Disabled="@(!SelectedYear.HasValue)">
-                Delete Year
-            </MudButton>
         </MudItem>
     </MudGrid>
 </MudPaper>
@@ -32,7 +26,6 @@
     [Parameter] public IReadOnlyList<string> AvailableSymbols { get; set; } = Array.Empty<string>();
     [Parameter] public string? SelectedSymbol { get; set; }
     [Parameter] public EventCallback<string?> SelectedSymbolChanged { get; set; }
-    [Parameter] public EventCallback OnDeleteYear { get; set; }
 
     private int? _selectedYear
     {
