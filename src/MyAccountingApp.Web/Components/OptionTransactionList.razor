@@ -3,7 +3,11 @@
     <ToolBarContent>
         <MudText Typo="Typo.subtitle1">@Transactions.Count option transactions</MudText>
         <MudSpacer />
-        <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@(() => OnRefresh.InvokeAsync())" Size="Size.Small" />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   OnClick="@(() => OnNew.InvokeAsync())" StartIcon="@Icons.Material.Filled.Add">
+            New
+        </MudButton>
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@(() => OnRefresh.InvokeAsync())" Size="Size.Small" Class="ml-2" />
     </ToolBarContent>
     <ColGroup>
         <col style="width: 120px" />
@@ -49,6 +53,7 @@
     [Parameter] public IReadOnlyList<OptionTransactionDto> Transactions { get; set; } = new List<OptionTransactionDto>();
     [Parameter] public HashSet<OptionTransactionDto> Selected { get; set; } = new();
     [Parameter] public EventCallback<HashSet<OptionTransactionDto>> SelectedChanged { get; set; }
+    [Parameter] public EventCallback OnNew { get; set; }
     [Parameter] public EventCallback OnRefresh { get; set; }
     [Parameter] public EventCallback<OptionTransactionDto> OnEdit { get; set; }
     [Parameter] public EventCallback<OptionTransactionDto> OnDelete { get; set; }

@@ -1,6 +1,6 @@
 <MudDialog @bind-Visible="_dialogVisible">
     <TitleContent>
-        <MudText Typo="Typo.h6">Edit Option Transaction</MudText>
+        <MudText Typo="Typo.h6">@(Transaction is null ? "Add Option Transaction" : "Edit Option Transaction")</MudText>
     </TitleContent>
     <DialogContent>
         <MudGrid>

@@ -365,6 +365,25 @@ public static class TransactionsEndpoints
             return Results.Ok(transactions);
         });
 
+        app.MapPost($"{prefix}/option-transactions", (UpdateOptionTransactionRequest request, IOptionTransactionRepository repo) =>
+        {
+            if (!Enum.TryParse<TransactionCategory>(request.Category, ignoreCase: true, out TransactionCategory category))
+            {
+                return Results.BadRequest(new { message = $"Invalid category: {request.Category}" });
+            }
+
+            if (!Enum.TryParse<AssetTransactionType>(request.Type, ignoreCase: true, out AssetTransactionType type))
+            {
+                return Results.BadRequest(new { message = $"Invalid type: {request.Type}" });
+            }
+
+            Money money = new(request.Amount, request.Currency);
+            Transaction transaction = new(request.Date, request.Description, money, category);
+            OptionTransaction created = new(transaction, request.Symbol, request.Isin, request.Quantity, type);
+            repo.Add(created);
+            return Results.Created($"/api/option-transactions/{created.Transaction.Id}", created.ToDto());
+        });
+
         app.MapPatch($"{prefix}/option-transactions/batch", (BatchOptionTransactionPatchRequest request, IOptionTransactionCommandService service) =>
         {
             if (request.Ids is null || request.Ids.Count == 0)
