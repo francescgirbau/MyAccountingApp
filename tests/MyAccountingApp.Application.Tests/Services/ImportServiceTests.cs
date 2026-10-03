@@ -160,6 +160,36 @@ public class ImportServiceTests
     }
 
     [Fact]
+    public async Task ImportFromFoldersAsync_StampsOptionSourceWithFileName()
+    {
+        string dir = CreateTempDir();
+        string file = Path.Combine(dir, "U8997440_2024_2024.csv");
+        File.WriteAllText(file, "dummy");
+
+        OptionTransaction optionTx = new(
+            new Transaction(Guid.NewGuid(), new DateTime(2024, 5, 22), "EC 16MAY25 10 P", new Money(300, "EUR"), TransactionCategory.DIVESTMENT),
+            "EC",
+            "IE0000000000",
+            1m,
+            AssetTransactionType.Sell);
+
+        FakeBroker broker = new();
+        broker.Transactions = Array.Empty<Transaction>();
+        broker.AssetTransactions = Array.Empty<AssetTransaction>();
+        broker.OptionTransactions = new[] { optionTx };
+        FakeTxRepo txRepo = new();
+        FakePfRepo pfRepo = new();
+        TransactionValidator validator = new();
+        FakeLogger<ImportService> logger = new();
+        ImportService service = new(broker, txRepo, pfRepo, new FakeOptionRepo(), validator, logger);
+
+        ImportResult result = await service.ImportFromFoldersAsync(new[] { dir });
+
+        Assert.Equal("U8997440_2024_2024.csv", optionTx.Transaction.Source);
+        Assert.Single(result.OptionTransactions);
+    }
+
+    [Fact]
     public async Task ImportFromFoldersAsync_SkipsInvalidTransactions()
     {
         string dir = CreateTempDir();

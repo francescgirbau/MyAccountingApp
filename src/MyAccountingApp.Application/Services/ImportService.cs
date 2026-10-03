@@ -120,6 +120,7 @@ public class ImportService : IImportService
 
                         foreach (Domain.Entities.OptionTransaction tx in optionTransactions)
                         {
+                            tx.Transaction.SetSource(source);
                             pendingOptions.Add(tx);
                         }
 
