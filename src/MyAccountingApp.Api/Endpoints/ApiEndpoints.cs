@@ -19,6 +19,7 @@ public static class ApiEndpoints
         app.MapBackupEndpoints();
         app.MapDashboardEndpoints();
         app.MapDataQualityEndpoints();
+        app.MapIBKRDataHealthEndpoints();
         app.MapReportsEndpoints();
         app.MapLoansEndpoints();
     }

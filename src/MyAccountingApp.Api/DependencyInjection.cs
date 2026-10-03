@@ -232,6 +232,7 @@ public static class DependencyInjection
         builder.Services.AddSingleton<IAssetTransactionCommandService, AssetTransactionCommandService>();
         builder.Services.AddSingleton<IOptionTransactionCommandService, OptionTransactionCommandService>();
         builder.Services.AddSingleton<IOptionPositionService, OptionPositionService>();
+        builder.Services.AddSingleton<IIBKRDataHealthService, IBKRDataHealthService>();
         builder.Services.AddSingleton<ILoanQuery, LoanQuery>();
         builder.Services.AddSingleton<ILoanCommandService, LoanCommandService>();
         builder.Services.AddSingleton<ITransactionCommandService, TransactionCommandService>();
