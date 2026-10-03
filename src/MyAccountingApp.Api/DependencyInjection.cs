@@ -232,6 +232,12 @@ public static class DependencyInjection
         builder.Services.AddSingleton<IAssetTransactionCommandService, AssetTransactionCommandService>();
         builder.Services.AddSingleton<IOptionTransactionCommandService, OptionTransactionCommandService>();
         builder.Services.AddSingleton<IOptionPositionService, OptionPositionService>();
+        builder.Services.AddSingleton<IIBKRRebuildService>(sp => new IBKRRebuildService(
+            sp.GetRequiredService<ITransactionRepository>(),
+            sp.GetRequiredService<IPortfolioRepository>(),
+            sp.GetRequiredService<IOptionTransactionRepository>(),
+            sp.GetRequiredService<IVaultService>(),
+            Path.Combine(Directory.GetCurrentDirectory(), "backups")));
         builder.Services.AddSingleton<IIBKRDataHealthService, IBKRDataHealthService>();
         builder.Services.AddSingleton<ILoanQuery, LoanQuery>();
         builder.Services.AddSingleton<ILoanCommandService, LoanCommandService>();
