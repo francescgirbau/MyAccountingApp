@@ -169,4 +169,30 @@ public class OptionTransactionsEndpointsTests
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task OptionPositions_ShouldComputePositionFromContract()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        Transaction transaction = new(new DateTime(2026, 8, 1), "AAPL 18SEP26 200 C", new Money(100m, "EUR"), TransactionCategory.INVESTMENT);
+        IOptionTransactionRepository repository = factory.Services.GetRequiredService<IOptionTransactionRepository>();
+        repository.Initialize(new[] { new OptionTransaction(transaction, "AAPL", "US0378331005", 2m, AssetTransactionType.Buy) });
+
+        // Act
+        HttpResponseMessage response = await client.GetAsync("/api/option-positions");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        JsonElement position = Assert.Single(document.RootElement.EnumerateArray());
+        Assert.Equal("AAPL 18SEP26 200 C", position.GetProperty("key").GetString());
+        Assert.Equal("Long Call", position.GetProperty("strategy").GetString());
+        Assert.Equal("2026-09-18", position.GetProperty("expiration").GetString());
+        Assert.Equal(200m, position.GetProperty("strike").GetDecimal());
+        Assert.Equal(2m, position.GetProperty("quantity").GetDecimal());
+        Assert.Equal("Open", position.GetProperty("status").GetString());
+        Assert.Equal(100m, position.GetProperty("debit").GetDecimal());
+    }
 }

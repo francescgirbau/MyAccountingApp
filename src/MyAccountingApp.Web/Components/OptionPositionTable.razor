@@ -1,0 +1,95 @@
+@using MyAccountingApp.Contracts
+
+<MudTable Items="@Positions" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true" SortLabel="Sort by">
+    <ToolBarContent>
+        <MudText Typo="Typo.subtitle1">@Positions.Count option positions</MudText>
+        <MudSpacer />
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@(() => OnRefresh.InvokeAsync())" Size="Size.Small" />
+    </ToolBarContent>
+    <ColGroup>
+        <col style="width: 130px" />
+        <col style="width: 90px" />
+        <col style="width: 85px" />
+        <col style="width: 55px" />
+        <col style="width: 45px" />
+        <col style="width: 85px" />
+        <col style="width: 60px" />
+        <col style="width: 85px" />
+        <col style="width: 70px" />
+        <col style="width: 70px" />
+        <col style="width: 85px" />
+        <col style="width: 80px" />
+        <col style="width: 60px" />
+        <col style="width: 40px" />
+        <col style="width: 80px" />
+    </ColGroup>
+    <HeaderContent>
+        <MudTh><MudTableSortLabel SortBy="new Func<OptionPositionDto, object>(p => p.Symbol)">Contract</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<OptionPositionDto, object>(p => p.Strategy)">Strategy</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<OptionPositionDto, object>(ExpiryKey)">Expiry</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<OptionPositionDto, object>(StrikeKey)">Strike</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<OptionPositionDto, object>(p => p.Quantity)">Qty</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<OptionPositionDto, object>(p => p.OpenDate)">Open</MudTableSortLabel></MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<OptionPositionDto, object>(CloseKey)">Close</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<OptionPositionDto, object>(p => p.Credit)">Credit</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<OptionPositionDto, object>(p => p.Debit)">Debit</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<OptionPositionDto, object>(p => p.ProfitLoss)">P/L</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<OptionPositionDto, object>(p => p.CapitalAtRisk)">Cap. risk</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<OptionPositionDto, object>(YieldKey)">Yield</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<OptionPositionDto, object>(p => p.DaysHeld)">Days</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<OptionPositionDto, object>(AnnualizedKey)">Ann. return</MudTableSortLabel></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Contract">
+            <MudChip T="string" Size="Size.Small" Color="Color.Primary">@context.Symbol</MudChip>
+        </MudTd>
+        <MudTd DataLabel="Strategy">@context.Strategy</MudTd>
+        <MudTd DataLabel="Expiry">@(context.Expiration?.ToString("yyyy-MM-dd") ?? "—")</MudTd>
+        <MudTd DataLabel="Strike">@(context.Strike?.ToString("G") ?? "—")</MudTd>
+        <MudTd DataLabel="Qty">@context.Quantity.ToString("G")</MudTd>
+        <MudTd DataLabel="Open">@context.OpenDate.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Size="Size.Small" Color="@(context.Status == "Open" ? Color.Warning : Color.Success)">@context.Status</MudChip>
+        </MudTd>
+        <MudTd DataLabel="Close">@(context.CloseDate?.ToString("yyyy-MM-dd") ?? "—")</MudTd>
+        <MudTd DataLabel="Credit">
+            <span>@context.Credit.ToString("N2") @context.Currency</span>
+        </MudTd>
+        <MudTd DataLabel="Debit">
+            <span>@context.Debit.ToString("N2") @context.Currency</span>
+        </MudTd>
+        <MudTd DataLabel="P/L">
+            <span class="@(context.ProfitLoss >= 0 ? "mud-success-text" : "mud-error-text")">
+                @(context.ProfitLoss >= 0 ? "+" : "")@context.ProfitLoss.ToString("N2") @context.Currency
+            </span>
+        </MudTd>
+        <MudTd DataLabel="Cap. risk">@context.CapitalAtRisk.ToString("N2") @context.Currency</MudTd>
+        <MudTd DataLabel="Yield">@(context.Yield?.ToString("P1") ?? "—")</MudTd>
+        <MudTd DataLabel="Days">@context.DaysHeld</MudTd>
+        <MudTd DataLabel="Ann. return">
+            <span class="@((context.AnnualizedReturn ?? 0) >= 0 ? "mud-success-text" : "mud-error-text")">
+                @(context.AnnualizedReturn?.ToString("P1") ?? "—")
+            </span>
+        </MudTd>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="@(new int[] { 15, 25, 50 })" />
+    </PagerContent>
+</MudTable>
+
+@code {
+    [Parameter] public IReadOnlyList<OptionPositionDto> Positions { get; set; } = Array.Empty<OptionPositionDto>();
+
+    [Parameter] public EventCallback OnRefresh { get; set; }
+
+    private static object ExpiryKey(OptionPositionDto p) => p.Expiration?.ToString() ?? string.Empty;
+
+    private static object StrikeKey(OptionPositionDto p) => p.Strike ?? 0m;
+
+    private static object CloseKey(OptionPositionDto p) => p.CloseDate?.ToString() ?? string.Empty;
+
+    private static object YieldKey(OptionPositionDto p) => p.Yield ?? 0m;
+
+    private static object AnnualizedKey(OptionPositionDto p) => p.AnnualizedReturn ?? 0m;
+}

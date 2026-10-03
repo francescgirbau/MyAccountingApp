@@ -353,6 +353,12 @@ public static class TransactionsEndpoints
             return Results.Ok(transactions);
         });
 
+        app.MapGet($"{prefix}/option-positions", (IOptionPositionService service) =>
+        {
+            IReadOnlyList<OptionPositionDto> positions = service.GetPositions();
+            return Results.Ok(positions);
+        });
+
         app.MapGet($"{prefix}/option-transactions/{{symbol}}", (string symbol, IOptionTransactionRepository repo) =>
         {
             List<OptionTransactionDto> transactions = repo.GetAll().Where(t => t.Symbol == symbol).Select(t => t.ToDto()).ToList();

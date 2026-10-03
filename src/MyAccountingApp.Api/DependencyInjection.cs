@@ -231,6 +231,7 @@ public static class DependencyInjection
         builder.Services.AddSingleton<ITransferMatchingService, TransferMatchingService>();
         builder.Services.AddSingleton<IAssetTransactionCommandService, AssetTransactionCommandService>();
         builder.Services.AddSingleton<IOptionTransactionCommandService, OptionTransactionCommandService>();
+        builder.Services.AddSingleton<IOptionPositionService, OptionPositionService>();
         builder.Services.AddSingleton<ILoanQuery, LoanQuery>();
         builder.Services.AddSingleton<ILoanCommandService, LoanCommandService>();
         builder.Services.AddSingleton<ITransactionCommandService, TransactionCommandService>();
