@@ -1,5 +1,4 @@
 @page "/options"
-@page "/options/{view}"
 @using System.Text.Json
 @inject HttpClient Http
 @inject ISnackbar Snackbar
@@ -27,42 +26,35 @@ else if (_allTransactions.Count == 0)
 }
 else
 {
-    <MudTabs Class="mt-0" @bind-ActivePanelIndex="_activeTabIndex">
-        <MudTabPanel Text="Positions">
-            <OptionPositionTable Positions="@_positions" OnRefresh="@LoadDataAsync" />
-        </MudTabPanel>
-        <MudTabPanel Text="Transactions">
-            <OptionTransactionFilters
-                AvailableYears="@_availableYears"
-                SelectedYear="@_selectedYear"
-                SelectedYearChanged="@OnYearChanged"
-                AvailableSymbols="@_availableSymbols"
-                SelectedSymbol="@_selectedSymbol"
-                SelectedSymbolChanged="@OnSymbolChanged"
-                OnDeleteYear="@OpenDeleteYearDialog" />
+    <OptionTransactionFilters
+        AvailableYears="@_availableYears"
+        SelectedYear="@_selectedYear"
+        SelectedYearChanged="@OnYearChanged"
+        AvailableSymbols="@_availableSymbols"
+        SelectedSymbol="@_selectedSymbol"
+        SelectedSymbolChanged="@OnSymbolChanged"
+        OnDeleteYear="@OpenDeleteYearDialog" />
 
-            @if (_selected.Count > 0)
-            {
-                <MudPaper Class="pa-2 mb-2 d-flex align-center" Outlined="true">
-                    <MudChip T="int" Color="Color.Primary" Size="Size.Small">@_selected.Count selected</MudChip>
-                    <MudText Typo="Typo.body2" Class="ml-2 mud-text-secondary">visible rows selected — bulk actions apply only to these</MudText>
-                    <MudSpacer />
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                               OnClick="@OpenBulkSymbolDialog" StartIcon="@Icons.Material.Filled.Edit">
-                        Change symbol
-                    </MudButton>
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="@ClearSelection" Size="Size.Small" />
-                </MudPaper>
-            }
+    @if (_selected.Count > 0)
+    {
+        <MudPaper Class="pa-2 mb-2 d-flex align-center" Outlined="true">
+            <MudChip T="int" Color="Color.Primary" Size="Size.Small">@_selected.Count selected</MudChip>
+            <MudText Typo="Typo.body2" Class="ml-2 mud-text-secondary">visible rows selected — bulk actions apply only to these</MudText>
+            <MudSpacer />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       OnClick="@OpenBulkSymbolDialog" StartIcon="@Icons.Material.Filled.Edit">
+                Change symbol
+            </MudButton>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="@ClearSelection" Size="Size.Small" />
+        </MudPaper>
+    }
 
-            <OptionTransactionList Transactions="@_filteredTransactions"
-                                    Selected="@_selected"
-                                    SelectedChanged="@OnSelectedChanged"
-                                    OnRefresh="@LoadDataAsync"
-                                    OnEdit="@OpenEditDialog"
-                                    OnDelete="@OpenDeleteDialog" />
-        </MudTabPanel>
-    </MudTabs>
+    <OptionTransactionList Transactions="@_filteredTransactions"
+                            Selected="@_selected"
+                            SelectedChanged="@OnSelectedChanged"
+                            OnRefresh="@LoadDataAsync"
+                            OnEdit="@OpenEditDialog"
+                            OnDelete="@OpenDeleteDialog" />
 }
 
 <OptionTransactionFormDialog @bind-Visible="_showFormDialog"
@@ -87,15 +79,9 @@ else
 @code {
     private List<OptionTransactionDto> _allTransactions = new();
     private List<OptionTransactionDto> _filteredTransactions = new();
-    private List<OptionPositionDto> _positions = new();
     private List<int> _availableYears = new();
     private List<string> _availableSymbols = new();
     private bool _loading = true;
-
-    [Parameter]
-    public string? View { get; set; }
-
-    private int _activeTabIndex; // 0 = Positions, 1 = Transactions
 
     private int? _selectedYear { get; set; }
     private string? _selectedSymbol { get; set; }
@@ -113,11 +99,6 @@ else
     private bool _showDeleteYearDialog;
     private int? _deleteYearCount;
 
-    protected override void OnParametersSet()
-    {
-        _activeTabIndex = string.Equals(View, "transactions", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
-    }
-
     protected override async Task OnInitializedAsync()
     {
         await LoadDataAsync();
@@ -129,7 +110,6 @@ else
         try
         {
             _allTransactions = await Http.GetFromJsonAsync<List<OptionTransactionDto>>("/api/option-transactions") ?? new();
-            _positions = await Http.GetFromJsonAsync<List<OptionPositionDto>>("/api/option-positions") ?? new();
             _availableYears = _allTransactions
                 .Select(t => t.Transaction.Date.Year)
                 .Distinct()
