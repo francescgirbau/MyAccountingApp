@@ -41,7 +41,7 @@ public sealed class OptionPositionService : IOptionPositionService
             .ToList();
     }
 
-    private static string ContractKey(OptionTransaction leg)
+    internal static string ContractKey(OptionTransaction leg)
     {
         if (TryParseContract(leg.Transaction.Description, out string root, out DateOnly expiration, out decimal strike, out string side))
         {
@@ -136,7 +136,7 @@ public sealed class OptionPositionService : IOptionPositionService
             annualizedReturn);
     }
 
-    private static bool TryParseContract(string description, out string root, out DateOnly expiration, out decimal strike, out string side)
+    internal static bool TryParseContract(string description, out string root, out DateOnly expiration, out decimal strike, out string side)
     {
         root = string.Empty;
         expiration = default;
@@ -170,7 +170,7 @@ public sealed class OptionPositionService : IOptionPositionService
         return true;
     }
 
-    private static bool TryParseExpiration(string raw, out DateOnly expiration)
+    internal static bool TryParseExpiration(string raw, out DateOnly expiration)
     {
         string upper = raw.ToUpperInvariant();
         if (DateTime.TryParseExact(

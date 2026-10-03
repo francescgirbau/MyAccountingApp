@@ -1,0 +1,190 @@
+@page "/ibkr-data-health"
+@inject HttpClient Http
+
+<PageTitle>IBKR data health</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">IBKR data health</MudText>
+
+<MudText Class="mb-4">
+    Read-only diagnostic of the data imported from Interactive Brokers statements. It shows how much of
+    the store comes from IBKR files (per year and per source file), option contracts whose expiration is
+    in the past but that the tracker reports as open (their closing leg is missing from a legacy import),
+    and candidate phantom asset rows produced by legacy imports.
+</MudText>
+
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (_report is null)
+{
+    <MudAlert Severity="Severity.Error">Failed to load the IBKR data health report.</MudAlert>
+}
+else
+{
+    <MudGrid Spacing="2" Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="0" Outlined="true"><MudCardContent>
+                <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Transactions (all / IBKR)</MudText>
+                <MudText Typo="Typo.h5">@_report.TotalTransactions / @_report.IbkrTransactions</MudText>
+            </MudCardContent></MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="0" Outlined="true"><MudCardContent>
+                <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Asset transactions (all / IBKR)</MudText>
+                <MudText Typo="Typo.h5">@_report.TotalAssets / @_report.IbkrAssets</MudText>
+            </MudCardContent></MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="0" Outlined="true"><MudCardContent>
+                <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Option transactions (all / IBKR)</MudText>
+                <MudText Typo="Typo.h5">@_report.TotalOptions / @_report.IbkrOptions</MudText>
+            </MudCardContent></MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="0" Outlined="true"><MudCardContent>
+                <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Expired but open / phantom assets</MudText>
+                <MudText Typo="Typo.h5" Class="@(_report.OpenExpiredContracts.Count + _report.PhantomAssets.Count > 0 ? "mud-error-text" : "mud-success-text")">
+                    @_report.OpenExpiredContracts.Count / @_report.PhantomAssets.Count
+                </MudText>
+            </MudCardContent></MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <MudCard Elevation="0" Outlined="true" Class="mb-4">
+        <MudCardContent>
+            <MudText Typo="Typo.h6" GutterBottom="true">Summary by year</MudText>
+            <MudTable Items="@_report.Years" Hover="true" Elevation="0" Outlined="false">
+                <HeaderContent>
+                    <MudTh>Year</MudTh>
+                    <MudTh>Transactions</MudTh>
+                    <MudTh>Assets</MudTh>
+                    <MudTh>Options</MudTh>
+                    <MudTh>IBKR transactions</MudTh>
+                    <MudTh>IBKR assets</MudTh>
+                    <MudTh>IBKR options</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Year">@context.Year</MudTd>
+                    <MudTd DataLabel="Transactions">@context.Transactions</MudTd>
+                    <MudTd DataLabel="Assets">@context.Assets</MudTd>
+                    <MudTd DataLabel="Options">@context.Options</MudTd>
+                    <MudTd DataLabel="IBKR transactions">@context.IbkrTransactions</MudTd>
+                    <MudTd DataLabel="IBKR assets">@context.IbkrAssets</MudTd>
+                    <MudTd DataLabel="IBKR options">@context.IbkrOptions</MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudCardContent>
+    </MudCard>
+
+    <MudCard Elevation="0" Outlined="true" Class="mb-4">
+        <MudCardContent>
+            <MudText Typo="Typo.h6" GutterBottom="true">Imported sources</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">
+                Rows are tagged with the CSV file they came from. IBKR files start with &quot;U8997440&quot;.
+            </MudText>
+            <MudTable Items="@_report.Sources" Hover="true" Elevation="0" Outlined="false">
+                <HeaderContent>
+                    <MudTh>Source</MudTh>
+                    <MudTh>Transactions</MudTh>
+                    <MudTh>Assets</MudTh>
+                    <MudTh>Options</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Source">@context.Source</MudTd>
+                    <MudTd DataLabel="Transactions">@context.Transactions</MudTd>
+                    <MudTd DataLabel="Assets">@context.Assets</MudTd>
+                    <MudTd DataLabel="Options">@context.Options</MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudCardContent>
+    </MudCard>
+
+    <MudCard Elevation="0" Outlined="true" Class="mb-4">
+        <MudCardContent>
+            <MudText Typo="Typo.h6" GutterBottom="true">Expired options still open (missing closing leg)</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">
+                These contracts expired but the tracker reports them open: the imported data has no closing
+                leg. Legacy imports dropped zero-premium closing legs; the current parser keeps them. Option
+                rows do not record a source file (a known import limitation), so they appear under
+                &quot;(no source)&quot; in the sources table above.
+            </MudText>
+            <MudTable Items="@_report.OpenExpiredContracts" Hover="true" Elevation="0" Outlined="false">
+                <HeaderContent>
+                    <MudTh>Contract</MudTh>
+                    <MudTh>Strategy</MudTh>
+                    <MudTh>Qty</MudTh>
+                    <MudTh>Expiration</MudTh>
+                    <MudTh>Open</MudTh>
+                    <MudTh>Legs</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Contract">@context.Description</MudTd>
+                    <MudTd DataLabel="Strategy">@context.Strategy</MudTd>
+                    <MudTd DataLabel="Qty">@context.Quantity.ToString("G")</MudTd>
+                    <MudTd DataLabel="Expiration">@context.Expiration.ToString("yyyy-MM-dd")</MudTd>
+                    <MudTd DataLabel="Open">@context.OpenDate.ToString("yyyy-MM-dd")</MudTd>
+                    <MudTd DataLabel="Legs">@context.Legs</MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudCardContent>
+    </MudCard>
+
+    <MudCard Elevation="0" Outlined="true" Class="mb-4">
+        <MudCardContent>
+            <MudText Typo="Typo.h6" GutterBottom="true">Phantom asset candidates</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">
+                Asset rows with a quantity of one that are not investments or divestments. Legacy imports
+                turned some option and cash rows into stock rows; re-importing with the current parser
+                removes them.
+            </MudText>
+            <MudTable Items="@_report.PhantomAssets" Hover="true" Elevation="0" Outlined="false">
+                <HeaderContent>
+                    <MudTh>Date</MudTh>
+                    <MudTh>Symbol</MudTh>
+                    <MudTh>Qty</MudTh>
+                    <MudTh>Category</MudTh>
+                    <MudTh>Amount</MudTh>
+                    <MudTh>Currency</MudTh>
+                    <MudTh>Source</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Date">@context.Date.ToString("yyyy-MM-dd")</MudTd>
+                    <MudTd DataLabel="Symbol">@context.Symbol</MudTd>
+                    <MudTd DataLabel="Qty">@context.Quantity.ToString("G")</MudTd>
+                    <MudTd DataLabel="Category">@context.Category</MudTd>
+                    <MudTd DataLabel="Amount">@context.Amount.ToString("N2")</MudTd>
+                    <MudTd DataLabel="Currency">@context.Currency</MudTd>
+                    <MudTd DataLabel="Source">@context.Source</MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudCardContent>
+    </MudCard>
+}
+
+@code {
+    private IBKRDataHealthDto? _report;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await this.LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        this._loading = true;
+        try
+        {
+            this._report = await this.Http.GetFromJsonAsync<IBKRDataHealthDto>("/api/ibkr/data-health");
+        }
+        catch
+        {
+            this._report = null;
+        }
+        finally
+        {
+            this._loading = false;
+        }
+    }
+}
