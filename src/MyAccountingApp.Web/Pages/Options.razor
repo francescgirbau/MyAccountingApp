@@ -1,4 +1,5 @@
 @page "/options"
+@page "/options/{view}"
 @using System.Text.Json
 @inject HttpClient Http
 @inject ISnackbar Snackbar
@@ -26,7 +27,7 @@ else if (_allTransactions.Count == 0)
 }
 else
 {
-    <MudTabs Class="mt-0">
+    <MudTabs Class="mt-0" @bind-ActivePanelIndex="_activeTabIndex">
         <MudTabPanel Text="Positions">
             <OptionPositionTable Positions="@_positions" OnRefresh="@LoadDataAsync" />
         </MudTabPanel>
@@ -91,6 +92,11 @@ else
     private List<string> _availableSymbols = new();
     private bool _loading = true;
 
+    [Parameter]
+    public string? View { get; set; }
+
+    private int _activeTabIndex; // 0 = Positions, 1 = Transactions
+
     private int? _selectedYear { get; set; }
     private string? _selectedSymbol { get; set; }
 
@@ -106,6 +112,11 @@ else
 
     private bool _showDeleteYearDialog;
     private int? _deleteYearCount;
+
+    protected override void OnParametersSet()
+    {
+        _activeTabIndex = string.Equals(View, "transactions", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+    }
 
     protected override async Task OnInitializedAsync()
     {
