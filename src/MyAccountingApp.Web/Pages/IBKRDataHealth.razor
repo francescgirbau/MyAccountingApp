@@ -1,5 +1,6 @@
 @page "/ibkr-data-health"
 @inject HttpClient Http
+@inject ISnackbar Snackbar
 
 <PageTitle>IBKR data health</PageTitle>
 
@@ -160,11 +161,89 @@ else
             </MudTable>
         </MudCardContent>
     </MudCard>
+
+    <MudCard Elevation="0" Outlined="true" Class="mb-4">
+        <MudCardContent>
+            <MudText Typo="Typo.h6" GutterBottom="true">Rebuild IBKR data</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">
+                Re-imports the Interactive Brokers statements cleanly: it removes the rows imported from
+                IBKR files (source starting with &quot;U8997440&quot;) for the selected years, plus option
+                rows without a recorded source in those years (in this app options come only from IBKR
+                statements). A backup is written to <strong>backups/</strong> before anything is removed;
+                other sources and manual entries are kept. After the rebuild, re-upload your Annual
+                statements from the Import page.
+            </MudText>
+
+            <div class="d-flex flex-wrap align-center gap-3 mb-3">
+                @foreach (int year in _report.Years.Select(y => y.Year).OrderBy(y => y))
+                {
+                    <MudCheckBox T="bool"
+                                 Value="@(_rebuildYears.Contains(year))"
+                                 ValueChanged="@(value => this.ToggleRebuildYear(year, value))"
+                                 Label="@year.ToString()" />
+                }
+                @if (!_report.Years.Any())
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">No years with data.</MudText>
+                }
+            </div>
+
+            <div class="d-flex gap-2">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Visibility"
+                           Disabled="@(_rebuildYears.Count == 0 || _busy)" OnClick="@this.PreviewRebuildAsync">
+                    Preview deletion
+                </MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteForever"
+                           Disabled="@(_rebuildPreview is null || _busy)" OnClick="@(() => this._showRebuildConfirm = true)">
+                    Run rebuild…
+                </MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Default"
+                           Disabled="@(_rebuildPreview is null || _busy)" OnClick="@this.ClearRebuildPreview">
+                    Clear preview
+                </MudButton>
+            </div>
+
+            @if (_rebuildPreview is not null)
+            {
+                <MudAlert Severity="Severity.Warning" Class="mt-4 mb-2">
+                    The rebuild would delete <strong>@_rebuildPreview.Transactions</strong> transactions,
+                    <strong>@_rebuildPreview.Assets</strong> assets and
+                    <strong>@_rebuildPreview.Options</strong> options
+                    (<strong>@_rebuildPreview.OptionsWithoutSource</strong> of them without a recorded source).
+                </MudAlert>
+                <MudTable Items="@_rebuildPreview.Years" Hover="true" Elevation="0" Outlined="false" Dense="true">
+                    <HeaderContent>
+                        <MudTh>Year</MudTh>
+                        <MudTh>Transactions</MudTh>
+                        <MudTh>Assets</MudTh>
+                        <MudTh>Options</MudTh>
+                        <MudTh>Options (no source)</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Year">@context.Year</MudTd>
+                        <MudTd DataLabel="Transactions">@context.Transactions</MudTd>
+                        <MudTd DataLabel="Assets">@context.Assets</MudTd>
+                        <MudTd DataLabel="Options">@context.Options</MudTd>
+                        <MudTd DataLabel="Options (no source)">@context.OptionsWithoutSource</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudCardContent>
+    </MudCard>
+
+    <IBKRRebuildConfirmDialog @bind-Visible="_showRebuildConfirm"
+                              SelectedYears="@(_rebuildYears.OrderBy(y => y).ToList())"
+                              Preview="@_rebuildPreview"
+                              ConfirmRequested="@this.RunRebuildAsync" />
 }
 
 @code {
     private IBKRDataHealthDto? _report;
     private bool _loading = true;
+    private readonly HashSet<int> _rebuildYears = new();
+    private IBKRRebuildPreviewDto? _rebuildPreview;
+    private bool _showRebuildConfirm;
+    private bool _busy;
 
     protected override async Task OnInitializedAsync()
     {
@@ -185,6 +264,76 @@ else
         finally
         {
             this._loading = false;
+        }
+    }
+
+    private void ToggleRebuildYear(int year, bool selected)
+    {
+        if (selected)
+        {
+            this._rebuildYears.Add(year);
+        }
+        else
+        {
+            this._rebuildYears.Remove(year);
+        }
+    }
+
+    private async Task PreviewRebuildAsync()
+    {
+        this._busy = true;
+        try
+        {
+            HttpResponseMessage response = await this.Http.PostAsJsonAsync(
+                "/api/ibkr/rebuild/preview",
+                new { years = this._rebuildYears.OrderBy(y => y).ToArray() });
+            response.EnsureSuccessStatusCode();
+            this._rebuildPreview = await response.Content.ReadFromJsonAsync<IBKRRebuildPreviewDto>();
+        }
+        catch
+        {
+            this._rebuildPreview = null;
+            this.Snackbar.Add("Failed to preview the rebuild.", Severity.Error);
+        }
+        finally
+        {
+            this._busy = false;
+        }
+    }
+
+    private void ClearRebuildPreview()
+    {
+        this._rebuildPreview = null;
+    }
+
+    private async Task RunRebuildAsync()
+    {
+        this._showRebuildConfirm = false;
+        this._busy = true;
+        try
+        {
+            HttpResponseMessage response = await this.Http.PostAsJsonAsync(
+                "/api/ibkr/rebuild",
+                new { years = this._rebuildYears.OrderBy(y => y).ToArray() });
+            response.EnsureSuccessStatusCode();
+            IBKRRebuildResultDto? result = await response.Content.ReadFromJsonAsync<IBKRRebuildResultDto>();
+            this.Snackbar.Add(
+                $"Rebuild done: {result?.TransactionsDeleted ?? 0} transactions, {result?.AssetsDeleted ?? 0} assets " +
+                $"and {result?.OptionsDeleted ?? 0} options removed. Backup at {result?.BackupFile}. " +
+                "Re-upload your Annual statements from the Import page.",
+                Severity.Success);
+            this._rebuildPreview = null;
+            await this.LoadAsync();
+        }
+        catch
+        {
+            this.Snackbar.Add(
+                "The rebuild failed. A backup is created before any removal; restore it if needed.",
+                Severity.Error);
+        }
+        finally
+        {
+            this._busy = false;
         }
     }
 }
