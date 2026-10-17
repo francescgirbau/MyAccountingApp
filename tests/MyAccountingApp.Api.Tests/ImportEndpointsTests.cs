@@ -57,6 +57,82 @@ public class ImportEndpointsTests
     }
 
     [Fact]
+    public async Task ImportUploadPreview_ShouldNotPersist()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        string csv = "accountNumber,mutationcode,transactiondate,valuedate,startsaldo,endsaldo,amount,description\n"
+            + "889774927,XYZ,20260110,20260110,0,0,300,\"PREVIEW TEST ROW\"";
+        using MultipartFormDataContent content = new();
+        content.Add(new StringContent(csv, Encoding.UTF8, "text/csv"), "file", "ABN_preview.csv");
+
+        // Act
+        HttpResponseMessage response = await client.PostAsync("/api/import/upload/preview", content);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(1, document.RootElement.GetProperty("filesProcessed").GetInt32());
+        Assert.Single(document.RootElement.GetProperty("transactions").EnumerateArray());
+
+        HttpResponseMessage list = await client.GetAsync("/api/transactions");
+        using JsonDocument doc = JsonDocument.Parse(await list.Content.ReadAsStringAsync());
+        Assert.Empty(doc.RootElement.EnumerateArray());
+    }
+
+    [Fact]
+    public async Task RawCsvPreview_ShouldNotPersist()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        string csv = "Date,Description,Amount,Type\n2026-08-01,Preview expense,10.5,Expense\nbad-date,Broken row,x,BadType\n";
+        using MultipartFormDataContent content = new();
+        content.Add(new StringContent(csv, Encoding.UTF8, "text/csv"), "file", "test.csv");
+
+        // Act
+        HttpResponseMessage response = await client.PostAsync("/api/import/raw-csv/preview", content);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(1, document.RootElement.GetProperty("imported").GetInt32());
+        Assert.NotEmpty(document.RootElement.GetProperty("errors").EnumerateArray());
+
+        HttpResponseMessage list = await client.GetAsync("/api/transactions");
+        using JsonDocument doc = JsonDocument.Parse(await list.Content.ReadAsStringAsync());
+        Assert.Empty(doc.RootElement.EnumerateArray());
+    }
+
+    [Fact]
+    public async Task RawCsv_ThenPreview_DoesNotDoubleImport()
+    {
+        // Arrange
+        using ApiWebApplicationFactory factory = new ApiWebApplicationFactory();
+        HttpClient client = factory.CreateClient();
+        string csv = "Date,Description,Amount,Type\n2026-08-01,Once,10.5,Expense\n";
+        using MultipartFormDataContent importContent = new();
+        importContent.Add(new StringContent(csv, Encoding.UTF8, "text/csv"), "file", "test.csv");
+        using MultipartFormDataContent previewContent = new();
+        previewContent.Add(new StringContent(csv, Encoding.UTF8, "text/csv"), "file", "test.csv");
+
+        // Act
+        HttpResponseMessage import = await client.PostAsync("/api/import/raw-csv", importContent);
+        HttpResponseMessage preview = await client.PostAsync("/api/import/raw-csv/preview", previewContent);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, import.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, preview.StatusCode);
+        using JsonDocument previewDoc = JsonDocument.Parse(await preview.Content.ReadAsStringAsync());
+        Assert.Equal(1, previewDoc.RootElement.GetProperty("imported").GetInt32());
+
+        HttpResponseMessage list = await client.GetAsync("/api/transactions");
+        using JsonDocument doc = JsonDocument.Parse(await list.Content.ReadAsStringAsync());
+        Assert.Single(doc.RootElement.EnumerateArray());
+    }
+
+    [Fact]
     public async Task Import_AbnUnknownCodeNoKeyword_FlagsNeedsReview()
     {
         // Arrange

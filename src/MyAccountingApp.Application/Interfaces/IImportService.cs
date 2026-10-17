@@ -5,7 +5,12 @@ namespace MyAccountingApp.Application.Interfaces;
 
 public interface IImportService
 {
-    Task<ImportResult> ImportFromFoldersAsync(IEnumerable<string> folderPaths);
+    /// <summary>
+    /// Parses, validates and deduplicates the CSV files of the given folders.
+    /// When <paramref name="dryRun"/> is true, nothing is persisted: the result
+    /// describes what an import would do, so the caller can preview it first.
+    /// </summary>
+    Task<ImportResult> ImportFromFoldersAsync(IEnumerable<string> folderPaths, bool dryRun = false);
 }
 
 public class ImportResult

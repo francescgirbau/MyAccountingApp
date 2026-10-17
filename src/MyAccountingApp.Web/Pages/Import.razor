@@ -5,18 +5,21 @@
 <PageTitle>Import</PageTitle>
 
 <MudText Typo="Typo.h3" GutterBottom="true">Import Data</MudText>
+<MudText Typo="Typo.body1" Class="mb-4 mud-text-secondary">
+    Every import starts with a preview: the file is parsed and validated, but nothing is saved until you confirm it below.
+</MudText>
 
 <ImportSourceCard Title="Upload a CSV file"
                   Description="Select a CSV file from your computer to import. Supported formats are detected automatically."
-                  ButtonColor="Color.Secondary" ButtonLabel="Upload &amp; Import"
+                  ButtonColor="Color.Secondary" ButtonLabel="Preview Upload"
                   FileName="@(_selectedFile?.Name)" Disabled="@(_selectedFile is null || _loading)"
-                  OnFileSelected="@OnFileSelected" OnUpload="@UploadAndImportAsync" />
+                  OnFileSelected="@OnFileSelected" OnUpload="@PreviewAndImportAsync" />
 
 <ImportSourceCard Title="Import Interactive Brokers (Flex Query Report)"
                   Description="Upload a Flex Query report from Interactive Brokers. Trades, dividends, deposits, corporate actions, fees and interest are detected automatically."
-                  ButtonColor="Color.Info" ButtonLabel="Import IBKR"
+                  ButtonColor="Color.Info" ButtonLabel="Preview IBKR"
                   FileName="@(_ibkrFile?.Name)" Disabled="@(_ibkrFile is null || _loading)"
-                  OnFileSelected="@OnIbkrFileSelected" OnUpload="@UploadIbkrAsync">
+                  OnFileSelected="@OnIbkrFileSelected" OnUpload="@PreviewIbkrAsync">
     <AlertContent>
         <strong>Format detected by filename.</strong> Files starting with <strong>U8997440_</strong> are routed to the IBKR Flex Query parser.<br />
         <strong>Trades</strong> become portfolio/option entries. <strong>Dividends</strong>, <strong>Fees</strong>, <strong>Deposits</strong>, <strong>Interest</strong> and <strong>Withholding Tax</strong> become cash transactions.
@@ -25,9 +28,9 @@
 
 <ImportSourceCard Title="Import DeGiro / Flatex CSV"
                   Description="Upload a CSV exported from DeGiro or Flatex (Spanish format). Asset transactions, dividends, and fees are detected automatically."
-                  ButtonColor="Color.Success" ButtonLabel="Import DeGiro"
+                  ButtonColor="Color.Success" ButtonLabel="Preview DeGiro"
                   FileName="@(_degiroFile?.Name)" Disabled="@(_degiroFile is null || _loading)"
-                  OnFileSelected="@OnDegiroFileSelected" OnUpload="@UploadDegiroAsync">
+                  OnFileSelected="@OnDegiroFileSelected" OnUpload="@PreviewDegiroAsync">
     <AlertContent>
         <strong>Format detected automatically.</strong> Expected columns: Fecha, Hora, Fecha valor, Producto, ISIN, Descripción, Tipo, Variación, (amount), Saldo, (balance), ID Orden.<br />
         <strong>Compra</strong> / <strong>Venta</strong> rows become portfolio entries. <strong>Dividendo</strong>, <strong>Retención</strong> and <strong>Costes</strong> become cash transactions. Internal transfers are skipped.
@@ -36,9 +39,9 @@
 
 <ImportSourceCard Title="Import Revolut CSV"
                   Description="Upload a CSV exported from Revolut. Deposits, card payments, ATM withdrawals, and transfers are detected automatically."
-                  ButtonColor="Color.Tertiary" ButtonLabel="Import Revolut"
+                  ButtonColor="Color.Tertiary" ButtonLabel="Preview Revolut"
                   FileName="@(_revolutFile?.Name)" Disabled="@(_revolutFile is null || _loading)"
-                  OnFileSelected="@OnRevolutFileSelected" OnUpload="@UploadRevolutAsync">
+                  OnFileSelected="@OnRevolutFileSelected" OnUpload="@PreviewRevolutAsync">
     <AlertContent>
         <strong>Format detected automatically.</strong> Expected columns: Type, Product, Started Date, Completed Date, Description, Amount, Fee, Currency, State, Balance.<br />
         <strong>Deposits</strong> and <strong>transfers</strong> become cash entries. Fees are handled as separate expense transactions.
@@ -47,9 +50,9 @@
 
 <ImportSourceCard Title="Import ABN AMRO CSV"
                   Description="Upload a CSV exported from ABN AMRO. Card payments, transfers, direct debits, and salary are detected automatically."
-                  ButtonColor="Color.Tertiary" ButtonLabel="Import ABN AMRO"
+                  ButtonColor="Color.Tertiary" ButtonLabel="Preview ABN AMRO"
                   FileName="@(_abnAmroFile?.Name)" Disabled="@(_abnAmroFile is null || _loading)"
-                  OnFileSelected="@OnAbnAmroFileSelected" OnUpload="@UploadAbnAmroAsync">
+                  OnFileSelected="@OnAbnAmroFileSelected" OnUpload="@PreviewAbnAmroAsync">
     <AlertContent>
         <strong>Format detected automatically.</strong> Expected columns: accountNumber, mutationcode, transactiondate, valuedate, startsaldo, endsaldo, amount, description.<br />
         <strong>Betaalpas</strong> and <strong>iDEAL</strong> become expenses. <strong>Overboeking</strong> to brokers become transfers. Salary from <strong>Spectral/Tesla</strong> becomes income.
@@ -58,9 +61,9 @@
 
 <ImportSourceCard Title="Import Cobas (Investment Funds)"
                   Description="Upload a CSV exported from Cobas. Fund subscriptions and transfers are detected automatically and become portfolio entries."
-                  ButtonColor="Color.Warning" ButtonLabel="Import Cobas"
+                  ButtonColor="Color.Warning" ButtonLabel="Preview Cobas"
                   FileName="@(_cobasFile?.Name)" Disabled="@(_cobasFile is null || _loading)"
-                  OnFileSelected="@OnCobasFileSelected" OnUpload="@UploadCobasAsync">
+                  OnFileSelected="@OnCobasFileSelected" OnUpload="@PreviewCobasAsync">
     <AlertContent>
         <strong>Format detected automatically.</strong> Expected columns: Operacion, Producto, Fecha, Tipo, Estado, Importe, Valor liquidativo, Participaciones.<br />
         <strong>Suscripción</strong> / <strong>Traspaso de entrada</strong> become portfolio entries. <strong>Reembolso</strong> / <strong>Traspaso de salida</strong> become sells. Cancelled (<strong>Anulada</strong>) rows are skipped. Quantity is the fractional <strong>Participaciones</strong> value.
@@ -69,9 +72,9 @@
 
 <ImportSourceCard Title="Import MyInvestor (Account &amp; Funds)"
                   Description="Upload a CSV exported from MyInvestor. Account statements and fund orders are detected automatically."
-                  ButtonColor="Color.Tertiary" ButtonLabel="Import MyInvestor"
+                  ButtonColor="Color.Tertiary" ButtonLabel="Preview MyInvestor"
                   FileName="@(_myInvestorFile?.Name)" Disabled="@(_myInvestorFile is null || _loading)"
-                  OnFileSelected="@OnMyInvestorFileSelected" OnUpload="@UploadMyInvestorAsync">
+                  OnFileSelected="@OnMyInvestorFileSelected" OnUpload="@PreviewMyInvestorAsync">
     <AlertContent>
         <strong>Format detected automatically.</strong> Account file columns: Fecha de operación; Fecha de valor; Concepto; Importe; Divisa. Fund orders file columns: Fecha de la orden; ISIN; Importe estimado; Nº de participaciones; Estado.<br />
         <strong>Account rows</strong> become cash entries (expenses, income and transfers). <strong>Fund orders</strong> become portfolio entries with the ISIN as symbol and fractional participations as quantity.
@@ -80,9 +83,9 @@
 
 <ImportSourceCard Title="Import SelfBank (Account &amp; Funds)"
                   Description="Upload a CSV exported from SelfBank. Account statements and fund movements are detected automatically by filename."
-                  ButtonColor="Color.Default" ButtonLabel="Import SelfBank"
+                  ButtonColor="Color.Default" ButtonLabel="Preview SelfBank"
                   FileName="@(_selfBankFile?.Name)" Disabled="@(_selfBankFile is null || _loading)"
-                  OnFileSelected="@OnSelfBankFileSelected" OnUpload="@UploadSelfBankAsync">
+                  OnFileSelected="@OnSelfBankFileSelected" OnUpload="@PreviewSelfBankAsync">
     <AlertContent>
         <strong>Format detected by filename.</strong> Files starting with <strong>selfbank_found</strong> are routed to the fund movements parser; other <strong>selfbank</strong> files to the account parser.<br />
         <strong>Account rows</strong> become cash entries (expenses, income and transfers). <strong>Fund movements</strong> (Suscripción / Suscripción traspaso) become portfolio entries with the fund name as symbol; Reembolso rows become sells; cash-only movements are skipped.
@@ -91,9 +94,9 @@
 
 <ImportSourceCard Title="Import Coinbase CSV"
                   Description="Upload a CSV exported from Coinbase (Transaction History). Crypto buys/sells, deposits and withdrawals are detected automatically."
-                  ButtonColor="Color.Tertiary" ButtonLabel="Import Coinbase"
+                  ButtonColor="Color.Tertiary" ButtonLabel="Preview Coinbase"
                   FileName="@(_coinbaseFile?.Name)" Disabled="@(_coinbaseFile is null || _loading)"
-                  OnFileSelected="@OnCoinbaseFileSelected" OnUpload="@UploadCoinbaseAsync">
+                  OnFileSelected="@OnCoinbaseFileSelected" OnUpload="@PreviewCoinbaseAsync">
     <AlertContent>
         <strong>Format detected automatically.</strong> Expected columns: User, ID, Timestamp, Transaction Type, Asset, Quantity Transacted, Price Currency, Price at Transaction, Subtotal, Total (inclusive of fees and/or spread), Fees and/or Spread, Notes, Sender Address, Recipient Address.<br />
         <strong>Buy</strong> / <strong>Sell</strong> rows become portfolio entries with the asset symbol. <strong>Deposit</strong> rows become cash deposits. <strong>Withdrawal</strong> rows become transfers. Convert, Receive, Send and other rows are skipped.
@@ -102,9 +105,9 @@
 
 <ImportSourceCard Title="Import Raw CSV"
                   Description="Upload a CSV with your own format. No transformations applied."
-                  ButtonColor="Color.Primary" ButtonLabel="Import Raw CSV"
+                  ButtonColor="Color.Primary" ButtonLabel="Preview Raw CSV"
                   FileName="@(_rawFile?.Name)" Disabled="@(_rawFile is null || _loading)"
-                  OnFileSelected="@OnRawFileSelected" OnUpload="@UploadRawCsvAsync">
+                  OnFileSelected="@OnRawFileSelected" OnUpload="@PreviewRawCsvAsync">
     <AlertContent>
         <strong>Format:</strong> Date,Description,Amount,Type,Currency (Type: Income, Expense, Transfer, Deposit; Currency optional, defaults to EUR)
     </AlertContent>
@@ -113,6 +116,53 @@
 @if (_loading)
 {
     <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+
+@if (_preview is not null || _rawPreview is not null)
+{
+    <MudPaper Class="pa-4 mb-4" Outlined="true">
+        <MudText Typo="Typo.h5" GutterBottom="true">Preview — nothing imported yet</MudText>
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            Review the result below before saving. Nothing has been written yet:
+            confirm to import <strong>@_pendingFileName</strong>, or discard to cancel.
+        </MudAlert>
+
+        @if (_preview is not null)
+        {
+            <ImportResultReport Result="@_preview" Preview="true" />
+        }
+
+        @if (_rawPreview is not null)
+        {
+            <MudText Typo="Typo.body1" Class="mb-2">
+                <strong>@_rawPreview.Imported</strong> row(s) would be imported,
+                <strong>@_rawPreview.Skipped</strong> skipped.
+            </MudText>
+            @if (_rawPreview.Errors?.Count > 0)
+            {
+                <MudText Typo="Typo.subtitle1" GutterBottom="true">Errors</MudText>
+                <MudAlert Severity="Severity.Error" Class="mb-4">
+                    @foreach (var error in _rawPreview.Errors)
+                    {
+                        <MudText Typo="Typo.body2">@error</MudText>
+                    }
+                </MudAlert>
+            }
+        }
+
+        <div class="d-flex gap-2 mt-2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large"
+                       OnClick="@ConfirmImportAsync" Disabled="@_loading"
+                       StartIcon="@Icons.Material.Filled.Save">
+                Confirm &amp; Import
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Large"
+                       OnClick="@DiscardPreview" Disabled="@_loading"
+                       StartIcon="@Icons.Material.Filled.Close">
+                Discard
+            </MudButton>
+        </div>
+    </MudPaper>
 }
 
 <ImportResultReport Result="@_result"
@@ -126,6 +176,8 @@
 
 @code {
     private ImportResultDto? _result;
+    private ImportResultDto? _preview;
+    private RawCsvResultDto? _rawPreview;
     private bool _loading;
     private bool _savingSymbols;
     private Dictionary<Guid, string> _editableSymbols = new();
@@ -142,84 +194,114 @@
     private IBrowserFile? _selfBankFile;
     private IBrowserFile? _coinbaseFile;
 
+    // Pending confirmation: the preview result is kept in memory together with the file
+    // content, so confirming re-uploads exactly what was previewed without re-picking it.
+    private byte[]? _pendingBytes;
+    private string? _pendingFileName;
+    private Action? _pendingResetFile;
+    private string _pendingSuccessMessage = "";
+    private string _pendingFailMessage = "";
+    private bool _pendingIsRaw;
+
     private void OnFileSelected(InputFileChangeEventArgs args)
     {
         _selectedFile = args.File;
-        _result = null;
+        ResetPreviewAndResult();
     }
 
     private void OnRawFileSelected(InputFileChangeEventArgs args)
     {
         _rawFile = args.File;
-        _result = null;
+        ResetPreviewAndResult();
     }
 
     private void OnDegiroFileSelected(InputFileChangeEventArgs args)
     {
         _degiroFile = args.File;
-        _result = null;
+        ResetPreviewAndResult();
     }
 
     private void OnRevolutFileSelected(InputFileChangeEventArgs args)
     {
         _revolutFile = args.File;
-        _result = null;
+        ResetPreviewAndResult();
     }
 
     private void OnAbnAmroFileSelected(InputFileChangeEventArgs args)
     {
         _abnAmroFile = args.File;
-        _result = null;
+        ResetPreviewAndResult();
     }
 
     private void OnCobasFileSelected(InputFileChangeEventArgs args)
     {
         _cobasFile = args.File;
-        _result = null;
+        ResetPreviewAndResult();
     }
 
     private void OnMyInvestorFileSelected(InputFileChangeEventArgs args)
     {
         _myInvestorFile = args.File;
-        _result = null;
+        ResetPreviewAndResult();
     }
 
     private void OnSelfBankFileSelected(InputFileChangeEventArgs args)
     {
         _selfBankFile = args.File;
-        _result = null;
+        ResetPreviewAndResult();
     }
 
     private void OnCoinbaseFileSelected(InputFileChangeEventArgs args)
     {
         _coinbaseFile = args.File;
-        _result = null;
+        ResetPreviewAndResult();
     }
 
     private void OnIbkrFileSelected(InputFileChangeEventArgs args)
     {
         _ibkrFile = args.File;
-        _result = null;
+        ResetPreviewAndResult();
     }
 
-    private async Task UploadFileAsync(IBrowserFile? file, Action resetFile, string successMessage, string failMessage)
+    private void ResetPreviewAndResult()
+    {
+        _result = null;
+        _preview = null;
+        _rawPreview = null;
+        _pendingBytes = null;
+        _pendingFileName = null;
+    }
+
+    private static async Task<byte[]> ReadFileBytesAsync(IBrowserFile file)
+    {
+        using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+        using var buffer = new MemoryStream();
+        await stream.CopyToAsync(buffer);
+        return buffer.ToArray();
+    }
+
+    private async Task PreviewUploadAsync(IBrowserFile? file, Action resetFile, string label, string successMessage, string failMessage)
     {
         if (file is null) return;
 
         _loading = true;
-        _result = null;
-        _editableSymbols = new();
+        ResetPreviewAndResult();
         try
         {
+            byte[] bytes = await ReadFileBytesAsync(file);
             using var content = new MultipartFormDataContent();
-            using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-            content.Add(new StreamContent(stream), "file", file.Name);
+            content.Add(new ByteArrayContent(bytes), "file", file.Name);
 
-            var response = await Http.PostAsync("/api/import/upload", content);
-            _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
-            InitEditableSymbols();
-            Snackbar.Add(successMessage, Severity.Success);
-            resetFile();
+            var response = await Http.PostAsync("/api/import/upload/preview", content);
+            _preview = await response.Content.ReadFromJsonAsync<ImportResultDto>();
+
+            _pendingBytes = bytes;
+            _pendingFileName = file.Name;
+            _pendingResetFile = resetFile;
+            _pendingSuccessMessage = successMessage;
+            _pendingFailMessage = failMessage;
+            _pendingIsRaw = false;
+            Snackbar.Add($"{label} preview ready — nothing imported yet.", Severity.Info);
         }
         catch (Exception ex)
         {
@@ -231,69 +313,121 @@
         }
     }
 
-    private async Task UploadAndImportAsync() =>
-        await UploadFileAsync(_selectedFile, () => _selectedFile = null, "Upload import completed.", "Upload failed");
+    private Task PreviewAndImportAsync() =>
+        PreviewUploadAsync(_selectedFile, () => _selectedFile = null, "CSV upload", "Upload import completed.", "Upload preview failed");
 
-    private async Task UploadIbkrAsync() =>
-        await UploadFileAsync(_ibkrFile, () => _ibkrFile = null, "IBKR import completed.", "IBKR import failed");
+    private Task PreviewIbkrAsync() =>
+        PreviewUploadAsync(_ibkrFile, () => _ibkrFile = null, "IBKR", "IBKR import completed.", "IBKR preview failed");
 
-    private async Task UploadDegiroAsync() =>
-        await UploadFileAsync(_degiroFile, () => _degiroFile = null, "DeGiro import completed.", "DeGiro import failed");
+    private Task PreviewDegiroAsync() =>
+        PreviewUploadAsync(_degiroFile, () => _degiroFile = null, "DeGiro", "DeGiro import completed.", "DeGiro preview failed");
 
-    private async Task UploadRevolutAsync() =>
-        await UploadFileAsync(_revolutFile, () => _revolutFile = null, "Revolut import completed.", "Revolut import failed");
+    private Task PreviewRevolutAsync() =>
+        PreviewUploadAsync(_revolutFile, () => _revolutFile = null, "Revolut", "Revolut import completed.", "Revolut preview failed");
 
-    private async Task UploadAbnAmroAsync() =>
-        await UploadFileAsync(_abnAmroFile, () => _abnAmroFile = null, "ABN AMRO import completed.", "ABN AMRO import failed");
+    private Task PreviewAbnAmroAsync() =>
+        PreviewUploadAsync(_abnAmroFile, () => _abnAmroFile = null, "ABN AMRO", "ABN AMRO import completed.", "ABN AMRO preview failed");
 
-    private async Task UploadCobasAsync() =>
-        await UploadFileAsync(_cobasFile, () => _cobasFile = null, "Cobas import completed.", "Cobas import failed");
+    private Task PreviewCobasAsync() =>
+        PreviewUploadAsync(_cobasFile, () => _cobasFile = null, "Cobas", "Cobas import completed.", "Cobas preview failed");
 
-    private async Task UploadMyInvestorAsync() =>
-        await UploadFileAsync(_myInvestorFile, () => _myInvestorFile = null, "MyInvestor import completed.", "MyInvestor import failed");
+    private Task PreviewMyInvestorAsync() =>
+        PreviewUploadAsync(_myInvestorFile, () => _myInvestorFile = null, "MyInvestor", "MyInvestor import completed.", "MyInvestor preview failed");
 
-    private async Task UploadSelfBankAsync() =>
-        await UploadFileAsync(_selfBankFile, () => _selfBankFile = null, "SelfBank import completed.", "SelfBank import failed");
+    private Task PreviewSelfBankAsync() =>
+        PreviewUploadAsync(_selfBankFile, () => _selfBankFile = null, "SelfBank", "SelfBank import completed.", "SelfBank preview failed");
 
-    private async Task UploadCoinbaseAsync() =>
-        await UploadFileAsync(_coinbaseFile, () => _coinbaseFile = null, "Coinbase import completed.", "Coinbase import failed");
+    private Task PreviewCoinbaseAsync() =>
+        PreviewUploadAsync(_coinbaseFile, () => _coinbaseFile = null, "Coinbase", "Coinbase import completed.", "Coinbase preview failed");
 
-    private async Task UploadRawCsvAsync()
+    private async Task PreviewRawCsvAsync()
     {
         if (_rawFile is null) return;
 
         _loading = true;
-        _result = null;
-        _editableSymbols = new();
+        ResetPreviewAndResult();
         try
         {
+            byte[] bytes = await ReadFileBytesAsync(_rawFile);
             using var content = new MultipartFormDataContent();
-            using var stream = _rawFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-            content.Add(new StreamContent(stream), "file", _rawFile.Name);
+            content.Add(new ByteArrayContent(bytes), "file", _rawFile.Name);
 
-            var response = await Http.PostAsync("/api/import/raw-csv", content);
-            var raw = await response.Content.ReadFromJsonAsync<RawCsvResultDto>();
-            if (raw is not null)
-            {
-                Snackbar.Add($"Raw CSV import: {raw.Imported} imported, {raw.Skipped} skipped.", Severity.Success);
-                if (raw.Errors?.Count > 0)
-                {
-                    foreach (var e in raw.Errors)
-                    {
-                        Snackbar.Add(e, Severity.Warning);
-                    }
-                }
-            }
-            _rawFile = null;
+            var response = await Http.PostAsync("/api/import/raw-csv/preview", content);
+            _rawPreview = await response.Content.ReadFromJsonAsync<RawCsvResultDto>();
+
+            _pendingBytes = bytes;
+            _pendingFileName = _rawFile.Name;
+            _pendingResetFile = () => _rawFile = null;
+            _pendingSuccessMessage = "Raw CSV import completed.";
+            _pendingFailMessage = "Raw CSV import failed";
+            _pendingIsRaw = true;
+            Snackbar.Add("Raw CSV preview ready — nothing imported yet.", Severity.Info);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Raw CSV import failed: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Raw CSV preview failed: {ex.Message}", Severity.Error);
         }
         finally
         {
             _loading = false;
         }
+    }
+
+    private async Task ConfirmImportAsync()
+    {
+        if (_pendingBytes is null || _pendingFileName is null) return;
+
+        _loading = true;
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            content.Add(new ByteArrayContent(_pendingBytes), "file", _pendingFileName);
+
+            string endpoint = _pendingIsRaw ? "/api/import/raw-csv" : "/api/import/upload";
+            var response = await Http.PostAsync(endpoint, content);
+
+            if (_pendingIsRaw)
+            {
+                var raw = await response.Content.ReadFromJsonAsync<RawCsvResultDto>();
+                if (raw is not null)
+                {
+                    Snackbar.Add($"Raw CSV import: {raw.Imported} imported, {raw.Skipped} skipped.", Severity.Success);
+                    if (raw.Errors?.Count > 0)
+                    {
+                        foreach (var e in raw.Errors)
+                        {
+                            Snackbar.Add(e, Severity.Warning);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                _result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
+                InitEditableSymbols();
+                Snackbar.Add(_pendingSuccessMessage, Severity.Success);
+            }
+
+            _pendingResetFile?.Invoke();
+            DiscardPreview();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"{_pendingFailMessage}: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void DiscardPreview()
+    {
+        _preview = null;
+        _rawPreview = null;
+        _pendingBytes = null;
+        _pendingFileName = null;
+        _pendingResetFile = null;
     }
 
     private void InitEditableSymbols()

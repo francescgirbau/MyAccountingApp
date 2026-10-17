@@ -32,7 +32,12 @@ public class ImportService : IImportService
         this._logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<ImportResult> ImportFromFoldersAsync(IEnumerable<string> folderPaths)
+    /// <summary>
+    /// Parses, validates and deduplicates the CSV files of the given folders.
+    /// With <paramref name="dryRun"/> the persistence phase is skipped entirely, so the
+    /// returned result describes what an import would do without touching the stores.
+    /// </summary>
+    public async Task<ImportResult> ImportFromFoldersAsync(IEnumerable<string> folderPaths, bool dryRun = false)
     {
         ImportResult result = new ImportResult();
 
@@ -139,7 +144,9 @@ public class ImportService : IImportService
             }
         }
 
-        if (pendingTransactions.Count > 0)
+        // Dry run stops here: the pending batches above describe what an import would do,
+        // and the duplicate/skip counters are already computed, so nothing else is needed.
+        if (!dryRun && pendingTransactions.Count > 0)
         {
             List<Domain.Entities.Transaction> merged = this._transactionRepo.GetAll().ToList();
             HashSet<(string ExternalKey, FxLeg? Leg, string Currency, decimal Amount, DateTime Date)> seenFxLegs = new(
@@ -158,7 +165,7 @@ public class ImportService : IImportService
             this._transactionRepo.Initialize(merged);
         }
 
-        if (pendingAssets.Count > 0)
+        if (!dryRun && pendingAssets.Count > 0)
         {
             List<Domain.Entities.AssetTransaction> mergedAssets = this._portfolioRepo.GetAllTransactions().ToList();
             Dictionary<Guid, int> assetIndexById = new Dictionary<Guid, int>(mergedAssets.Count);
@@ -184,7 +191,7 @@ public class ImportService : IImportService
             this._portfolioRepo.Initialize(mergedAssets);
         }
 
-        if (pendingOptions.Count > 0)
+        if (!dryRun && pendingOptions.Count > 0)
         {
             List<Domain.Entities.OptionTransaction> mergedOptions = this._optionRepo.GetAll().ToList();
             mergedOptions.AddRange(pendingOptions);
