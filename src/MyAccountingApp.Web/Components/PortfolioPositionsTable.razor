@@ -1,6 +1,19 @@
 <MudTable Items="@Positions" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Outlined="true" Striped="true" SortLabel="Sort by" TableClass="portfolio-table-compact">
     <ToolBarContent>
         <MudText Typo="Typo.subtitle1">@Positions.Count positions</MudText>
+        <MudSpacer />
+        <MudTooltip Placement="Placement.Top">
+            <ChildContent>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Download"
+                           OnClick="@(() => OnExportCsv.InvokeAsync())">
+                    Export CSV
+                </MudButton>
+            </ChildContent>
+            <TooltipContent>
+                <span>Download the open positions as a CSV to import into Investing.com</span>
+            </TooltipContent>
+        </MudTooltip>
     </ToolBarContent>
     <ColGroup>
         <col style="width: 90px" />
@@ -166,4 +179,5 @@
     [Parameter] public string? HighlightedSymbol { get; set; }
     [Parameter] public EventCallback<string> OnViewMovements { get; set; }
     [Parameter] public EventCallback<PortfolioPositionDto> OnToggleExpanded { get; set; }
+    [Parameter] public EventCallback OnExportCsv { get; set; }
 }

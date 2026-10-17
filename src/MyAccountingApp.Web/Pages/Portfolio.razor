@@ -1,6 +1,7 @@
 @page "/portfolio"
 @inject HttpClient Http
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <PageTitle>Portfolio</PageTitle>
 
@@ -37,7 +38,8 @@ else
                              TotalUnrealized="@_totalUnrealized" TotalValueEur="@_totalValueEur"
                              TotalUnrealizedEur="@_totalUnrealizedEur" ValuationLookup="@GetValuation"
                              ExpandedSymbols="@_expanded" HighlightedSymbol="@_highlightedSymbol"
-                             OnViewMovements="@NavigateToMovements" OnToggleExpanded="@ToggleExpanded" />
+                             OnViewMovements="@NavigateToMovements" OnToggleExpanded="@ToggleExpanded"
+                             OnExportCsv="@ExportPositionsCsvAsync" />
 }
 
 @code {
@@ -162,6 +164,12 @@ else
     private void NavigateToMovements(string symbol)
     {
         Navigation.NavigateTo($"/asset-transactions?symbol={Uri.EscapeDataString(symbol)}");
+    }
+
+    private async Task ExportPositionsCsvAsync()
+    {
+        string csv = InvestingPositionsCsv.Build(_positions);
+        await JS.InvokeVoidAsync("downloadTextFile", "investing-positions.csv", csv, "text/csv;charset=utf-8");
     }
 
     private void NavigateToDataQuality()
