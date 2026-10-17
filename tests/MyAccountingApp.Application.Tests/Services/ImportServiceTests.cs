@@ -473,6 +473,75 @@ public class ImportServiceTests
         Assert.Single(pfRepo.GetAllTransactions());
     }
 
+    [Fact]
+    public async Task ImportFromFoldersAsync_DryRun_ParsesButDoesNotPersist()
+    {
+        string dir = CreateTempDir();
+        string file = Path.Combine(dir, "transactions.csv");
+        File.WriteAllText(file, "dummy");
+
+        Transaction tx = new(
+            Guid.NewGuid(),
+            new DateTime(2024, 1, 15),
+            "Test",
+            new Money(100, "EUR"),
+            TransactionCategory.INCOME);
+        AssetTransaction lot = new(
+            new Transaction(Guid.NewGuid(), new DateTime(2023, 2, 13), "CEQ", new Money(90, "CAD"), TransactionCategory.EXPENSE),
+            "CEQ",
+            1000,
+            AssetTransactionType.Buy);
+
+        FakeBroker broker = new();
+        broker.Transactions = new[] { tx };
+        broker.AssetTransactions = new[] { lot };
+        FakeTxRepo txRepo = new();
+        FakePfRepo pfRepo = new();
+        FakeOptionRepo optionRepo = new();
+        TransactionValidator validator = new();
+        FakeLogger<ImportService> logger = new();
+        ImportService service = new(broker, txRepo, pfRepo, optionRepo, validator, logger);
+
+        ImportResult result = await service.ImportFromFoldersAsync(new[] { dir }, dryRun: true);
+
+        Assert.Single(result.Transactions);
+        Assert.Single(result.AssetTransactions);
+        Assert.Equal(1, result.FilesProcessed);
+        Assert.Empty(txRepo.GetAll());
+        Assert.Empty(pfRepo.GetAllTransactions());
+        Assert.Empty(optionRepo.GetAll());
+    }
+
+    [Fact]
+    public async Task ImportFromFoldersAsync_DryRun_ReportsSkippedDuplicates()
+    {
+        string dir = CreateTempDir();
+        string file = Path.Combine(dir, "assets.csv");
+        File.WriteAllText(file, "dummy");
+
+        AssetTransaction lot = new(
+            new Transaction(Guid.NewGuid(), new DateTime(2023, 2, 13), "CEQ", new Money(90, "CAD"), TransactionCategory.EXPENSE),
+            "CEQ",
+            1000,
+            AssetTransactionType.Buy);
+
+        FakeBroker broker = new();
+        broker.AssetTransactions = new[] { lot };
+        FakeTxRepo txRepo = new();
+        FakePfRepo pfRepo = new();
+        TransactionValidator validator = new();
+        FakeLogger<ImportService> logger = new();
+        ImportService service = new(broker, txRepo, pfRepo, new FakeOptionRepo(), validator, logger);
+
+        ImportResult real = await service.ImportFromFoldersAsync(new[] { dir });
+        ImportResult preview = await service.ImportFromFoldersAsync(new[] { dir }, dryRun: true);
+
+        Assert.Equal(0, real.SkippedAssetTransactions);
+        Assert.Equal(1, preview.SkippedAssetTransactions);
+        Assert.Empty(preview.AssetTransactions);
+        Assert.Single(pfRepo.GetAllTransactions());
+    }
+
     private static string CreateTempDir(string suffix = "")
     {
         string dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString(), suffix);

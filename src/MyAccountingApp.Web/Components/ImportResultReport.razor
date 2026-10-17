@@ -1,9 +1,12 @@
 @if (Result is not null)
 {
     <MudAlert Severity="@(Result.Errors.Count == 0 ? Severity.Success : Severity.Warning)" Class="mb-4">
-        <MudText>Import completed: <strong>@Result.FilesProcessed</strong> files processed,
+        <MudText>
+            @(Preview ? "Preview:" : "Import completed:")
+            <strong>@Result.FilesProcessed</strong> files processed,
             <strong>@Result.Transactions.Count</strong> transactions,
-            <strong>@Result.AssetTransactions.Count</strong> asset transactions.
+            <strong>@Result.AssetTransactions.Count</strong> asset transactions,
+            <strong>@Result.OptionTransactions.Count</strong> option transactions.
             @if (Result.Errors.Count > 0) { <span><strong>@Result.Errors.Count</strong> errors.</span> }
         </MudText>
     </MudAlert>
@@ -11,12 +14,12 @@
     @if (Result.SkippedAssetTransactions > 0)
     {
         <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
-            <strong>@Result.SkippedAssetTransactions</strong> asset transaction(s) skipped as duplicates
-            (already imported). No new lots were added for them.
+            <strong>@Result.SkippedAssetTransactions</strong> asset transaction(s) @(Preview ? "would be" : "skipped as") duplicates
+            (already imported). No new lots are added for them.
         </MudAlert>
     }
 
-    @if (Result.AssetTransactions.Count > 0)
+    @if (Result.AssetTransactions.Count > 0 && !Preview)
     {
         <MudText Typo="Typo.subtitle1" GutterBottom="true">Asset Transactions — verify and correct symbols</MudText>
         <MudAlert Severity="Severity.Warning" Class="mb-4" Dense="true">
@@ -76,6 +79,29 @@
         }
     }
 
+    @if (Result.AssetTransactions.Count > 0 && Preview)
+    {
+        <MudText Typo="Typo.subtitle1" GutterBottom="true">Asset transactions that would be imported</MudText>
+        <MudSimpleTable Class="mb-4" Outlined="true" Hover="true">
+            <thead>
+                <tr><th>Symbol</th><th>Description</th><th>Amount</th><th>Currency</th><th>Quantity</th><th>Type</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var a in Result.AssetTransactions)
+                {
+                    <tr>
+                        <td>@a.Symbol</td>
+                        <td>@a.Transaction.Description</td>
+                        <td>@a.Transaction.Money.Amount.ToString("N2")</td>
+                        <td>@a.Transaction.Money.Currency</td>
+                        <td>@a.Quantity</td>
+                        <td>@a.Type</td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    }
+
     @if (Result.Errors.Count > 0)
     {
         <MudText Typo="Typo.subtitle1" GutterBottom="true">Errors</MudText>
@@ -122,6 +148,12 @@
 
 @code {
     [Parameter] public ImportResultDto? Result { get; set; }
+
+    /// <summary>
+    /// When true, the report renders as a pre-import preview: read-only tables,
+    /// no symbol corrections and "would be imported" wording.
+    /// </summary>
+    [Parameter] public bool Preview { get; set; }
     [Parameter] public Dictionary<Guid, string> EditableSymbols { get; set; } = new();
     [Parameter] public Dictionary<Guid, List<SymbolLookupResult>> SymbolResults { get; set; } = new();
     [Parameter] public IReadOnlySet<Guid> SymbolSearching { get; set; } = new HashSet<Guid>();
