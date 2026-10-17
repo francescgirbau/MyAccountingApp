@@ -15,7 +15,7 @@
 | 45 | feat: add Frankfurter as default currency provider | 🟢 Done |
 | 46 | feat: quota-aware currency rate caching with timeseries sync | 🟢 Done |
 | 47 | style: fix StyleCop violations and make the CI gate real | 🟢 Done |
-| 48 | feat: currency conversions stabilization (resilience, gap sync, status endpoint) | 🟡 In Progress |
+| 48 | feat: currency conversions stabilization (resilience, gap sync, status endpoint) | 🟢 Done |
 | R1 | feat: add CoinGecko provider for BTC (and other crypto) | 🟢 Done |
 | R2 | feat: add remaining fiat currencies (PLN, DKK, CZK, HUF, NZD, KRW, THB, IDR, MYR, PHP, RON, ISK) | 🟢 Done |
 | R3 | feat: multi-base conversion support | 🟢 Done |
@@ -27,10 +27,18 @@
 | A1 | docs: reflect current state in VISION.md | 🟢 Done |
 | A2 | docs: add ARCHITECTURE.md (target structure + constitution) | 🟢 Done |
 | A3 | docs: add MIGRATION.md (data playbook + storage inventory) | 🟢 Done |
-| A4 | feat: Contracts project — shared DTOs API ↔ Web (end duplication) | ⬜ Pending |
+| A4 | feat: Contracts project — shared DTOs API ↔ Web (end duplication) | 🟢 Done |
 | A5 | test: golden datasets + persistence compatibility tests | ⬜ Pending (before next persistence change) |
 | A6 | refactor: move Json\* repositories Core → Infrastructure | ⬜ Pending (only with a driver) |
 | Q1 | feat: persist daily market quotes (lazy price cache + audit trail) | 🟢 Done |
+| 197–200 | contracts + CI: DTOs únics a `MyAccountingApp.Contracts`, docker restore layer, gate de cobertura que exclo la UI del Web | 🟢 Done |
+| 201–209 | refactor(web): split de totes les pàgines grans (DataQuality, Transactions, AssetTransactions, Import, Loans, Options, Settings, Portfolio, Summary) en components reutilitzables + tancament del diàleg de duplicats en resoldre'ls | 🟢 Done |
+| 210, 212 | docs(architecture): splitting consolidat al roadmap; tema fosc i motiu de no-virtualització de taules registrats | 🟢 Done |
+| 211 | feat(web): dark mode amb selector de tres estats | 🟢 Done |
+| 213–219 | feat(web): Portfolio professional — capçalera amb KPIs i refresh únic, taules amb ColGroup i llegenda, colors de P&L visibles, retorn money-weighted i anualitzat, comptador de preus aïllat, gate local a `build/gate.sh` | 🟢 Done |
+| 220–224 | fix(ibkr): parsers 2026 correctes, opcions fora del portfolio, tracker d'opcions posició a posició, preview de salut de dades i rebuild quirúrgic (provat i revertit — la base es deixa tal com està) | 🟢 Done |
+| 225–227 | feat(web): opcions en dues pàgines reals (transaccions a Movements, posicions a Investments), delete per any a Settings i creació manual d'opcions | 🟢 Done |
+| 228 | feat(web): export de les posicions del portfolio a CSV per importar a Investing.com | 🟢 Done |
 
 ## Llegenda
 
@@ -38,10 +46,13 @@
 - 🟡 In Progress
 - ⬜ Pending
 
-## Roadmap (R1–R5)
+## Properes passes
 
-- **R1 — CoinGecko per BTC**: afegir proveïdor de cripto per cobrir BTC amb el seu propi proveïdor i base, sense contaminar les sèries fiat.
-- **R2 — Monedes fiat addicionals**: estendre l'enum amb les monedes que falta de Frankfurter (PLN, DKK, CZK, HUF, NZD, KRW, THB, IDR, MYR, PHP, RON, ISK); canvi trivial.
-- **R3 — Multi-base**: permetre consultar conversions entre qualssevol monedes, no només des d'EUR.
-- **R4 — Cua offline genèrica**: generalitzar la cua de pendents amb retry de fons automàtic.
-- **R5 — Self-host Frankfurter**: allotjar un endpoint compatible amb Frankfurter per no dependre del servei públic.
+- **A5 — Golden datasets + tests de compatibilitat de persistència**: fer-los abans del proper canvi de format de dades (p. ex. abans d'un driver SQL dins d'A6).
+- **A6 — Moure els repositoris `Json*` de Core a Infrastructure**: només amb un driver concret que ho justifiqui.
+
+## Pendents operatius (fora del codi)
+
+- **Opcions IBKR 2026**: quan es descarregui el fitxer anual, crear-hi les 7 potes obertes que falten (totes ja expirades) i revisar-lo en sola lectura.
+- **Vault bloquejat**: neteja del 401 sorollós (capturar-lo i deixar que el handler redirigeixi a `/unlock`) — acceptada, ajornada.
+- **IBKR legacy 2022–2025**: replantejar l'execució del fix (deixar-ho com està i importar només 2026, o esborrar i re-importar des de Settings).
